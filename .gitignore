@@ -1,0 +1,7 @@
+*.elc
+*.pyc
+*~
+.*.swp
+config.log
+config.status
+*.dvi
