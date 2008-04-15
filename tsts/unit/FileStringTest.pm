@@ -204,6 +204,19 @@ sub test_find
     $self->assert_deep_equals(['goo.txt', 'foo.txt'], \@flist);
 }
 
+sub test_glob_1
+{
+    my $self = shift;
+
+    Idval::FileString::idv_add_file("/a/b/foo.txt", "\n");
+    Idval::FileString::idv_add_file("/a/b/goo.txt", "\n");
+    Idval::FileString::idv_add_file("/a/b/gah.txt", "\n");
+
+    my @files = Idval::FileString::idv_glob("/a/b/*oo.txt");
+
+    $self->assert_deep_equals(['/a/b/foo.txt', '/a/b/goo.txt'], \@files);
+}
+
 sub test_mkdir
 {
     my $self = shift;

@@ -24,7 +24,6 @@ use Data::Dumper;
 use Carp;
 use Config;
 use File::Spec;
-use File::Glob ':glob';
 use FindBin;
 use Memoize;
 use Text::Balanced qw (
@@ -136,6 +135,15 @@ sub get_top_dir
     }
 
     return @subdirs ? File::Spec->catdir(@top_dir_path, @subdirs): File::Spec->catdir(@top_dir_path);
+}
+
+sub expand_tilde
+{
+    my $name = shift;
+
+    $name =~ s{^~([^/]*)}{$1 ? (getpwnam($1))[7] : ($ENV{HOME} || $ENV{LOGDIR} || (getpwuid($>))[7])}ex;
+
+    return $name;
 }
 
 # This will need to vary depending on the OS

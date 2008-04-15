@@ -10,6 +10,7 @@ use strict;
 use warnings;
 use Carp;
 use IO::File;
+use File::Glob ':glob';
 use File::Find;
 use File::Path;
 
@@ -38,6 +39,11 @@ sub idv_find
 {
     my $subr = shift;
     return File::Find::find({wanted => $subr, preprocess => sub{return grep(-r, @_);}}, @_);
+}
+
+sub idv_glob
+{
+    return File::Glob::bsd_glob(@_);
 }
 
 sub idv_mkdir

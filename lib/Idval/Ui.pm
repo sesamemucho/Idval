@@ -28,6 +28,7 @@ use File::Basename;
 use File::Path;
 use File::Spec;
 
+use Idval::Common;
 use Idval::Config;
 use Idval::FileIO;
 use Idval::TypeMap;
@@ -141,21 +142,12 @@ sub make_wanted
     };
 }
 
-sub expand_tilde
-{
-    my $name = shift;
-
-    $name =~ s{^~([^/]*)}{$1 ? (getpwnam($1))[7] : ($ENV{HOME} || $ENV{LOGDIR} || (getpwuid($>))[7])}ex;
-
-    return $name;
-}
-
 # This should just provide a very basic list of records, consisting only of FILE, TYPE and CLASS tags
 sub get_source_from_dirs
 {
     my $providers = shift;
     my $config = shift;
-    my @dirs = map {expand_tilde($_) }  @_;
+    my @dirs = map {Idval::Common::expand_tilde($_) }  @_;
 
     #local $srclist = {};
     $srclist = Idval::Collection->new({source => 'STORED DATA CACHE'});
@@ -183,7 +175,7 @@ sub get_source_from_file
     }
     else
     {
-        $reclist = eval {retrieve(expand_tilde($data_store))};
+        $reclist = eval {retrieve(Idval::Common::expand_tilde($data_store))};
         croak "Tag info cache is corrupted; you will need to regenerate it (with 'gettags'):\n$@\n" if $@;
         return Idval::Collection->new({contents => $reclist, source => 'STORED DATA CACHE'});
     }
@@ -206,10 +198,10 @@ sub put_source_to_file
     if ($usecache)
     {
         # Make sure the path exists
-        my $path = dirname(expand_tilde($data_store_file));
+        my $path = dirname(Idval::Common::expand_tilde($data_store_file));
         mkpath($path) unless -d $path;
-        #print "Storing data to ",  expand_tilde($data_store_file), "\n";
-        store($reclist, expand_tilde($data_store_file));
+        #print "Storing data to ",  Idval::Common::expand_tilde($data_store_file), "\n";
+        store($reclist, Idval::Common::expand_tilde($data_store_file));
         #print "Finished storing data\n";
     }
 

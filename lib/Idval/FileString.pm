@@ -175,6 +175,35 @@ sub idv_find
     idv_cd($here);
 }
 
+# A simple minded implementation for testing.
+# GLOBBING ONLY DONE ON FILENAME (NOT DIRECTORY NAMES)
+# No brace expansion
+# No wildcard escapes
+# No tilde expansion.
+# Never ignore case.
+sub idv_glob
+{
+    my $filespec = shift;
+
+    $filespec =~ s/\./\\./g;
+    $filespec =~ s/\*/.*/g;
+    $filespec =~ s/\?/./g;
+
+    my ($vol, $dirpath, $filename) = File::Spec->splitpath($filespec);
+    my ($status, $dpath) = _get_dir($dirpath);
+    my $dirname = idv_get_dirname($dpath);
+
+    my @filelist = ();
+    my $candidate;
+    foreach my $fname (keys(%{$dpath}))
+    {
+        $candidate = $dirname . '/' . $fname;
+        push (@filelist, $candidate) if $candidate =~ m/^$filespec/;
+    }
+
+    return sort @filelist;
+}
+
 sub idv_cd
 {
     my $new_cd = shift;
@@ -500,7 +529,7 @@ sub idv_get_file
 
     my ($vol, $dirpath, $filename) = File::Spec->splitpath($path);
     $dirpath =~ s{//+}{/}g;
-    #print STDERR "idv_get_file: vol, dirpath, filename: \"$vol\" \"$dirpath\" \"$filename\"\n";
+    print STDERR "idv_get_file: vol, dirpath, filename: \"$vol\" \"$dirpath\" \"$filename\"\n";
 
     croak "File \"$path\" not found\n" unless idv_test_isfile($path);
     my ($status, $dpath) = _get_dir($dirpath);
