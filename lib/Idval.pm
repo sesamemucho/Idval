@@ -261,7 +261,7 @@ sub cmd_loop
         {
             chomp $line;
 
-            last if $line =~ /^\s*(quit|exit|bye)\s*$/i;
+            last if $line =~ /^\s*(q|quit|exit|bye)\s*$/i;
             next if $line =~ /^\s*$/;
 
             @line_args = @{Idval::Common::split_line($line)};
@@ -280,7 +280,7 @@ sub cmd_loop
                 if ($reason =~ /No script file found for command \"([^""]+)\"/)
                 {
                     my $bogus = $1;
-                    print "Got bogus command \"$bogus\", with args ", join(",", @line_args), "\n";
+                    print "Got unrecognized command \"$bogus\", with args ", join(",", @line_args), "\n";
                     print "$@\n";
                     $error_occurred = 1;
                 }

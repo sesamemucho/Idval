@@ -10,7 +10,7 @@ use Idval::Common;
 
 use AcceptUtils;
 
-our $data_dir = "tsts/accept_data/ValidateTest";
+our $data_dir = $main::topdir . '/' . "tsts/accept_data/ValidateTest";
 
 sub new {
     my $self = shift()->SUPER::new(@_);
@@ -41,7 +41,7 @@ sub test_validation_with_one_error
 {
     my $self = shift;
     my $expected_result =<<EOF;
-STORED DATA CACHE:48: error: Wrong date!
+STORED DATA CACHE:\\d+: error: Wrong date!
 EOF
 
     $taglist = AcceptUtils::mktree("$data_dir/val1.dat", "$data_dir/t/d1", $self->{IDVAL});
@@ -49,11 +49,10 @@ EOF
     my $io = IO::String->new();
     my $old_logfh = $self->{LOG}->accessor('LOG_OUT');
     $self->{LOG}->accessor('LOG_OUT', $io);
-    $taglist = Idval::cmd_val($taglist, $self->{IDVAL}->providers(), "$data_dir/val1.cfg");
+    $taglist = Idval::Scripts::val($taglist, $self->{IDVAL}->providers(), "$data_dir/val1.cfg");
     $self->{LOG}->accessor('LOG_OUT', $old_logfh);
 
-    $self->assert_equals($expected_result, ${$io->string_ref});
+    $self->assert_matches(qr/$expected_result/, ${$io->string_ref});
 }
-
 
 1;

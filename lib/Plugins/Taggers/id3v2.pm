@@ -33,6 +33,7 @@ our %xlat_tags =
       TRACKNUM => 'TRACKNUMBER'
     );
 
+print STDERR "Hey ho\n";
 Idval::Common::register_provider({provides=>'reads_tags', name=>$name, type=>$type});
 Idval::Common::register_provider({provides=>'writes_tags', name=>$name, type=>$type});
 
@@ -55,7 +56,9 @@ sub init
     $self->set_param('classtype_map', {'MUSIC' => [qw( MP3 )]});
     $self->set_param('type', $type);
 
+    print "Hi, looking for exe path for ", $self->{NAME}, "\n";
     my $path = $self->find_exe_path();
+    print "Path is: \"$path\"\n";
     $self->set_param('path', $path);
     $self->set_param('is_ok', $path ? 1 : 0);
 }
@@ -196,4 +199,4 @@ sub write_tags
     return $status;
 }
 
-1;
+2;

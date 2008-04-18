@@ -127,13 +127,13 @@ sub get_value
 #     return sort keys %{$self->{RECORDS}};
 # }
 
-# sub key_exists
-# {
-#     my $self = shift;
-#     my $key = shift;
+sub key_exists
+{
+    my $self = shift;
+    my $key = shift;
 
-#     return exists($self->{RECORDS}->{$key});
-# }
+    return exists($self->{RECORDS}->{$key});
+}
 
 # sub size
 # {

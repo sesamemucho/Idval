@@ -28,10 +28,14 @@ use strict;
 use warnings;
 use Carp;
 use IO::File;
+use File::Glob;
 
 use Idval::ServiceLocator;
 use Idval::FileSystem;
 use Idval::FileString;
+
+our $GLOB_NOCASE = File::Glob::GLOB_NOCASE;
+our $GLOB_TILDE  = File::Glob::GLOB_TILDE;
 
 our $implementation;
 

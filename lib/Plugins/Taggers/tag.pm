@@ -82,6 +82,7 @@ sub read_tags
     my $path = $self->query('path');
 
     $filename =~ s{/cygdrive/(.)}{$1:}; # Tag doesn't deal well with cygdrive pathnames
+    #print "Tag checking \"$filename\"\n";
     foreach $line (`$path --hideinfo --hidenames "$filename" 2>&1`) {
         chomp $line;
         $line =~ s/\r//;
@@ -96,15 +97,16 @@ sub read_tags
             last;
         };
 
+        # All MP3 tag names should be upper-case
         $line =~ m/^(\S+):\s*(.*)/ and do {
-            $current_tag = $1;
+            $current_tag = uc($1);
             $current_tag = $xlat_tags{$current_tag} if exists $xlat_tags{$current_tag};
             $record->add_tag($current_tag, $2);
             next;
         };
 
         $line =~ m/^(\S+)\s*=\s*(.*)/ and do {
-            $current_tag = $1;
+            $current_tag = uc($1);
             $current_tag = $xlat_tags{$current_tag} if exists $xlat_tags{$current_tag};
             $record->add_tag($current_tag, $2);
             next;

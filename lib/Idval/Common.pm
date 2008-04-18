@@ -91,7 +91,7 @@ sub mung_to_unix
     my $path = shift;
 
     # expand tilde
-    $path =~ s{^~([^/]*)}{$1 ? (getpwnam($1))[7] : ($ENV{HOME} || $ENV{LOGDIR} || (getpwuid($>))[7])}ex;
+    $path = Idval::Common::expand_tilde($path);
 
     # mung drive letter
     if ($Config{osname} eq 'cygwin')

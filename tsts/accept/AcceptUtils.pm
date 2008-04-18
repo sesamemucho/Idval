@@ -6,6 +6,15 @@ use File::stat;
 use File::Copy;
 use File::Path;
 use File::Basename;
+use Idval;
+
+our $audiodir = $main::topdir . '/data/audio';
+
+our %startfiles = (
+    'FLAC' => $audiodir . '/sbeep.flac',
+    'MP3'  => $audiodir . '/sbeep.mp3',
+    'OGG'  => $audiodir . '/sbeep.ogg',
+    );
 
 sub mktree
 {
@@ -14,12 +23,6 @@ sub mktree
     my $idval = shift;
 
     my %info;
-    my %startfile = (
-        'FLAC' => 'data/audio/sbeep.flac',
-        'MP3'  => 'data/audio/sbeep.mp3',
-        'OGG'  => 'data/audio/sbeep.ogg',
-        );
-
     my $dfh = IO::File->new($datafile, '<') || croak "Can't open input file \"$datafile\" for reading: $!\n";
 
     while (defined(my $line = <$dfh>))
@@ -32,7 +35,7 @@ sub mktree
         chomp $date;
 
         my $path = File::Spec->catfile($testpath, "$fname." . lc($type));
-        $info{$path}->{TYPE} = $type;
+        $info{$path}->{TYPE} = uc($type);
         $info{$path}->{TITLE} = $title;
         $info{$path}->{ARTIST} = $artist;
         $info{$path}->{ALBUM} = $album;
@@ -44,14 +47,14 @@ sub mktree
         # make a new one
         next if (-e $path) and (stat($path)->mtime > stat($datafile)->mtime);
         mkpath([dirname($path)]);
-        copy($startfile{$type}, $path) or croak("Copy of $startfile{$type} to $path failed: $!\n");
+        copy($startfiles{$type}, $path) or croak("Copy of $startfiles{$type} to $path failed: $!\n");
 
         #Set up tags here
     }
 
     my $taglist = $idval->datastore();
-    $taglist = Idval::gettags($taglist, $idval->providers(), $testpath);
-    #$taglist = Idval::printlist($taglist, $idval->providers());
+    $taglist = Idval::Scripts::gettags($taglist, $idval->providers(), $testpath);
+    #$taglist = Idval::Scripts::print($taglist, $idval->providers());
 
     my $record;
     my $type;
@@ -70,7 +73,7 @@ sub mktree
     }
 
     #print "Updating tags:\n";
-    $taglist = Idval::update($taglist, $idval->providers());
+    $taglist = Idval::Scripts::update($taglist, $idval->providers());
     #$taglist = Idval::printlist($taglist, $idval->providers());
 
     return $taglist;

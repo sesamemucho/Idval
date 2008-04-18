@@ -205,7 +205,7 @@ sub find_exe_path
         foreach my $testexe (@{$exelist})
         {
             $self->{LOG}->verbose($DBG_PROCESS, "Checking \"$testexe\"\n");
-            $testexe = (glob($testexe))[0];
+            $testexe = Idval::Common::expand_tilde($testexe);
             if (-e $testexe)
             {
                 $exe = $testexe;

@@ -169,8 +169,7 @@ sub test_get_a_command_1
     $provs = Idval::Providers->new($fc);
     my $cmd = $provs->find_command('cmd1');
 
-    print "cmd is: ", Dumper($cmd);
-    #$self->assert_equals('Idval::UserPlugins::Up2', ref $writer);
+    $self->assert_equals('Idval::UserPlugins::Cmd1::cmd1', $cmd);
 }
 
 ##-------------------------------------------------##

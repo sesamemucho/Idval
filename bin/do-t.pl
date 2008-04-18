@@ -51,9 +51,9 @@ print STDERR $log->str(), "\n";
 #my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/ConverterTest.pm");
 #my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/DataFileTest.pm");
 #my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/FileParseTest.pm");
-my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/FileStringTest.pm");
+#my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/FileStringTest.pm");
 #my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/GraphTest.pm");
-##my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/ProviderTest.pm");
+#my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/ProviderTest.pm");
 #my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/RecordTest.pm");
 #my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/SelectTest.pm");
 #my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/TypeMapTest.pm");
@@ -61,7 +61,7 @@ my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/FileStringTest.pm");
 
 
 
-#my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/*Test.pm");
+my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/*Test.pm");
 
 # Re-create the test data, if needed
 #system("perl $FindBin::Bin/mktree.pl -q");

@@ -22,7 +22,6 @@ use warnings;
 no warnings qw(redefine);
 use Data::Dumper;
 use Text::Abbrev;
-use File::Glob ':glob';
 use File::Basename;
 use Memoize;
 use Carp;
@@ -330,8 +329,8 @@ sub find_command
     # directories.
     foreach my $cmd_dir (@{$self->{COMMAND_DIRS}})
     {
-        my @sources = File::Glob::bsd_glob("$cmd_dir/$name.$ext",
-                                           GLOB_NOCASE | GLOB_TILDE);
+        my @sources = Idval::FileIO::idv_glob("$cmd_dir/$name.$ext",
+                                              $Idval::FileIO::GLOB_NOCASE | $Idval::FileIO::GLOB_TILDE);
         if (@sources)
         {
             $filename = $sources[0];
@@ -365,8 +364,8 @@ sub find_all_commands
     # directories.
     foreach my $cmd_dir (@{$self->{COMMAND_DIRS}})
     {
-        my @sources = File::Glob::bsd_glob("$cmd_dir/*.$ext",
-                                           GLOB_NOCASE | GLOB_TILDE);
+        my @sources = Idval::FileIO::idv_glob("$cmd_dir/*.$ext",
+                                              $Idval::FileIO::GLOB_NOCASE | $Idval::FileIO::GLOB_TILDE);
         foreach my $source (@sources)
         {
             my $name = basename(lc($source), '.pm');
@@ -458,7 +457,7 @@ sub _add_provider
     {
         $self->{NUM_PROVIDERS}++;
         $self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name} = $cnv;
-        #print STDERR "Adding \"$prov_type\" provider \"$name\" from package \"$package\". src: \"$src\", dest: \"$dest\", weight: \"$weight\"\n";
+        print STDERR "Adding \"$prov_type\" provider \"$name\" from package \"$package\". src: \"$src\", dest: \"$dest\", weight: \"$weight\"\n";
         $self->{GRAPH}->{$prov_type}->add_edge($src, $package . '::' . $name, $dest, $weight);
     }
     else
@@ -547,14 +546,17 @@ sub get_plugin_cb
     my $fh = Idval::FileIO->new($_, "r");
     confess "Bad filehandle: $! for item \"$_\"" unless defined $fh;
 
-    my $plugin = do { local $/; <$fh> };
-    $fh->close();
+    #my $plugin = do { local $/; <$fh> };
+    #$fh->close();
 
-    croak "Could not read plugin \"$_\"\n" unless $plugin;
+    #print "Plugin is \"$plugin\"\n" if $_ eq "id3v2";
+#     croak "Could not read plugin \"$_\"\n" unless $plugin;
 
-    
-    my $status = do {eval "$plugin" };
-
+    #print STDERR "Plugin $_\n";
+    #my $status = do {eval "$plugin" };
+    my $status = do "$_";
+    #my $status = eval "$plugin";
+    #print STDERR "eval result is: $@\n" if $@;
     if (defined $status)
     {
         #print STDERR "Status is <$status>\n";

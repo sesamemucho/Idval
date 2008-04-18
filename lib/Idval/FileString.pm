@@ -529,7 +529,7 @@ sub idv_get_file
 
     my ($vol, $dirpath, $filename) = File::Spec->splitpath($path);
     $dirpath =~ s{//+}{/}g;
-    print STDERR "idv_get_file: vol, dirpath, filename: \"$vol\" \"$dirpath\" \"$filename\"\n";
+    #print STDERR "idv_get_file: vol, dirpath, filename: \"$vol\" \"$dirpath\" \"$filename\"\n";
 
     croak "File \"$path\" not found\n" unless idv_test_isfile($path);
     my ($status, $dpath) = _get_dir($dirpath);

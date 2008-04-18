@@ -52,6 +52,7 @@ sub gettags
     my $prov;
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
+        #print "Checking \"$key\"\n";
         $record = $datastore->{RECORDS}->{$key};
         $type = $record->get_value('TYPE');
         $prov = $providers->get_provider('reads_tags', $type, 'NULL');

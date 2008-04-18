@@ -9,7 +9,10 @@ use File::Glob ':glob';
 use File::Path;
 use FindBin;
 use lib ("$FindBin::Bin/../lib", "$FindBin::Bin/../tsts/accept");
-#use lib "$FindBin::Bin/../lib";
+use Cwd qw(abs_path);
+
+# Get the top directory of the idv tree and make it look pretty
+our $topdir = abs_path("$FindBin::Bin/..");
 
 use Idval::Logger;
 use Idval::Common;
@@ -26,8 +29,10 @@ our (
      'debug=i',
      'development',
      'log_out=i',
+     'no-delete',
     );
 
+$options{'no-delete'} = 0;
 my $opts = Getopt::Long::Parser->new();
 my $retval = $opts->getoptions(\%options, @standard_options);
 
@@ -53,10 +58,11 @@ my @pkgs = bsd_glob("$FindBin::Bin/../tsts/accept/*Test.pm");
 # Uncomment and edit to debug individual packages.
 #debug_pkgs(qw/Test::Unit::TestCase/);
 
+print "Get some coffee...\n";
 foreach my $pkg (@pkgs)
 {
     my $testrunner = Test::Unit::TestRunner->new();
     $testrunner->start($pkg);
 }
 
-rmtree(['tsts/accept_data/ValidateTest/t']);
+rmtree([$topdir . '/tsts/accept_data/ValidateTest/t']) unless $options{'no-delete'};
