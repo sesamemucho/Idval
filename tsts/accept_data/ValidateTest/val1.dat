@@ -1,0 +1,14 @@
+# Simple dat file for validation test
+
+flacs/fil01  | FLAC | First Flac File | Roberta Flac | Flac-A-Munga | 1 | Folk | 2006
+flacs/fil02  | FLAC | First Flac File | Roberta Flac | Flac-A-Munga | 2 | Folk | 2006
+flacs/fil03  | FLAC | First Flac File | Roberta Flac | Flac-A-Munga | 3 | Folk | 2006
+
+oggs/fil01  | OGG | First Ogg File | Roberta Ogg | Ogg-A-Munga | 1 | Folk | 2006
+oggs/fil02  | OGG | First Ogg File | Roberta Ogg | Ogg-A-Munga | 2 | Folk | 2006
+oggs/fil03  | OGG | First Ogg File | Roberta Ogg | Ogg-A-Munga | 3 | Folk | 2007
+
+mp3s/fil01  | MP3 | First Mp3 File | Roberta Mp3 | Mp3-A-Munga | 1 | Folk | 2006
+mp3s/fil02  | MP3 | First Mp3 File | Roberta Mp3 | Mp3-A-Munga | 2 | Folk | 2006
+mp3s/fil03  | MP3 | First Mp3 File | Roberta Mp3 | Mp3-A-Munga | 3 | Folk | 2006
+
