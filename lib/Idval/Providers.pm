@@ -457,7 +457,7 @@ sub _add_provider
     {
         $self->{NUM_PROVIDERS}++;
         $self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name} = $cnv;
-        print STDERR "Adding \"$prov_type\" provider \"$name\" from package \"$package\". src: \"$src\", dest: \"$dest\", weight: \"$weight\"\n";
+        #print STDERR "Adding \"$prov_type\" provider \"$name\" from package \"$package\". src: \"$src\", dest: \"$dest\", weight: \"$weight\"\n";
         $self->{GRAPH}->{$prov_type}->add_edge($src, $package . '::' . $name, $dest, $weight);
     }
     else
@@ -546,16 +546,18 @@ sub get_plugin_cb
     my $fh = Idval::FileIO->new($_, "r");
     confess "Bad filehandle: $! for item \"$_\"" unless defined $fh;
 
-    #my $plugin = do { local $/; <$fh> };
-    #$fh->close();
+    # Doing it this way instead of just "do ..." to allow for use
+    # of in-core files for testing (see FileString.pm)
+    my $plugin = do { local $/; <$fh> };
+    $fh->close();
 
     #print "Plugin is \"$plugin\"\n" if $_ eq "id3v2";
 #     croak "Could not read plugin \"$_\"\n" unless $plugin;
 
     #print STDERR "Plugin $_\n";
     #my $status = do {eval "$plugin" };
-    my $status = do "$_";
-    #my $status = eval "$plugin";
+    ##my $status = do "$_";
+    my $status = eval "$plugin";
     #print STDERR "eval result is: $@\n" if $@;
     if (defined $status)
     {

@@ -17,7 +17,10 @@ package Idval::SysPlugins::Id3v2;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
-use Idval::Setup;
+#use Idval::Setup;
+use strict;
+use warnings;
+no warnings qw(redefine);
 use Idval::Common;
 use Class::ISA;
 
@@ -33,7 +36,6 @@ our %xlat_tags =
       TRACKNUM => 'TRACKNUMBER'
     );
 
-print STDERR "Hey ho\n";
 Idval::Common::register_provider({provides=>'reads_tags', name=>$name, type=>$type});
 Idval::Common::register_provider({provides=>'writes_tags', name=>$name, type=>$type});
 
@@ -56,11 +58,7 @@ sub init
     $self->set_param('classtype_map', {'MUSIC' => [qw( MP3 )]});
     $self->set_param('type', $type);
 
-    print "Hi, looking for exe path for ", $self->{NAME}, "\n";
-    my $path = $self->find_exe_path();
-    print "Path is: \"$path\"\n";
-    $self->set_param('path', $path);
-    $self->set_param('is_ok', $path ? 1 : 0);
+    $self->find_and_set_exe_path();
 }
 
 sub read_tags

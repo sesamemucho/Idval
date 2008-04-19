@@ -17,7 +17,10 @@ package Idval::SysPlugins::MP3_Tag;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
-use Idval::Setup;
+#use Idval::Setup;
+use strict;
+use warnings;
+no warnings qw(redefine);
 use Class::ISA;
 use Carp;
 

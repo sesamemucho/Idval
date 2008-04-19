@@ -17,7 +17,10 @@ package Idval::SysPlugins::Vorbiscomment;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
-use Idval::Setup;
+#use Idval::Setup;
+use strict;
+use warnings;
+no warnings qw(redefine);
 use Class::ISA;
 use Carp;
 
@@ -49,9 +52,7 @@ sub init
     $self->set_param('classtype_map', {'MUSIC' => [qw( OGG )]});
     $self->set_param('type', $type);
 
-    my $path = $self->find_exe_path();
-    $self->set_param('path', $path);
-    $self->set_param('is_ok', $path ? 1 : 0);
+    $self->find_and_set_exe_path();
 }
 
 sub read_tags

@@ -221,5 +221,19 @@ sub find_exe_path
     return $exe;
 }
 
+sub find_and_set_exe_path
+{
+    my $self = shift;
+    my $name = shift || $self->{NAME};
+
+    my $path = $self->find_exe_path($name);
+
+    $self->set_param('path', $path);
+    $self->set_param('is_ok', $path ? 1 : 0);
+    $self->set_param('status', $path ? 'ok' : "Program \"$name\" not found.");
+
+    return $path;
+}
+
 1;
 

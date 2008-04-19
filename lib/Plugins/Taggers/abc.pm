@@ -17,7 +17,10 @@ package Idval::SysPlugins::Abc;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
-use Idval::Setup;
+#use Idval::Setup;
+use strict;
+use warnings;
+no warnings qw(redefine);
 use Class::ISA;
 use Carp;
 
@@ -52,6 +55,7 @@ sub init
     #my $path = $self->find_exe_path();
     $self->set_param('path', '(Builtin)');
     $self->set_param('is_ok', 1);
+    $self->set_param('status', 'ok');
 }
 
 sub read_tags

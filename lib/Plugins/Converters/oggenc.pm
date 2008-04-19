@@ -17,7 +17,10 @@ package Idval::SysPlugins::OggEnc;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
-use Idval::Setup;
+#use Idval::Setup;
+use strict;
+use warnings;
+no warnings qw(redefine);
 use Idval::Common;
 use Class::ISA;
 
@@ -49,9 +52,7 @@ sub init
     $self->set_param('from', $from);
     $self->set_param('to', $to);
 
-    my $path = $self->find_exe_path();
-    $self->set_param('path', $path);
-    $self->set_param('is_ok', defined($path));
+    $self->find_and_set_exe_path();
 }
 
 sub convert
