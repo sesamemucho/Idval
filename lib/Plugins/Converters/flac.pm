@@ -70,7 +70,7 @@ sub init
         $self->set_param('to', 'FLAC');
     }
 
-    $self->find_and_set_exe_path();
+    $self->find_and_set_exe_path('flac');
 }
 
 sub convert

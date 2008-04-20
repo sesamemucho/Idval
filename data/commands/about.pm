@@ -138,7 +138,19 @@ sub about
             next if $provider =~ m{/}; # This indicates a 'smooshed' combined converter,
             # whose individual components will be displayed
             # separately.
-            silent_q("\tProvider $provider is located at ", $provider_paths{$provider}, "\n");
+            silent_q("\tProvider $provider uses ", $provider_paths{$provider}, "\n");
+        }
+    }
+
+    #if ((exists $options->{'all'}) and $options->{'all'})
+    {
+        silent_q("\nProvider info:\n");
+        foreach my $pinfo ($providers->direct_get_providers('converts', 'reads_tags', 'writes_tags'))
+        {
+            my $cnv = $pinfo->{converter};
+            my $status = $cnv->query('status');
+
+            silent_q(sprintf("\tProvider %-15s status for %-15s is: %s\n", $pinfo->{'name'}, $pinfo->{'type'}, $status));
         }
     }
 

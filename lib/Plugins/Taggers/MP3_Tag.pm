@@ -57,6 +57,10 @@ sub init
 
     $self->set_param('path', "(Perl module}");
     $self->set_param('is_ok', $req_msg eq "Load OK");
+    if ($req_msg eq "No such file or directory")
+    {
+        $req_msg = "Perl module MP3::Tag not found";
+    }
     $self->set_param('status', $req_msg);
 }
 

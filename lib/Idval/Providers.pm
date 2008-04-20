@@ -186,6 +186,33 @@ sub _get_providers
     return @prov_list;
 }
 
+# Provides information about _all_ providers, even those that are disabled or unselected.
+# Should only be used to report on configuration
+sub direct_get_providers
+{
+    my $self = shift;
+    my @provider_types = @_;
+    my @prov_list = ();
+
+    # For each kind of provider
+    foreach my $prov_type (@provider_types)
+    {
+        foreach my $provider_package (keys %{$self->{ALL_PROVIDERS}->{$prov_type}})
+        {
+            foreach my $provider_name (keys %{$self->{ALL_PROVIDERS}->{$prov_type}->{$provider_package}})
+            {
+                my $cnv = $self->{ALL_PROVIDERS}->{$prov_type}->{$provider_package}->{$provider_name};
+                push(@prov_list, {converter=>$cnv, name=>$provider_name, package_name=>$provider_package, type=>$prov_type});
+            }
+        }
+    }
+
+    
+    return map { $_->[0] }
+           sort { $a->[1] cmp $b->[1] }
+           map { [$_, $_->{name}] } @prov_list;
+}
+
 sub get_all_active_providers
 {
     my $self = shift;
@@ -453,11 +480,11 @@ sub _add_provider
     my $cnv;
 
     $cnv = $package->new($config, $name);
+    $self->{NUM_PROVIDERS}++;
+    $self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name} = $cnv;
     if ($cnv->query('is_ok'))
     {
-        $self->{NUM_PROVIDERS}++;
-        $self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name} = $cnv;
-        #print STDERR "Adding \"$prov_type\" provider \"$name\" from package \"$package\". src: \"$src\", dest: \"$dest\", weight: \"$weight\"\n";
+        print STDERR "Adding \"$prov_type\" provider \"$name\" from package \"$package\". src: \"$src\", dest: \"$dest\", weight: \"$weight\"\n";
         $self->{GRAPH}->{$prov_type}->add_edge($src, $package . '::' . $name, $dest, $weight);
     }
     else

@@ -63,7 +63,7 @@ sub init
         $self->set_param('to', 'MP3');
     }
 
-    $self->find_and_set_exe_path();
+    $self->find_and_set_exe_path('lame');
 }
 
 sub convert

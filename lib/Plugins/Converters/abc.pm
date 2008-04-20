@@ -17,6 +17,9 @@ package Idval::SysPlugins::Abc;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
+use strict;
+use warnings;
+no warnings qw(redefine);
 use Idval::Common;
 
 use base qw(Idval::Converter);
@@ -45,25 +48,10 @@ sub init
     # output files to have a '.flac' extension
     $self->set_param('output_ext_map', {'FLAC' => [qw( flac )]});
 
-    if ($name eq 'flac_dec')
-    {
-        $self->set_param('from', 'FLAC');
-        $self->set_param('to', 'WAV');
-    }
-    elsif ($name eq 'flac_enc')
-    {
-        $self->set_param('from', 'WAV');
-        $self->set_param('to', 'FLAC');
-    }
-    else
-    {
-        $self->set_param('from', 'OGG');
-        $self->set_param('to', 'FLAC');
-    }
-
-    my $path = $self->find_exe_path('flac');
-    $self->set_param('path', $path);
-    $self->set_param('is_ok', defined($path));
+    $self->set_param('path', 'not yet');
+    #$self->set_param('is_ok', defined($path));
+    $self->set_param('is_ok', 0);
+    $self->set_param('status', 'not implemented');
 }
 
 #

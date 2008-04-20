@@ -105,6 +105,11 @@ sub make_wanted
     my $typemap = Idval::TypeMap->new($providers);
     my %type_list;
     my %record_creators;
+
+    ###Handle sub-types here: so far the only one is MP3 IDV1 or V2 or ???
+    ###@type_list should only have extensions
+    ###record_creators needs to deal with sub-types
+
     # Get a list of all the kinds of files we can read with the currently installed
     # 'reads_tags' providers.
     foreach my $item ($providers->_get_providers('reads_tags'))
