@@ -17,6 +17,9 @@ package Idval::UserPlugins::Gettags;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
+use strict;
+use warnings;
+
 use Data::Dumper;
 use English;
 use Carp;
