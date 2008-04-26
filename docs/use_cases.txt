@@ -1,0 +1,40 @@
+Use cases
+
+* New user
+
+Brand new user, perhaps running from a live CD. Has a collection, wants to see what it does.
+
+** Actions
+
+Should be able to run a simple tutorial.
+
+help -- should work
+
+gettags <dirname> -- 
+
+store
+
+simple sync
+
+validate
+
+* Scenario: permanent derived tree
+
+User has source music, mostly in flac. Has a separate permanent
+derived tree in mp3 (aac) for online jukebox (or other player). Wants
+to move source or derived files around, without re-coding.
+
+Idv needs to be able to match up files. Possibly a sync operation
+could make a cache of this data. Perhaps each file can have an MD5
+hash on the contents (flac/ogg encoding does this).
+
+* Scenario: Wacky MP3 player
+
+Some MP3 players have severe restrictions on the names/numbers of
+files or directories, for instance, having only 10 single-level
+directories. Considering re-coding and transfer (USB 1) time, it may
+be desireable to intelligently rename and move files on the device
+rather than clear and start over.
+
+Capability in separate, special-purpose scripts? More smarts in sync
+(and sync config files)?

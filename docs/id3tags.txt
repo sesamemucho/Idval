@@ -1,0 +1,117 @@
+Generally speaking, there are two kinds of tags for mp3 files: id3v1 and id3v2.
+
+* id3v1
+
+** Very limited set of tags
+
+** Each tag has a limited range
+
+*** Comments are 30 bytes
+*** Genre is 1 byte, categories are predefined
+
+* id3v2
+
+** very large set of tags
+*** the set is still constrained
+By spec, and by available tools
+
+** Range of values of tags is effectively unlimited
+
+** There are some user-defined tags that could perhaps be used to create tags that are otherwise unavailable
+
+** Available tools do not handle all tags consistently
+
+*** Difference in handling T??? (Genre) tag between Tag.exe and id3v2.exe
+<put example here>
+
+* mp3 tags (id3v1, id3v2)
+
+** Files may (shall?) have both
+*** Unless only v1 writer is available
+
+** Source files may have either, both, or none
+
+If changed (by update), both types will be written
+
+It looks like the tag writers that write both kinds will automatically
+write id3v2 tags for the id3v1 tags (for instance, setting year=2001
+will also set TYER=2001.
+
+
+
+** Tag writers
+*** No need for v1 or v2 only
+*** V1 or V2-only writer may be the only one present
+*** Converter may need to decide if it can write tags, or if it needs to invoke a tag writer
+This is an optimization.
+I can choose not to support v1 only...
+
+
+* ogg/vorbis
+
+** unlimited range of tags
+
+** unlimited values of tags
+
+* flac (metaflac)
+
+** unlimited range of tags
+
+** unlimited values of tags
+
+* exif (jpeg, etc)
+
+** Most similar to id3v2
+
+* abc
+
+** Hack
+
+** set and range of tags is unlimited, but should be small
+
+* midi
+
+** Hack
+
+** set and range of tags is unlimited, but should be small
+
+* General
+
+** How to map tag names across tag types?
+
+*** For now, allow all names, but only those that match id3v2 tags will be written to mp3 files.
+Plus a few different names for the common set (year, track, artist, etc) (=id3v1)
+
+** There may be tags that idv does not want to deal with (yet).
+The picture tags in id3v2 are an example. This implies that idv should
+not erase all id3v2 tags (or vorbis or flac, or ...) This will become
+more interesting if idv ever starts resampling mp3 files, since it
+will have to figure out how to bring the tags over (maybe the
+conversion tool will do this automatically?).
+
+
+* Tag support conclusions
+
+** For mp3 files, both types will always be written
+
+** Tags supported by id3v1 will be translated (year, date => -year, etc.)
+
+** Tags with the same names as id3v2 tags (T...) will be put into mp3 files.
+
+** Standard Vorbis/Flac tag names that have corresponding id3v2 names will be translated.
+Phase 2?
+
+** Tags with other names will be inserted into TXXX tags for mp3 files (phase 2)
+
+** idv must know about standard genre list.
+This should be builtin as an option for validation. Genre values that
+are not v1 compliant must be handled specially (v1 option => 255,
+actual genre in v2. Actual genre should always be taken from v2 genre
+tag. Genre tag values should always be represented in data files as
+names (not numbers).
+
+If no converters barf on bogus genre names, this rule can be
+relaxed. Need to check lame. Yes: use "--add-id3v2" and
+"--ignore-tag-errors". With "--ignore-tag-errors", lame will set
+unrecognized genre to "other".
+
