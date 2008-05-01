@@ -124,6 +124,8 @@ sub encode
     my $status = Idval::Common::run($path,
                                     Idval::Common::mkarglist(
                                         "--quiet",
+                                        "--add-id3v2",
+                                        "--ignore-tag-errors",
                                         $record->get_value_as_arg('--tt ', 'TITLE'),
                                         $record->get_value_as_arg('--ta ', 'ARTIST'),
                                         $record->get_value_as_arg('--tl ', 'ALBUM'),
