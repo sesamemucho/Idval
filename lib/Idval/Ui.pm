@@ -138,12 +138,6 @@ sub make_wanted
         my $obj = $record_creators{$type};
 
         $obj->create_records($_, $File::Find::name, $class, $type, $srclist);
-
-#         $rec = Idval::Record->new($File::Find::name);
-#         $rec->add_tag('CLASS', $class);
-#         $rec->add_tag('TYPE', $type);
-
-#         $srclist->add($rec);
     };
 }
 

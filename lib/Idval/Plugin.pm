@@ -82,6 +82,7 @@ sub create_records
     my $rec = Idval::Record->new($path);
     $rec->add_tag('CLASS', $class);
     $rec->add_tag('TYPE', $type);
+    $rec->commit_tags();
 
     $srclist->add($rec);
 }

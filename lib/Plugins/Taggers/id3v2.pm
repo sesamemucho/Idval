@@ -67,8 +67,9 @@ sub read_tags
     my $record = shift;
     my $line;
     my $current_tag;
+    my $retval = 0;
 
-    return if !$self->query('is_ok');
+    return $retval if !$self->query('is_ok');
 
     my %v1tags;
     my %v2tags;
@@ -170,6 +171,10 @@ sub read_tags
             $record->add_tag($tag, defined($v1tags{$tag}) ? $v1tags{$tag} : '');
         }
     }
+
+    $record->commit_tags();
+
+    return $retval;
 }
 
 sub write_tags

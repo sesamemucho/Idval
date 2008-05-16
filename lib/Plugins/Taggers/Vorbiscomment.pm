@@ -20,7 +20,7 @@ package Idval::SysPlugins::Vorbiscomment;
 #use Idval::Setup;
 use strict;
 use warnings;
-no warnings qw(redefine);
+no  warnings qw(redefine);
 use Class::ISA;
 use Carp;
 
@@ -79,7 +79,6 @@ sub read_tags
         $line =~ m/Failed to open file as vorbis/ and do {
             print 'Getters::BadVorbis', $line, $filename, "\n";
             print "ref record: ", ref $record, "\n";
-            #delete $record;
             $retval = 1;
             last;
         };
@@ -95,6 +94,8 @@ sub read_tags
 
     #print "\nGot tag:\n";
     #print join("\n", $record->format_record());
+
+    $record->commit_tags();
 
     return $retval;
 }

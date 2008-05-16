@@ -20,7 +20,7 @@ package Idval::SysPlugins::MP3_Tag;
 #use Idval::Setup;
 use strict;
 use warnings;
-no warnings qw(redefine);
+no  warnings qw(redefine);
 use Class::ISA;
 use Carp;
 
@@ -72,7 +72,7 @@ sub read_tags
     my $current_tag;
     my $retval = 0;
 
-    return 0 if !$self->query('is_ok');
+    return $retval if !$self->query('is_ok');
 
     my $filename = $record->get_value('FILE');
 
@@ -88,6 +88,8 @@ sub read_tags
     $record->add_tag('GENRE', $genre);
 
     #print join("\n", $record->format_record());
+
+    $record->commit_tags();
 
     return $retval;
 }

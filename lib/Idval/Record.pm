@@ -24,6 +24,7 @@ use English '-no_match_vars';
 use Carp;
 
 use Idval::Ui;
+use Idval::Data::Genres;
 
 sub new
 {
@@ -41,7 +42,7 @@ sub _init
 
     if (ref $arg eq "Idval::Record")
     {
-        $self->set_name($arg->get_name());
+        $self->add_tag('FILE', $arg->get_name());
         foreach my $tag ($arg->get_all_keys())
         {
             $self->add_tag($tag, $arg->get_value($tag));
@@ -49,8 +50,10 @@ sub _init
     }
     else
     {
-        $self->set_name($arg);
+        $self->add_tag('FILE', $arg);
     }
+
+    $self->commit_tags();
 }
 
 # Return a subset of the tag/values so that
@@ -88,7 +91,7 @@ sub add_tag
     my $name = shift;
     my $value = shift;
 
-    $self->{$name} = $value;
+    $self->{TEMP}->{$name} = $value;
 }
 
 # Add a line of text to an already-existing tag.
@@ -103,7 +106,62 @@ sub add_to_tag
     $value =~ s/[\n\r]//g;
     return if $value =~ m/^\s*$/;
     $value =~ s/^\s*/    /;
-    $self->{$name} .= "\n$value";
+    $self->{TEMP}->{$name} .= "\n$value";
+}
+
+sub commit_tags
+{
+    my $self = shift;
+
+    my $class = exists($self->{CLASS}) ? $self->{CLASS} : '';
+    my %tags;
+
+    # XXX Special processing; use polymorphism eventually
+    if ($class eq 'MUSIC')
+    {
+        # Upcase tag names
+        map { $tags{uc($_)} = $self->{TEMP}->{$_} } keys %{$self->{TEMP}};
+
+        # So far, just normalize GENRE
+        if (exists($tags{GENRE}))
+        {
+            my $tagval = $tags{GENRE};
+            my $genre = '';
+            my $tcon = '';
+            if ($tagval =~ m/^[[:digit:]]+$/ && exists($Idval::Data::Genres::id2name{$tagval}))
+            {
+                $tcon = $genre = $Idval::Data::Genres::id2name{$tagval};
+            }
+            elsif (exists($Idval::Data::Genres::name2id{lc($tagval)}))
+            {
+                # All this hoorah is to get a consistent capitalization for the genre text
+                $tcon = $genre = $Idval::Data::Genres::id2name{$Idval::Data::Genres::name2id{lc($tagval)}};
+            }
+            else
+            {
+                $genre = 'Other';
+                $tcon = $tagval;
+            }
+
+            $tags{GENRE} = $genre;
+            $tags{TCON} = $tcon;
+        }
+    }
+    else
+    {
+        if (exists($self->{TEMP}))
+        {
+            %tags = %{$self->{TEMP}};
+        }
+        else
+        {
+            confess("No TEMP tags, but commit_tags was called");
+        }
+    }
+
+    map { $self->{$_} = $tags{$_} } keys %{$self->{TEMP}};
+
+    undef $self->{TEMP};
 }
 
 sub get_value

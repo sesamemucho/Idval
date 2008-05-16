@@ -62,7 +62,7 @@ sub read_tags
     my $current_tag;
     my $retval = 0;
 
-    return 0 if !$self->query('is_ok');
+    return $retval if !$self->query('is_ok');
 
     my $filename = $record->get_value('FILE');
     my $path = $self->query('path');
@@ -94,6 +94,8 @@ sub read_tags
 
     #print "\nGot tag:\n";
     #print join("\n", $record->format_record());
+
+    $record->commit_tags();
 
     return $retval;
 }

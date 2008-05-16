@@ -20,7 +20,7 @@ package Idval::SysPlugins::Tag;
 #use Idval::Setup;
 use strict;
 use warnings;
-no warnings qw(redefine);
+no  warnings qw(redefine);
 use Idval::Common;
 use Class::ISA;
 
@@ -74,8 +74,9 @@ sub read_tags
     my $record = shift;
     my $line;
     my $current_tag;
+    my $retval = 0;
 
-    return if !$self->query('is_ok');
+    return $retval if !$self->query('is_ok');
 
     my $filename = $record->get_value('FILE');
     my $path = $self->query('path');
@@ -93,6 +94,7 @@ sub read_tags
         next if $line =~ /^\s*$/;
 
         $line =~ m/^File has no known tags./ and do {
+            $retval = 1;
             last;
         };
 
@@ -113,6 +115,10 @@ sub read_tags
 
         $record->add_to_tag($current_tag, "$line");
     }
+
+    $record->commit_tags();
+
+    return $retval;
 }
 
 sub write_tags

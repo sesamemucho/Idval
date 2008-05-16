@@ -20,7 +20,7 @@ package Idval::SysPlugins::Abc;
 #use Idval::Setup;
 use strict;
 use warnings;
-no warnings qw(redefine);
+no  warnings qw(redefine);
 use Class::ISA;
 use Carp;
 
@@ -68,7 +68,7 @@ sub read_tags
 
     my $filename = $record->get_value('FILE');
 
-    return 0;
+    return $retval;
     
     my $path = $self->query('path');
 
@@ -99,6 +99,8 @@ sub read_tags
 
     #print "\nGot tag:\n";
     #print join("\n", $record->format_record());
+
+    $record->commit_tags();
 
     return $retval;
 }

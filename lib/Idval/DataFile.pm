@@ -335,6 +335,7 @@ sub parse_block
     }
 
     #print "Returning ", Dumper($rec);
+    $rec->commit_tags();
     return $rec;
 }
 
