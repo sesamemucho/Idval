@@ -91,7 +91,8 @@ sub add_tag
     my $name = shift;
     my $value = shift;
 
-    $self->{TEMP}->{$name} = $value;
+    #$self->{TEMP}->{$name} = $value;
+    $self->{$name} = $value;
 }
 
 # Add a line of text to an already-existing tag.
@@ -106,62 +107,66 @@ sub add_to_tag
     $value =~ s/[\n\r]//g;
     return if $value =~ m/^\s*$/;
     $value =~ s/^\s*/    /;
-    $self->{TEMP}->{$name} .= "\n$value";
+    #$self->{TEMP}->{$name} .= "\n$value";
+    $self->{$name} .= "\n$value";
 }
 
+# NO! See docs/id3tags.txt (idv should not automatically add TCON tag from GENRE tag)
 sub commit_tags
 {
-    my $self = shift;
+#     my $self = shift;
 
-    my $class = exists($self->{CLASS}) ? $self->{CLASS} : '';
-    my %tags;
+#     my $class = exists($self->{CLASS}) ? $self->{CLASS} : '';
+#     my %tags;
 
-    # XXX Special processing; use polymorphism eventually
-    if ($class eq 'MUSIC')
-    {
-        # Upcase tag names
-        map { $tags{uc($_)} = $self->{TEMP}->{$_} } keys %{$self->{TEMP}};
+#     # XXX Special processing; use polymorphism eventually
+#     if ($class eq 'MUSIC')
+#     {
+#         # Upcase tag names
+#         map { $tags{uc($_)} = $self->{TEMP}->{$_} } keys %{$self->{TEMP}};
 
-        # So far, just normalize GENRE
-        if (exists($tags{GENRE}))
-        {
-            my $tagval = $tags{GENRE};
-            my $genre = '';
-            my $tcon = '';
-            if ($tagval =~ m/^[[:digit:]]+$/ && exists($Idval::Data::Genres::id2name{$tagval}))
-            {
-                $tcon = $genre = $Idval::Data::Genres::id2name{$tagval};
-            }
-            elsif (exists($Idval::Data::Genres::name2id{lc($tagval)}))
-            {
-                # All this hoorah is to get a consistent capitalization for the genre text
-                $tcon = $genre = $Idval::Data::Genres::id2name{$Idval::Data::Genres::name2id{lc($tagval)}};
-            }
-            else
-            {
-                $genre = 'Other';
-                $tcon = $tagval;
-            }
+#         # So far, just normalize GENRE
+#         if (exists($tags{GENRE}))
+#         {
+#             my $tagval = $tags{GENRE};
+#             my $genre = '';
+#             # Don't change TCON tag if it already exists
+#             my $tcon = exists($tags{TCON}) ? $tags{TCON} : '';
+#             if ($tagval =~ m/^[[:digit:]]+$/ && exists($Idval::Data::Genres::id2name{$tagval}))
+#             {
+#                 $tcon = $genre = $Idval::Data::Genres::id2name{$tagval};
+#             }
+#             elsif (exists($Idval::Data::Genres::name2id{lc($tagval)}))
+#             {
+#                 # All this hoorah is to get a consistent capitalization for the genre text
+#                 $tcon = $genre = $Idval::Data::Genres::id2name{$Idval::Data::Genres::name2id{lc($tagval)}};
+#             }
+#             else
+#             {
+#                 $genre = 'Other';
+#                 $tcon = $tagval;
+#             }
 
-            $tags{GENRE} = $genre;
-            $tags{TCON} = $tcon;
-        }
-    }
-    else
-    {
-        if (exists($self->{TEMP}))
-        {
-            %tags = %{$self->{TEMP}};
-        }
-        else
-        {
-            confess("No TEMP tags, but commit_tags was called");
-        }
-    }
+#             $tags{GENRE} = $genre;
+#             $tags{TCON} = $tcon;
+#         }
+#     }
+#     else
+#     {
+#         if (exists($self->{TEMP}))
+#         {
+#             %tags = %{$self->{TEMP}};
+#         }
+#         else
+#         {
+#             confess("No TEMP tags, but commit_tags was called");
+#         }
+#     }
 
-    map { $self->{$_} = $tags{$_} } keys %{$self->{TEMP}};
+#     map { $self->{$_} = $tags{$_} } keys %{$self->{TEMP}};
 
-    undef $self->{TEMP};
+#     undef $self->{TEMP};
+#     delete $self->{TEMP};
 }
 
 sub get_value
@@ -236,6 +241,7 @@ sub format_record
         next if $tag eq '__LINES';
         next if $tag eq '__NEXT_LINE';
 
+        confess "Uninitialized value for tag \"$tag\"\n" if !defined($self->get_value($tag));
         push(@output, "$tag = " . $self->get_value($tag));
         $lines{$tag} = $start_line++ if defined $start_line;
     }

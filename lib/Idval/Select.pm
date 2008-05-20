@@ -104,6 +104,10 @@ our %compare_function =
                        STR => \&Idval::Select::cmp_ge_str},
               NAME => {NUM => 'Idval::Select::cmp_ge_num',
                        STR => 'Idval::Select::cmp_ge_str'}},
+     'passes' => {FUNC => {NUM => \&Idval::Select::passes,
+                       STR => \&Idval::Select::passes},
+              NAME => {NUM => 'Idval::Select::passes',
+                       STR => 'Idval::Select::passes'}},
      );
 
 our %assignments =
@@ -130,6 +134,8 @@ sub cmp_le_str { return ($_[0] le $_[1]); }
 sub cmp_ge_str { return ($_[0] ge $_[1]); }
 
 sub cmp_has_str { return (index("$_[0]", "$_[1]") != -1); }
+
+sub passes { my $func = $_[0]; return (eval {&$func(split(/,/, $_[1]))} != 0 ); }
 
 # Operators that are *not* composed of metacharacters (such as 'gt',
 # 'le', etc.) need to have spaces around them, so (say) "file=goo"

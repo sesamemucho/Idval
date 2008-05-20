@@ -104,6 +104,9 @@ Phase 2?
 ** Tags with other names will be inserted into TXXX tags for mp3 files (phase 2)
 
 ** idv must know about standard genre list.
+GENRE tag should be id3v1 compliant.
+TCON tag should be used for id3v2 compliance.
+
 This should be builtin as an option for validation. Genre values that
 are not v1 compliant must be handled specially (v1 option => 255,
 actual genre in v2. Actual genre should always be taken from v2 genre
@@ -115,3 +118,9 @@ relaxed. Need to check lame. Yes: use "--add-id3v2" and
 "--ignore-tag-errors". With "--ignore-tag-errors", lame will set
 unrecognized genre to "other".
 
+** idv should not automatically add TCON tag from GENRE tag
+There is no sane way to do this without either 1) allowing
+inconsistency, if user changes on or the other tag later, or 2)
+overwriting user-changed data.
+
+This kind of massaging should be handled by a script.
