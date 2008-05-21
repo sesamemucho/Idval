@@ -1,5 +1,11 @@
 
-sub foofah
+%Idval::Validate::CheckFunctions = (foofah => 1,
+                                    goombah => 1,
+    );
+
+my $perror;
+
+sub Idval::Validate::foofah
 {
     my $a = shift;
     my $b = shift;
@@ -9,17 +15,33 @@ sub foofah
     return 0;
 }
 
-sub goombah
+sub Idval::Validate::goombah
 {
     my $a = shift;
     my $b = shift;
 
     print "Goombah has \"$a\" and \"$b\"\n";
 
+    $perror = "Goo!";
+
     return 1;
 }
 
-sub passes { my $func = $_[0]; return (eval {&$func(split(/,/, $_[1]))} != 0 ); }
+sub perror
+{
+    my $retval = $perror;
+
+    $perror = '';
+
+    return $retval;
+}
+
+sub passes { my $funcname = $_[0];
+             return undef unless exists($Idval::Validate::CheckFunctions{$funcname});
+             my $func = "Idval::Validate::$funcname";
+             return (&$func(split(/,/, $_[1])) != 0 ); }
+#sub passes { my $func = 'Idval::Validate::' . $_[0]; return (&$func(split(/,/, $_[1])) != 0 ); }
+#sub passes { my $func = $_[0]; return (eval {&$func(split(/,/, $_[1]))} != 0 ); }
 
 
 while(1)
@@ -38,6 +60,9 @@ while(1)
     print "\n";
 
     print "result: ", passes($subr, $args), "\n";
+
+    print "perror: ", perror(), "\n";
+
 }
 
 

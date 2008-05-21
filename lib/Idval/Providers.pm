@@ -484,7 +484,7 @@ sub _add_provider
     $self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name} = $cnv;
     if ($cnv->query('is_ok'))
     {
-        print STDERR "Adding \"$prov_type\" provider \"$name\" from package \"$package\". src: \"$src\", dest: \"$dest\", weight: \"$weight\"\n";
+        #print STDERR "Adding \"$prov_type\" provider \"$name\" from package \"$package\". src: \"$src\", dest: \"$dest\", weight: \"$weight\"\n";
         $self->{GRAPH}->{$prov_type}->add_edge($src, $package . '::' . $name, $dest, $weight);
     }
     else

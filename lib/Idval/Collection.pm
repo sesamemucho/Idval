@@ -36,11 +36,20 @@ sub _init
     my $argref = shift || {};
 
     my $contents    = exists $argref->{contents} ? $argref->{contents} : '';
-    $self->{SOURCE} = exists $argref->{source}   ? $argref->{source}   : 'UNKNOWN';
+    $self->{SOURCE} = ! exists $argref->{source} ? 'UNKNOWN'
+                    : $argref->{source}          ? $argref->{source}
+                    : 'UNKNOWN'
+                    ;
 
     $self->{CREATIONDATE} = scalar(localtime());
 
-    if ($contents and ref($contents) eq 'HASH')
+    if ($contents and ref($contents) eq 'Idval::Collection')
+    {
+        $self->{SOURCE} = $contents->{SOURCE};
+        $self->{CREATIONDATE} = $contents->{CREATIONDATE};
+        $self->{RECORDS} = $contents->{RECORDS};
+    }
+    elsif ($contents and ref($contents) eq 'HASH')
     {
         $self->{RECORDS} = $contents;
     }

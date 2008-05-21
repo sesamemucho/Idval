@@ -261,7 +261,7 @@ sub parse
     my $self = shift;
 
     my $datafile = $self->{DATAFILE};
-    my $collection = Idval::Collection->new();
+    my $collection = Idval::Collection->new({'source' => $datafile});
     if (not $datafile)
     {
         $self->{BLOCKS} = $collection;
@@ -311,7 +311,7 @@ sub parse_block
 
     foreach my $line (@{$blockref})
     {
-        if ($line =~ m/^([^=\s]+)\s*=\s*(.*)$/)
+        if ($line =~ m/\A([^=\s]+)\s*=\s*(.*)\z/ms)
         {
             $hash{$1} = $2;
         }

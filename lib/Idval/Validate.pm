@@ -25,8 +25,37 @@ use Carp;
 
 use Idval::Common;
 use Idval::Constants;
+use Idval::Data::Genres;
 
 use base qw( Idval::Config );
+
+my $perror = '';
+
+# Is this a valid function name for the 'passes' validation operand?
+sub CheckFunction
+{
+    my $func = shift;
+
+    return 1 if $func =~ m/^(Check_Genre_for_id3v1)$/;
+
+    $perror = "Unknown validation function \"$func\"";
+}
+
+sub perror
+{
+    my $retval = $perror;
+
+    $perror = '';
+
+    return $retval;
+}
+
+sub Check_Genre_for_id3v1
+{
+    my $tagvalue = lc(shift);
+
+    return exists($Idval::Data::Genres::name2id{$tagvalue});
+}
 
 sub new
 {

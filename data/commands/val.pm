@@ -84,7 +84,7 @@ sub each_item
     my $key = shift;
     my $record = $hash->{RECORDS}->{$key};
     my $tagname;
-    my $tagvalue;
+    my $checkvalue;
     my $tag;
     my $cmp_result = 1;
     my $cmp_op;
@@ -118,14 +118,21 @@ sub each_item
         $cmpfunc = $Idval::Select::compare_function{$cmp_op}->{FUNC}->{$type};
         #print STDERR "Comparing \"", $record->get_value($tagname), "\" \"$cmp_op\" \"$cmp_value\" resulted in ",
         #             &$cmpfunc($record->get_value($tagname), $cmp_value) ? "True\n" : "False\n";
+        $checkvalue = $record->get_value($tagname);
         no strict 'refs';
-        $cmp_result = &$cmpfunc($record->get_value($tagname), $cmp_value);
+        $cmp_result = &$cmpfunc($checkvalue, $cmp_value);
         use strict;
-        if (!$cmp_result)
+        if (!defined($cmp_result))
         {
             silent_q(sprintf "%s:%d: error: %s\n", $filename,
                      exists $lines->{$tagname} ? $lines->{$tagname} : "unknown tag ($tagname)",
-                     $gripe);
+                     sprintf Idval::Validate::perror(), $checkvalue, $tagname);
+        }
+        elsif (!$cmp_result)
+        {
+            silent_q(sprintf "%s:%d: error: %s\n", $filename,
+                     exists $lines->{$tagname} ? $lines->{$tagname} : "unknown tag ($tagname)",
+                     sprintf $gripe, $checkvalue, $tagname);
             last;
         }
     }

@@ -176,7 +176,7 @@ sub get_source_from_file
     {
         $reclist = eval {retrieve(Idval::Common::expand_tilde($data_store))};
         croak "Tag info cache is corrupted; you will need to regenerate it (with 'gettags'):\n$@\n" if $@;
-        return Idval::Collection->new({contents => $reclist, source => 'STORED DATA CACHE'});
+        return Idval::Collection->new({contents => $reclist});
     }
 
 }
@@ -200,7 +200,8 @@ sub put_source_to_file
         my $path = dirname(Idval::Common::expand_tilde($data_store_file));
         mkpath($path) unless -d $path;
         #print "Storing data to ",  Idval::Common::expand_tilde($data_store_file), "\n";
-        store($reclist, Idval::Common::expand_tilde($data_store_file));
+        #store($reclist, Idval::Common::expand_tilde($data_store_file));
+        store($datastore, Idval::Common::expand_tilde($data_store_file));
         #print "Finished storing data\n";
     }
 
