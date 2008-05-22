@@ -187,10 +187,9 @@ sub parse_block
 
         if ($current_tag eq '')
         {
-            Idval::Common::get_logger()->log_error("FileParse::BadContinuation", $line);
-            #croak "A continuation line was found, but nothing to continue from!\nA configuration ".
-            #    "assignment must start at the beginning of a line (no spaces).\nThe line in " .
-            #        "question is: \"$line\"\n";
+            croak "A continuation line was found, but nothing to continue from!\nA configuration ".
+                "assignment must start at the beginning of a line (no spaces).\nThe line in " .
+                "question is: \"$line\"\n";
         }
 
         # Otherwise, it must be a continuation

@@ -185,8 +185,7 @@ sub run
     #$name = exe_name($name);
     if ($no_run)
     {
-        #$log->quiet("$name $cmdargs\n");
-        printf STDERR "$name $cmdargs\n";
+        $log->quiet($DBG_PROCESS, "$name $cmdargs\n");
         return 0;
     }
     else
@@ -196,9 +195,7 @@ sub run
         $status = $?;
         if ($status)
         {
-            printf STDERR "Error $status from: \"$name $cmdargs\"\nReturned \"$retval\"\n";
-            #$log->quiet("$name $cmdargs\n");
-            #$log->quiet("$retval\n");
+            $log->quiet($DBG_PROCESS, "Error $status from: \"$name $cmdargs\"\nReturned \"$retval\"\n");
         }
         #elsif (! $log->log_level_is_under($Idval::Logger::DEBUG1))
         #{
@@ -278,8 +275,6 @@ sub get_common_object
     my $key = shift;
 
     #print Dumper($common_objs{$key}) if $key eq "help_file";
-    # $log->log_error('Common::UnknownRegistration', $key) unless exists($common_objs{$key});
-
     croak "Common object \"$key\" not found." unless exists($common_objs{$key});
     return $common_objs{$key};
 }
@@ -374,27 +369,5 @@ sub prefer_v2tags
 #     return $value;
 # }
 
-
-# # sub getfile
-# # {
-# #     my $filename = shift;
-# #     my $error_id = shift;
-# #     my $result = '';
-
-# #     $filename = '' if (!defined($filename));
-# #     if ($filename)
-# #     {
-# #         open(FH, '<', $filename) ||
-# #             $log->log_error($error_id, $filename, $!);
-# #         {
-# #             local $/;
-# #             $result = <FH>;
-# #         }
-
-# #         close(FH);
-# #     }
-
-# #     return $result;
-# # }
 
 1;

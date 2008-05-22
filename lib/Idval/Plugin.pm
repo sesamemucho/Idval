@@ -41,7 +41,6 @@ sub new
     $self->{LOG} = Idval::Common::get_logger();
     $self->{PARAMS} = {};
     $self->{CONFIG} = $config;
-    #print STDERR "In Plugin with: \"$name\"\n";
     $self->{NAME} = $name;
     return $self;
 }
@@ -110,7 +109,6 @@ sub get_dest_filename
 sub _call_pod2usage
 {
     my $self = shift;
-    print STDERR "call_pod2usage: input = <", join(";", @_), ">\n";
     # If the next argument starts with a '-', that's an argument to pod2usage.
     # Otherwise, it's a string that we should use as an input to pod2usage.
     my $input = $_[0] =~ m/^-/ ? $self->query('pod_input') : shift;
@@ -131,7 +129,6 @@ sub _call_pod2usage
 sub get_short_description
 {
     my $self = shift;
-    print STDERR "Hello from get_short_description\n";
     my $usage = $self->_call_pod2usage(-verbose => 99, -sections => "NAME");
 
     # Now trim it

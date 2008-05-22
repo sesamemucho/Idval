@@ -212,15 +212,6 @@ sub put_source_to_file
         my $out = Idval::FileIO->new($fname, '>:utf8') or croak "Can't open $fname for writing: $ERRNO\n";
 
         print $out join("\n", @{$datastore->stringify()});
-#         print $out "# IDValidator Tag File (DO NOT REMOVE THIS LINE)\n";
-#         print $out "# Created on: ", scalar(localtime()), "\n";
-#         print $out "# Source: $source_name\n\n";
-#         foreach my $key (sort keys %{$reclist})
-#         {
-#             print $out join("\n", $reclist->{$key}->format_record());
-#             print $out "\n";
-#         }
-
         $out->close();
     }
 }

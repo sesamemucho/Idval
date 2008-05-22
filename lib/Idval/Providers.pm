@@ -588,11 +588,11 @@ sub get_plugin_cb
     #print STDERR "eval result is: $@\n" if $@;
     if (defined $status)
     {
-        #print STDERR "Status is <$status>\n";
+        $self->{LOG}->verbose($DBG_STARTUP, "Status is <$status>\n");
     }
     else
     {
-        print STDERR "Error return from \"$_\"\n";
+        $self->{LOG}->info($DBG_STARTUP, "Error return from \"$_\"\n");
     }
     if (not ($status or $! or $@))
     {

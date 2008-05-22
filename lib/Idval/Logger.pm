@@ -24,9 +24,6 @@ use IO::Handle;
 use Carp qw(croak cluck);
 use POSIX qw(strftime);
 
-#use Idval::CommonArgs;
-use Idval::ErrorMsg;
-
 use Idval::Constants;
 
 $Carp::CarpLevel = 1;
@@ -313,32 +310,6 @@ sub _fatal(@)
     else
     {
         Carp::croak('fatal error');
-    }
-}
-
-sub log_error(@)
-{
-    my $self = shift;
-
-    if ($self->{XML})
-    {
-        my $msg_ref = Idval::ErrorMsg::xml_msg(@_);
-        print "<LOGMESSAGE>\n";
-        print "<LEVEL>", $msg_ref->{LEVEL}, "</LEVEL>\n";
-        print "<SOURCE>" . caller(1) . "</SOURCE>\n";
-        print "<TIME>", strftime("%y-%m-%d %H:%M:%S ", localtime), "</TIME>\n";
-        print "<MSG>", $msg_ref->{MSG}, "</MSG>\n";
-        print "<HELP>", $msg_ref->{HELP}, "</HELP>\n";
-        print "</LOGMESSAGE>\n";
-        Carp::croak('fatal error');
-    }
-    else
-    {
-        my ($level, $msg) = Idval::ErrorMsg::make_msg(@_);
-
-        # level has been verified in Idval::ErrorMsg
-        $self->_warn($msg) if $level eq "warn";
-        $self->_fatal($msg) if $level eq "fatal";
     }
 }
 

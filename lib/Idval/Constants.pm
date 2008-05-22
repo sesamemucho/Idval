@@ -27,6 +27,7 @@ our @EXPORT = qw(
             $DBG_PROCESS
             $DBG_CONFIG
             $DBG_PROVIDERS
+            $DBG_CONVERT
             $DBG_ALL
 
             $SILENT
@@ -44,6 +45,7 @@ our $DBG_STARTUP   = 1;
 our $DBG_PROCESS   = 2;
 our $DBG_CONFIG    = 4;
 our $DBG_PROVIDERS = 8;
+our $DBG_CONVERT   = 16;
 
 # ...
 

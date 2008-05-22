@@ -115,7 +115,8 @@ sub convert
             push(@temporary_files, $to_file);
         }
 
-        #print STDERR "Converting ", $record->get_name(), " to $to_file using ", $conv->query('name'), "\n";
+        $self->{LOG}->verbose($DBG_CONVERT, 
+                              "Converting ", $record->get_name(), " to $to_file using ", $conv->query('name'), "\n");
         $retval = $conv->convert($record, $to_file);
         last if $retval != 0;
 

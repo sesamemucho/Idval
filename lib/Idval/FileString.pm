@@ -408,7 +408,7 @@ sub idv_mkdir
     }
     elsif ($status == 1)
     {
-        # This is guaranteed to be sucessfull
+        # This is guaranteed to be sucessful
         #print STDERR "restpath is \"$restpath\"\n";
         $retval = _make_path($dpath, $restpath);
     }
