@@ -34,7 +34,7 @@ use Idval::Common;
 # Keys are assumed to be upper case. Value comparisons are case-insensitive.
 #
 
-our %compare_function =
+my %compare_function =
     (
      '==' => {FUNC => {NUM => \&Idval::Select::cmp_eq_num,
                        STR => \&Idval::Select::cmp_eq_str},
@@ -139,6 +139,14 @@ sub passes { my $funcname = $_[1];
              return undef unless Idval::Validate::CheckFunction($funcname);
              my $func = \&{"Idval::Validate::$funcname"};
              return (&$func(split(/,/, $_[0])) != 0 ); }
+
+sub get_compare_function
+{
+    my $operand = shift;
+    my $func_type = shift;
+
+    return $compare_function{$operand}->{FUNC}->{$func_type};
+}
 
 # Operators that are *not* composed of metacharacters (such as 'gt',
 # 'le', etc.) need to have spaces around them, so (say) "file=goo"

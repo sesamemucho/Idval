@@ -21,7 +21,9 @@ use strict;
 use warnings;
 
 use base qw(Exporter);
-    
+
+## no critic (ProhibitAutomaticExportation)
+
 our @EXPORT = qw(
             $DBG_STARTUP
             $DBG_PROCESS

@@ -1,6 +1,9 @@
 package ValidateTest;
 use base qw(Test::Unit::TestCase);
 
+use strict;
+use warnings;
+
 use Benchmark qw(:all);
 use Data::Dumper;
 use FindBin;
@@ -10,7 +13,7 @@ use Idval::Common;
 
 use AcceptUtils;
 
-our $data_dir = $main::topdir . '/' . "tsts/accept_data/ValidateTest";
+my $data_dir = $main::topdir . '/' . "tsts/accept_data/ValidateTest";
 
 sub new {
     my $self = shift()->SUPER::new(@_);
@@ -40,11 +43,9 @@ sub tear_down {
 sub test_validation_with_one_error
 {
     my $self = shift;
-    my $expected_result =<<EOF;
-STORED DATA CACHE:\\d+: error: Wrong date!
-EOF
+    my $expected_result = "STORED DATA CACHE:\\d+: error: Wrong date!\n";
 
-    $taglist = AcceptUtils::mktree("$data_dir/val1.dat", "$data_dir/t/d1", $self->{IDVAL});
+    my $taglist = AcceptUtils::mktree("$data_dir/val1.dat", "$data_dir/t/d1", $self->{IDVAL});
 
     my $io = IO::String->new();
     my $old_logfh = $self->{LOG}->accessor('LOG_OUT');
@@ -53,6 +54,8 @@ EOF
     $self->{LOG}->accessor('LOG_OUT', $old_logfh);
 
     $self->assert_matches(qr/$expected_result/, ${$io->string_ref});
+
+    return;
 }
 
 1;

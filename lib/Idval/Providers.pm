@@ -61,6 +61,12 @@ sub _init
     $self->{NUM_PROVIDERS} = 0;
     $self->{PROVIDERS} = {};
     $self->{LOG} = Idval::Common::get_logger();
+    *verbose = Idval::Common::make_custom_logger({level => $VERBOSE, 
+                                                  debugmask => $DBG_STARTUP,
+                                                  decorate => 1}) unless defined(*verbose{CODE});
+    *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
+                                                  debugmask => $DBG_STARTUP,
+                                                  decorate => 1}) unless defined(*chatty{CODE});
 
     map{$self->{GRAPH}->{$_} = Idval::Graph->new()} @provider_types;
 
@@ -490,7 +496,7 @@ sub _add_provider
     else
     {
         my $status = $cnv->query('status') ? $cnv->query('status') : 'no status';
-        $self->{LOG}->verbose($DBG_STARTUP, "Provider \"$name\" is not ok: status is: $status\n");
+        verbose($DBG_STARTUP, "Provider \"$name\" is not ok: status is: $status\n");
     }
 }
 
@@ -588,11 +594,11 @@ sub get_plugin_cb
     #print STDERR "eval result is: $@\n" if $@;
     if (defined $status)
     {
-        $self->{LOG}->verbose($DBG_STARTUP, "Status is <$status>\n");
+        verbose($DBG_STARTUP, "Status is <$status>\n");
     }
     else
     {
-        $self->{LOG}->info($DBG_STARTUP, "Error return from \"$_\"\n");
+        info($DBG_STARTUP, "Error return from \"$_\"\n");
     }
     if (not ($status or $! or $@))
     {

@@ -37,7 +37,7 @@ use Idval::FileString;
 our $GLOB_NOCASE = File::Glob::GLOB_NOCASE;
 our $GLOB_TILDE  = File::Glob::GLOB_TILDE;
 
-our $implementation;
+my $implementation;
 
 sub set_imp
 {
@@ -46,16 +46,13 @@ sub set_imp
 
     croak "Unrecognized service name \"$service_name\" in Idval::FileIO" if $service_name ne "io_type";
 
-#     $implementation = $service eq "FileSystem" ? "IO::File" :
-#                       $service eq "FileString" ? "FileString" :
-#                       croak "Unrecognized service \"$service\" for service name io_type";
     $implementation = $service eq "FileSystem" ? "Idval::FileSystem" :
                       $service eq "FileString" ? "Idval::FileString" :
                       croak "Unrecognized service \"$service\" for service name io_type";
 
+    return;
 }
 
-#INIT { Idval::ServiceLocator::register_callback('io_type', 'FileIO', \&set_imp); }
 BEGIN { Idval::ServiceLocator::register_callback('io_type', 'FileIO', 'set_imp', \&set_imp); }
 
 sub AUTOLOAD
@@ -83,9 +80,9 @@ sub AUTOLOAD
     }
 
     my $what = $AUTOLOAD;
-    (my $val = $what) =~ s/.*:://;
+    (my $val = $what) =~ s/.*:://x;
     #print "AUTOLOADING: \"$what\" using \"$implementation\"\n";
-    return if $val =~ m/^[A-Z]*$/;
+    return if $val =~ m/^[A-Z]*$/x;
 
     my $sub = "${implementation}::${val}";
     #print "Calling \"$sub\" with \"", join(" ", @_), "\"\n";

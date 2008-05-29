@@ -57,8 +57,8 @@ sub query_user
     my $dispdef = defined $def ? "[$def] " : " ";
     $def = defined $def ? $def : "";
 
-    local $|=1;
-    local $\;
+    local $| = 1;
+    local $\ = undef;
     my $ans;
     if ($auto_choose_def)
     {
@@ -78,7 +78,7 @@ sub yesno
 {
     my $result = query_user(@_);
 
-    return $result =~ m/^y/i;
+    return $result =~ m/^y/ix;
 }
 
 sub init
@@ -90,7 +90,7 @@ sub init
     my $value;
     my $answer;
 
-    prompt(qq[
+    my $prompt1 = <<"END_OF_PROMPT1";
 
 First time setup:
 
@@ -103,17 +103,19 @@ to this question, and I'll try to set it automatically. If you want
 to revisit the configuration later, use the command 'conf init' at the
 idv prompt.
 
-]);
+END_OF_PROMPT1
+    prompt($prompt1);
 
     my $mc = yesno("Are you ready for manual configuration?", "yes", 0);
     my $auto_def = $mc ? 0 : 1;
 
-    $mc && prompt(qq[
+    my $prompt1 = <<"END_OF_PROMPT2";
 
 idv can use a file to store the metadata information between runs. It
-isn't necessary, but it is convenient and saves quite a bit of time.
+isn\'t necessary, but it is convenient and saves quite a bit of time.
 
-]);
+END_OF_PROMPT2
+   $mc && prompt($prompt2);
 
     $value = $config->get_single_value('use_cache_file', $selects, 1);
     $default = $value ? 'yes' : 'no';
@@ -128,7 +130,7 @@ isn't necessary, but it is convenient and saves quite a bit of time.
            "use cache file: $answer\n");
 
 
-
+    return;
 }
 
 1;

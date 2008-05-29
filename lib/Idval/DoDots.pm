@@ -23,15 +23,15 @@ use warnings;
 use Idval::Common;
 use Idval::Constants;
 
-our (
-    $dotnum,
-    $log,
-    );
+my $dotnum;
+my $log;
 
 sub init
 {
     $dotnum = 0;
     $log = Idval::Common::get_logger();
+
+    return;
 }
 
 sub dodots
@@ -42,11 +42,15 @@ sub dodots
     $log->info_q($DBG_PROCESS, "$char");
     $log->info_q($DBG_PROCESS, " ") if $dotnum % 4 == 0;
     $log->info_q($DBG_PROCESS, "\n") if $dotnum % 60 == 0;
+
+    return;
 }
 
 sub finish
 {
     $log->info_q($DBG_PROCESS, "\n") if $dotnum % 60 != 0;
+
+    return;
 }
 
 1;

@@ -31,7 +31,7 @@ use Idval::FileIO;
 use Idval::Select;
 use IO::String;
 
-our $octothorpe = "\x23";
+my $octothorpe = "\x23";
 
 # Given a reader object and one or more IO::Handles, parse
 # the input file(s) and call reader to handle the results.
@@ -80,6 +80,8 @@ sub _init
 #     $self->{OP_REGEX_WITH_SPACES} = qr/$op_string_with_spaces/;
 
     #print STDERR Dumper($self->{FILES});
+
+    return;
 }
 
 sub parse
@@ -92,22 +94,22 @@ sub parse
 
     foreach my $fh (@{$self->{FILES}})
     {
-        $text .= "\n" . do { local $/; <$fh> } . "\n";
+        $text .= "\n" . do { local $/ = undef; <$fh> } . "\n";
         $fh->close();
     }
 
     croak "Need a file\n" unless $text; # We do need at least one config file
 
-    $text =~ s/${octothorpe}.*$//mg;      # Remove comments
-    $text =~ s/^\n+//s;         # Trim off newline(s) at start
-    $text =~ s/\n+$//s;         # Trim off newline(s) at end
+    $text =~ s/${octothorpe}.*$//mgx;      # Remove comments
+    $text =~ s/^\n+//sx;         # Trim off newline(s) at start
+    $text =~ s/\n+$//sx;         # Trim off newline(s) at end
 
     $self->{BLOCKS} = $reader->collection_type() eq 'HASH' ? {} : [];
     # Blocks are separated by one or more blank lines
     foreach my $block ($reader->get_blocks($text))
     {
-        my $b = $self->parse_block($block);
-        $reader->add_block($self->{BLOCKS}, $b);
+        my $temp_block = $self->parse_block($block);
+        $reader->add_block($self->{BLOCKS}, $temp_block);
     }
 
 #     # If we didn't find any blocks, something is very wrong
@@ -135,23 +137,24 @@ sub parse_block
     $reader->start_block($text);
 
     #print STDERR "Block; parsing \"$text\"\n";
-    foreach my $line (split(/\n/, $text))
+    foreach my $line (split(/\n/x, $text))
     {
         chomp $line;
-        $line =~ s{\r}{}g;
-        $line =~ s/${octothorpe}.*$//;      # Remove comments
-        next if $line =~ m/^\s*$/;
+        $line =~ s{\r}{}gx;
+        $line =~ s/${octothorpe}.*$//x;      # Remove comments
+        next if $line =~ m/^\s*$/x;
 
-        $line =~ m{^([[:alnum:]]\w*)($op_regex)(\S.*)\s*$}imx and do {
+        if ($line =~ m{^([[:alnum:]]\w*)($op_regex)(\S.*)\s*$}imx)
+        {
             #print STDERR "Got plain tag of \"$1\" \"$2\" \"$3\" \n";
             $current_tag = $1;
             $current_op = $2;
             $value = $3;
 
-            $current_op =~ s/ //g;
+            $current_op =~ s/ //gx;
             $reader->store_value($current_op, $current_tag, $value);
             next;
-        };
+        }
 
 #         $line =~ m{^([[:alnum:]]\w*)\s+($op_regex_spaces)\s+(\S.*)\s*$}imx and do {
 #             #print STDERR "Got plain tag of \"$1\" \"$2\" \"$3\" \n";
@@ -169,13 +172,14 @@ sub parse_block
 #             next;
 #         };
 
-        $line =~ m{^([[:alnum:]]\w*)\s*\+=\s*(\S.*)\s*$}imx and do {
+        if ($line =~ m{^([[:alnum:]]\w*)\s*\+=\s*(\S.*)\s*$}imx)
+        {
             #print STDERR "Got add-on tag of \"$1\" += \"$2\"\n";
             $reader->store_value('+=', $1, $2);
             $current_tag = $1;
             $current_op = '+=';
             next;
-        };
+        }
 
 #         $line =~ m{^($kw_set)\s+([[:alnum:]]\w*)\s*(\S+)\s*(\S.*)\s*$}imx and do {
 #             #print STDERR "Got keyword of \"$1 $2\" $3 \"$4\"\n";
@@ -193,7 +197,7 @@ sub parse_block
         }
 
         # Otherwise, it must be a continuation
-        $line =~ s/^\s+//;
+        $line =~ s/^\s+//x;
         $reader->store_value($current_op, $current_tag, $line);
 
      }

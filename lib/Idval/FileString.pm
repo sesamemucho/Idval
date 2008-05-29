@@ -34,11 +34,11 @@ use IO::String;
 
 use base qw(IO::String);
 
-our $tree = {};
-our $pwd = '/';
-our $cwd = $tree;
-our $cb;
-our @curdir;
+my $tree = {};
+my $pwd = '/';
+my $cwd = $tree;
+our $cb; ## no critic (ProhibitPackageVars)
+my @curdir;
 
 # This seems to be needed for AUTOLOAD to work
 sub new
@@ -49,7 +49,7 @@ sub new
 
     my $io;
 
-    if ($filename && ($mode && ($mode =~ m/^[r<]/)) && idv_test_exists($filename))
+    if ($filename && ($mode && ($mode =~ m/^[r<]/x)) && idv_test_exists($filename))
     {
         $io = IO::String->new(idv_get_file($filename));
     }
@@ -62,22 +62,24 @@ sub new
     return $io;
 }
 
-sub open
+sub open ## no critic (ProhibitBuiltinHomonyms)
 {
     my $self = shift;
     my $filename = shift;
     my $mode = shift;
     my $perms = shift;
 
-    if ($mode && ($mode =~ m/^r/))
+    if ($mode && ($mode =~ m/^r/x))
     {
         if (!idv_test_exists($filename))
         {
-            $self->open(undef);
+            return $self->open(undef);
         }
 
-        $self->open(idv_get_file($filename));
+        return $self->open(idv_get_file($filename));
     }
+    
+    return;
 }
 
 #XXX Need to change directories to ...->{dirname}->{NAME} = "dirname"
@@ -124,7 +126,7 @@ sub open
 # }
 
 
-sub _idv_find_impl
+sub _idv_find_impl ## no critic (RequireFinalReturn)
 {
     my $dir = shift;
     my $entry = shift;
@@ -173,6 +175,8 @@ sub idv_find
     }
 
     idv_cd($here);
+
+    return;
 }
 
 # A simple minded implementation for testing.
@@ -185,9 +189,9 @@ sub idv_glob
 {
     my $filespec = shift;
 
-    $filespec =~ s/\./\\./g;
-    $filespec =~ s/\*/.*/g;
-    $filespec =~ s/\?/./g;
+    $filespec =~ s/\./\\./gx;
+    $filespec =~ s/\*/.*/gx;
+    $filespec =~ s/\?/./gx;
 
     my ($vol, $dirpath, $filename) = File::Spec->splitpath($filespec);
     my ($status, $dpath) = _get_dir($dirpath);
@@ -198,7 +202,7 @@ sub idv_glob
     foreach my $fname (keys(%{$dpath}))
     {
         $candidate = $dirname . '/' . $fname;
-        push (@filelist, $candidate) if $candidate =~ m/^$filespec/;
+        push (@filelist, $candidate) if $candidate =~ m/^$filespec/x;
     }
 
     return sort @filelist;
@@ -218,6 +222,8 @@ sub idv_cd
         
         $cwd = $dpath if $status == 0;
     }
+
+    return;
 }
 
 sub idv_pwd
@@ -266,6 +272,8 @@ sub _idv_add_special
 
     return if ref $dir->{$entry} eq '';
     $dir->{$entry}->{'..'} = $dir unless exists $dir->{$entry}->{'..'};
+
+    return;
 }
 
 sub _idv_remove_special
@@ -275,6 +283,8 @@ sub _idv_remove_special
 
     return if ref $dir->{$entry} eq '';
     delete($dir->{$entry}->{'..'}) if exists $dir->{$entry}->{'..'};
+
+    return;
 }
 
 sub _idv_visit
@@ -291,6 +301,8 @@ sub _idv_visit
 
         &$rtn($top, $item);
     }
+
+    return;
 }
 
 sub idv_set_tree
@@ -301,6 +313,8 @@ sub idv_set_tree
     $cwd = $tree;
 
     _idv_visit($tree, \&_idv_add_special);
+
+    return;
 }
 
 sub idv_clear_tree
@@ -309,6 +323,8 @@ sub idv_clear_tree
     $tree = {};
     $pwd = '/';
     $cwd = $tree;
+
+    return;
 }
 
 # sub idv_mkdir
@@ -396,7 +412,7 @@ sub idv_mkdir
     my $retval;
 
     $path = File::Spec->canonpath(File::Spec->catdir($pwd, $path));
-    $path =~ s{//+}{/}g;
+    $path =~ s{//+}{/}gx;
 
     my ($status, $dpath, $restpath) = _get_dir($path);
 
@@ -416,6 +432,8 @@ sub idv_mkdir
     {
         croak "A regular file ($dpath) was found while creating the directory path \"$path\"\n";
     }
+
+    return;
 }
 
 sub _get_dir
@@ -429,10 +447,10 @@ sub _get_dir
     confess "Undefined path\n" unless defined($path);
     if ($path)
     {
-        $path =~ s{//+}{/}g;
-        $path =~ s{/$}{};
+        $path =~ s{//+}{/}gx;
+        $path =~ s{/$}{}x;
 
-        if ($path =~ m{^/})
+        if ($path =~ m{^/}x)
         {
             $dpath = $tree;
         }
@@ -517,10 +535,12 @@ sub idv_add_file
     my $dpath;
 
     my ($vol, $dirpath, $filename) = File::Spec->splitpath($path);
-    $dirpath =~ s{//+}{/}g;
+    $dirpath =~ s{//+}{/}gx;
     $dpath = idv_mkdir($dirpath);
 
     $dpath->{$filename} = $filedata;
+
+    return;
 }
 
 sub idv_get_file
@@ -528,7 +548,7 @@ sub idv_get_file
     my $path = shift;
 
     my ($vol, $dirpath, $filename) = File::Spec->splitpath($path);
-    $dirpath =~ s{//+}{/}g;
+    $dirpath =~ s{//+}{/}gx;
     #print STDERR "idv_get_file: vol, dirpath, filename: \"$vol\" \"$dirpath\" \"$filename\"\n";
 
     croak "File \"$path\" not found\n" unless idv_test_isfile($path);

@@ -78,6 +78,8 @@ sub init
     map { $is_ok &&= $_->query('is_ok') } @{$self->{CONVERTERS}};
 
     $self->set_param('is_ok', $is_ok);
+
+    return;
 }
 
 sub convert
@@ -98,8 +100,8 @@ sub convert
     my @temporary_files;
     my $retval;
     # Make a copy of the input record so we can fool with it
-    my $record = Idval::Record->new($rec);
-    #print "Dump of record is:", Dumper($record);
+    my $tag_record = Idval::Record->new($rec);
+    #print "Dump of record is:", Dumper($tag_record);
 
     foreach my $conv (@{$self->{CONVERTERS}})
     {
@@ -116,11 +118,11 @@ sub convert
         }
 
         $self->{LOG}->verbose($DBG_CONVERT, 
-                              "Converting ", $record->get_name(), " to $to_file using ", $conv->query('name'), "\n");
-        $retval = $conv->convert($record, $to_file);
+                              "Converting ", $tag_record->get_name(), " to $to_file using ", $conv->query('name'), "\n");
+        $retval = $conv->convert($tag_record, $to_file);
         last if $retval != 0;
 
-        $record->set_name($to_file);
+        $tag_record->set_name($to_file);
     }
 
     unlink @temporary_files;

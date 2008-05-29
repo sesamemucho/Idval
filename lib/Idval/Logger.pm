@@ -229,7 +229,7 @@ sub log
     }
 }
 
-sub silent($@)
+sub silent
 {
     my $self = shift;
     my $dbgmask = shift;
@@ -237,7 +237,7 @@ sub silent($@)
     return $self->log({level => $SILENT, debugmask => $dbgmask}, @_);
 }
 
-sub silent_q($@)
+sub silent_q
 {
     my $self = shift;
     my $dbgmask = shift;
@@ -245,21 +245,21 @@ sub silent_q($@)
     return $self->log({level => $SILENT, decorate => 0, debugmask => $dbgmask}, @_);
 }
 
-sub quiet($@)
+sub quiet
 {
     my $self = shift;
     my $dbgmask = shift;
     return $self->log({level => $QUIET, debugmask => $dbgmask}, @_);
 }
 
-sub info($@)
+sub info
 {
     my $self = shift;
     my $dbgmask = shift;
     return $self->log({level => $INFO, debugmask => $dbgmask}, @_);
 }
 
-sub info_q($@)
+sub info_q
 {
     my $self = shift;
     my $dbgmask = shift;
@@ -269,28 +269,28 @@ sub info_q($@)
 #     print $self->{INFO_OUT} (@_) if $self->ok($INFO);
 }
 
-sub verbose($@)
+sub verbose
 {
     my $self = shift;
     my $dbgmask = shift;
     return $self->log({level => $VERBOSE, debugmask => $dbgmask}, @_);
 }
 
-sub chatty($@)
+sub chatty
 {
     my $self = shift;
     my $dbgmask = shift;
     return $self->log({level => $CHATTY, debugmask => $dbgmask}, @_);
 }
 
-sub warn(@)
+sub warn
 {
     my $self = shift;
     push(@warnings, join("", @_));
     return $self->log({level => $QUIET, debugmask => $DBG_ALL}, @_);
 }
 
-sub _warn(@)
+sub _warn
 {
     my $self = shift;
 
@@ -298,7 +298,7 @@ sub _warn(@)
     return $self->log({level => $QUIET, debugmask => $DBG_ALL, call_depth => 2}, @_);
 }
 
-sub _fatal(@)
+sub _fatal
 {
     my $self = shift;
 
@@ -313,7 +313,7 @@ sub _fatal(@)
     }
 }
 
-sub get_warnings()
+sub get_warnings
 {
     my $self = shift;
 

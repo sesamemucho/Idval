@@ -64,12 +64,14 @@ sub _init
 sub add
 {
     my $self = shift;
-    my $record = shift;
-    #print "Adding ", Dumper($record);
-    #print "ref record: ", ref $record, "\n";
-    #print "name: ", $record->get_name(), "\n";
-    my $name = $record->get_name();
-    $self->{RECORDS}->{$name} = $record;
+    my $tag_record = shift;
+    #print "Adding ", Dumper($tag_record);
+    #print "ref record: ", ref $tag_record, "\n";
+    #print "name: ", $tag_record->get_name(), "\n";
+    my $name = $tag_record->get_name();
+    $self->{RECORDS}->{$name} = $tag_record;
+
+    return;
 }
 
 sub get

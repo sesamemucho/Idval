@@ -34,9 +34,9 @@ use Text::Balanced qw (
 use Idval::Logger;
 use Idval::Constants;
 
-our $log = Idval::Logger::get_logger();
-our %common_objs;
-our @top_dir_path = ();
+my $log = Idval::Logger::get_logger();
+my %common_objs;
+my @top_dir_path = ();
 
 memoize('mung_path_query');
 
@@ -63,7 +63,7 @@ sub mung_path_query
 {
     my $path = shift;
     my $newpath = qx{cygpath -m "$path"};
-    $newpath =~ s{[\n\r]+}{}g;
+    $newpath =~ s{[\n\r]+}{}gx;
     return $newpath;
 }
 
@@ -74,8 +74,8 @@ sub mung_path
 
     if ($Config{osname} eq 'cygwin')
     {
-        $path =~ s{/cygdrive/(\w)}{$1:};
-        if ($path =~ m{^/})
+        $path =~ s{/cygdrive/(\w)}{$1:}x;
+        if ($path =~ m{^/}x)
         {
             $path = mung_path_query($path);
             # Still not right
@@ -96,11 +96,11 @@ sub mung_to_unix
     # mung drive letter
     if ($Config{osname} eq 'cygwin')
     {
-        $path =~ s{^(\w):}{/cygdrive/$1};
+        $path =~ s{^(\w):}{/cygdrive/$1}x;
     }
 
     # Some File::Spec routines get weirded out
-    $path =~ s{^//cygdrive}{/cygdrive};
+    $path =~ s{^//cygdrive}{/cygdrive}x;
 
     return $path;
 }
@@ -109,6 +109,8 @@ sub mung_to_unix
 sub set_top_dir
 {
     @top_dir_path = @_;
+
+    return;
 }
 
 sub get_top_dir
@@ -151,7 +153,7 @@ sub quoteme
 {
     my $arg = shift;
 
-    return $arg =~ /[^_\.\-=[:alnum:]]/ ? '"' . $arg . '"' : $arg;
+    return $arg =~ /[^_\.\-=[:alnum:]]/x ? '"' . $arg . '"' : $arg;
 }
 
 sub mkarglist
@@ -159,14 +161,14 @@ sub mkarglist
     my @retval;
     my $arg;
 
-    foreach $arg (@_)
+    foreach my $arg (@_)
     {
         next if !defined($arg);
-        next if $arg =~ m/^\s*$/;
+        next if $arg =~ m/^\s*$/x;
         # Quote only those arguments that have not already been quoted.
         # This may have to change if we can't use double-quotes for all OSes.
 
-        push(@retval, ($arg =~ m{[""]}) ? $arg : quoteme($arg));
+        push(@retval, ($arg =~ m{[""]}x) ? $arg : quoteme($arg));
     }
 
     return @retval;
@@ -217,22 +219,49 @@ sub run
 }
 
 # Originally from http://www.stonehenge.com/merlyn/UnixReview/col30.html
+my %value_for = (
+    'ARRAY'  => sub{ return [map { deep_copy($_) } @{$_[0]}]; },
+    'HASH'   => sub{ return +{map { $_ => deep_copy($_[0]->{$_}) } keys %{$_[0]}}; },
+    'CODE'   => sub{ return $_[0]; },
+    'Regexp' => sub{ return $_[0]; },
+    '^Idval' => sub{ return $_[0]; },
+    );
+
 sub deep_copy {
     my $this = shift;
     if (not ref $this) {
-        $this;
-    } elsif (ref $this eq "ARRAY") {
-        [map deep_copy($_), @$this];
-    } elsif (ref $this eq "HASH") {
-        +{map { $_ => deep_copy($this->{$_}) } keys %$this};
-    } elsif (ref $this eq "CODE") {
-        $this;
-    } elsif (ref $this eq "Regexp") {
-        $this;
-    } elsif (ref($this) =~ m{^Idval}) {
-        $this;
-    } else { die "what type is ", ref $this ,"?" }
-  }
+        return $this;
+    }
+    foreach my $item (keys %value_for)
+    {
+        if (ref $this =~ m/$item/x)
+        {
+            my $ret_sub = $value_for{$item};
+            return &$ret_sub($this);
+        }
+    }
+
+    croak  "what type is ", ref $this ,"?";
+}
+
+# sub deep_copy {
+#     my $this = shift;
+#     if (not ref $this) {
+#         $this;
+#     } elsif (ref $this eq "ARRAY") {
+#         [map deep_copy($_), @$this];
+#     } elsif (ref $this eq "HASH") {
+#         +{map { $_ => deep_copy($this->{$_}) } keys %$this};
+#     } elsif (ref $this eq "CODE") {
+#         $this;
+#     } elsif (ref $this eq "Regexp") {
+#         $this;
+#     } elsif (ref($this) =~ m{^Idval}) {
+#         $this;
+#     } else { die "what type is ", ref $this ,"?" }
+
+#     return;
+#   }
 
 # Given two references to hash tables, copy assignments from $from to
 # $to, without trashing previously-existing assignments in $to (that
@@ -243,7 +272,7 @@ sub deep_assign
     my $from = shift;
     my $key;
 
-    foreach $key (keys %{$from})
+    foreach my $key (keys %{$from})
     {
         #print STDERR "ref \$from->{$key} is <", ref $from->{$key}, ">\n";
         if (not ref $from->{$key})
@@ -260,6 +289,8 @@ sub deep_assign
             deep_assign($to->{$key}, $from->{$key});
         }
     }
+
+    return;
 }
 
 sub register_common_object
@@ -268,6 +299,8 @@ sub register_common_object
     my $obj = shift;
 
     $common_objs{$key} = $obj;
+
+    return;
 }
 
 sub get_common_object
@@ -308,6 +341,8 @@ sub register_provider
 
     my $provs = get_common_object('providers');
     $provs->register_provider($argref);
+    
+    return;
 }
 
 sub split_line
@@ -323,12 +358,12 @@ sub split_line
 
     foreach my $field (@fields)
     {
-        $field =~ s/^\s+//;
-        $field =~ s/\s+$//;
-        if ($field =~ m/[''""]/)
+        $field =~ s/^\s+//x;
+        $field =~ s/\s+$//x;
+        if ($field =~ m/[''""]/x)
         {
-            $field =~ s/^[''""]//;
-            $field =~ s/[''""]$//;
+            $field =~ s/^[''""]//x;
+            $field =~ s/[''""]$//x;
             push(@retlist, $field);
         }
         else

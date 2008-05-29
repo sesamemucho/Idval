@@ -1,6 +1,7 @@
 #!/usr/bin/perl -w
 
 use strict;
+use warnings;
 
 use Getopt::Long;
 use Test::Unit::Debug qw(debug_pkgs);
@@ -17,12 +18,7 @@ our $topdir = abs_path("$FindBin::Bin/..");
 use Idval::Logger;
 use Idval::Common;
 
-our (
-    @standard_options,
-    %options,
-    );
-
-@standard_options =
+my @standard_options =
     (
      'verbose+',
      'quiet+',
@@ -32,7 +28,9 @@ our (
      'no-delete',
     );
 
+my %options;
 $options{'no-delete'} = 0;
+
 my $opts = Getopt::Long::Parser->new();
 my $retval = $opts->getoptions(\%options, @standard_options);
 

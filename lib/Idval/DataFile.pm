@@ -45,6 +45,8 @@ sub _init
     my $self = shift;
     $self->{DATAFILE} = shift;
     $self->{BLOCKS} = $self->parse();
+
+    return;
 }
 
 sub parse
@@ -67,8 +69,8 @@ sub parse
     while(defined($line = <$fh>))
     {
         chomp $line;
-        next if $line =~ m/^#/;
-        if ($line =~ m/^\s*$/)
+        next if $line =~ m/^#/x;
+        if ($line =~ m/^\s*$/x)
         {
             push(@block, $accumulate_line) if $accumulate_line;
             $collection->add($self->parse_block(\@block)) if @block;
@@ -77,7 +79,7 @@ sub parse
             next;
         }
 
-        if ($line =~ m/^  (.*)/)
+        if ($line =~ m/^  (.*)/x)
         {
             $accumulate_line .= "\n" . $1;
         }
@@ -102,7 +104,7 @@ sub parse_block
 
     foreach my $line (@{$blockref})
     {
-        if ($line =~ m/\A([^=\s]+)\s*=\s*(.*)\z/ms)
+        if ($line =~ m/\A([^=\s]+)\s*=\s*(.*)\z/msx)
         {
             $hash{$1} = $2;
         }

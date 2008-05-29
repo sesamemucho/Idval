@@ -38,7 +38,7 @@ sub new
 sub idv_find
 {
     my $subr = shift;
-    return File::Find::find({wanted => $subr, preprocess => sub{return grep(-r, @_);}}, @_);
+    return File::Find::find({wanted => $subr, preprocess => sub{return grep {-r} @_}}, @_);
 }
 
 sub idv_glob

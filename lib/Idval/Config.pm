@@ -1,4 +1,4 @@
-package Idval::Config::Block;
+package Idval::Config;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
@@ -22,9 +22,370 @@ use warnings;
 use Data::Dumper;
 use English '-no_match_vars';
 use Carp;
+use Memoize;
+use Text::Balanced qw (
+                       extract_delimited
+                       extract_multiple
+                      );
+
 
 use Idval::Common;
 use Idval::Constants;
+use Idval::Select;
+use Idval::FileIO;
+
+use constant STRICT_MATCH => 0;
+use constant LOOSE_MATCH  => 1;
+
+my $octothorpe = "\x23";
+
+*verbose = Idval::Common::make_custom_logger({level => $VERBOSE, 
+                                              debugmask => $DBG_CONFIG,
+                                              decorate => 1}) unless defined(*verbose{CODE});
+*chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
+                                              debugmask => $DBG_CONFIG,
+                                              decorate => 1}) unless defined(*chatty{CODE});
+
+# Make a flat list out of the arguments, which may be scalars or array refs
+# Leave out any undefined args.
+sub make_flat_list
+{
+    my @result = map {ref $_ eq 'ARRAY' ? @{$_} : $_ } grep {defined($_)} @_;
+    chatty("make_flat list: result is: ", Dumper(\@result));
+    return \@result;
+}
+
+##sub normalize { join ' ', $_[0], $_[1], map{ @{$_} } @{$_[2]}}
+###memoize('_merge_blocks', NORMALIZER => 'normalize');
+#memoize('_merge_blocks');
+#our %memohash;
+# memoize('_merge_blocks', INSTALL => 'fast_merge_blocks',
+#         SCALAR_CACHE => [HASH => \%memohash]);
+
+# memoize('_merge_blocks', INSTALL => 'fast_merge_blocks_1',
+#         NORMALIZER => 'normalize',
+#         SCALAR_CACHE => [HASH => \%memohash]);
+
+sub new
+{
+    my $class = shift;
+    my $self = {};
+    bless($self, ref($class) || $class);
+    $self->_init(@_);
+    return $self;
+}
+
+sub _init
+{
+    my $self = shift;
+    my $initfile = shift;
+    my $unmatched_selector_keys_ok = shift;
+    $unmatched_selector_keys_ok = LOOSE_MATCH unless defined($unmatched_selector_keys_ok);
+    *verbose = Idval::Common::make_custom_logger({level => $VERBOSE, 
+                                                  debugmask => $DBG_CONFIG,
+                                                  decorate => 1}) unless defined(*verbose{CODE});
+    *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
+                                                  debugmask => $DBG_CONFIG,
+                                                  decorate => 1}) unless defined(*chatty{CODE});
+
+    $self->{OP_REGEX} = Idval::Select::get_op_regex();
+    $self->{ASSIGN_OP_REGEX} = Idval::Select::get_assign_regex();
+    $self->{CMP_OP_REGEX} = Idval::Select::get_cmp_regex();
+    $self->{INITFILES} = [];
+    $self->{TREE} = {};
+
+    if ($initfile)
+    {
+        $self->add_file($initfile, $unmatched_selector_keys_ok);
+    }
+
+    return;
+}
+
+sub add_file
+{
+    my $self = shift;
+    my $initfile = shift;
+    my $unmatched_selector_keys_ok = shift;
+    $unmatched_selector_keys_ok = LOOSE_MATCH unless defined($unmatched_selector_keys_ok);
+
+    #print "Adding file \"$initfile\"\n";
+    return unless $initfile;      # Blank input file names are OK...
+    push(@{$self->{INITFILES}}, $initfile);
+
+    my $text = '';
+    my $fh;
+
+    foreach my $fname (@{$self->{INITFILES}})
+    {
+        $fh = Idval::FileIO->new($fname, "r") || croak "Can't open \"$fname\" for reading: $!\n";
+        $text .= do { local $/ = undef; <$fh> };
+        $fh->close();
+    }
+
+    croak "Need a file\n" unless $text; # We do need at least one config file
+
+    $text =~ s/${octothorpe}.*$//mgx;      # Remove comments
+    $text =~ s/^\n+//sx;         # Trim off newline(s) at start
+    $text =~ s/\n+$//sx;         # Trim off newline(s) at end
+
+
+    $self->{NODENAME} = 'Node0000';
+    my $top = $self->parse_blocks("\{$text\}");
+    $self->{TREE} = $top->{NODE}->{'Node0000'};
+
+    return;
+}
+
+sub get_next_nodename
+{
+    my $self = shift;
+    my $newnode = $self->{NODENAME}++;
+    chatty("returning nodename $newnode\n");
+    return $newnode;
+}
+
+sub extract_blocks
+{
+    my $self = shift;
+    my $text = shift;
+
+    my @blocks;
+    my ($extracted, $remainder, $skipped);
+    my $front = '';
+
+    while(1)
+    {
+        ($extracted, $remainder, $skipped) = Text::Balanced::extract_codeblock($text, '{}', '[^{}]*');
+        chatty("extracted: \"$extracted\", remainder is: \"$remainder\", skipped: \"$skipped\"\n");
+
+        last unless $extracted;
+
+        push(@blocks, $extracted);
+
+        $text = $remainder;
+        $front .= $skipped;
+    }
+
+    $remainder = $front . $remainder;
+    chatty("** blocks are: ", join('::', @blocks), "   remainder is: \"$remainder\"\n");
+    return (\@blocks, $remainder);
+}
+
+sub parse_one_block
+{
+    my $self = shift;
+    my $node = shift;
+    my $text = shift;
+
+    my $op_regex = $self->{OP_REGEX};
+
+    my $current_tag = undef;
+    my $current_op;
+    my $current_value;
+
+    return unless defined $text; # Nothing to do...
+
+    chatty("parse_one_block, op_regex is: \"$op_regex\"\ndata is: <$text>\n");
+
+    foreach my $line (split(/\n/x, $text))
+    {
+        chomp $line;
+        $line =~ s{\r}{}gx;
+        $line =~ s/${octothorpe}.*$//x;      # Remove comments
+        next if $line =~ m/^\s*$/x;
+
+        if ($line =~ m{^([[:alnum:]]\w*)($op_regex)(.*)$}imx)
+        {
+            $node->add_data($current_tag, $current_op, $current_value) if defined $current_tag;
+            chatty("Got tag of \"$1\" \"$2\" \"$3\" \n");
+            $current_tag = $1;
+            $current_op = $2;
+            $current_value = $3;
+
+            $current_op =~ s/\s//gx;
+            next;
+        };
+
+        if ($line =~ m{^\s+(.*)$}imx)
+        {
+            croak("Found unexpected continuation line \"$line\" at the beginning of a block\n") unless defined $current_tag;
+            chatty("Got continuation tag of \"$1\" \"$2\" \"$3\" \n");
+            $current_value .= $3;
+            next;
+        };
+
+    }
+
+    $node->add_data($current_tag, $current_op, $current_value) if defined $current_tag;
+
+    return;
+}
+
+sub parse_blocks
+{
+    my $self = shift;
+    my $text = shift;
+    
+    my $tree = Idval::Config::Block->new();
+    my ($kidsref, $data) = $self->extract_blocks($text);
+    my $child_name;
+    my $op_regex = $self->{OP_REGEX};
+
+    # Clean it up
+    $data =~ s/^\s+//gmx;
+    $data =~ s/\s+$//gmx;
+
+    # Preprocess the data, for use in the visit subroutine
+    $self->parse_one_block($tree, $data);
+
+    chatty("Current node has ", scalar(@{$kidsref}), " children.\n");
+    foreach my $blk (@{$kidsref})
+    {
+        chop $blk;
+        $blk = substr($blk, 1);
+        $child_name = $self->get_next_nodename();
+        chatty("At \"$child_name\", Looking at: \"$blk\"\n");
+        $tree->add_node($child_name, $self->parse_blocks($blk));
+    }
+
+    chatty("tree: ", Dumper($tree));
+    return $tree;
+}
+
+sub visit
+{
+    my $self = shift;
+    my $top = shift;
+    my $subr = shift;
+
+    my $retval = &$subr($top);
+
+    # If retval is undef, this node is not for us
+    # and therefore, none of its children are, either
+    return if not defined($retval);
+
+    # get_children returns a list of child nodes, sorted
+    # by nodename.
+    foreach my $node (@{$top->get_children()})
+    {
+        $self->visit($node, $subr);
+    }
+
+    return;
+}
+
+sub merge_blocks
+{
+    my $self = shift;
+    my $selects = shift;
+    my %vars;
+
+    verbose("Start of _merge_blocks, selects: ", Dumper($selects));
+
+    # visit each node, in correct order
+    # if node evaluates to TRUE,
+    #    accumulate values (including appends)
+
+    # When finished with tree, return hash of values
+
+    my $visitor = sub {
+        my $node = shift;
+
+        return if $node->evaluate($selects) == 0;
+
+        foreach my $name (@{$node->get_assignment_data_names()})
+        {
+            my ($op, $value) = $node->get_assignment_data_values($name);
+            chatty("name \"$name\" op \"$op\" value \"$value\"\n");
+
+            if ($op eq '=')
+            {
+                chatty("For \"$name\", op is \"=\" and value is \"$value\"\n");
+                $vars{$name} = $value;
+            }
+            elsif ($op eq '+=')
+            {
+                chatty("For \"$name\", op is \"+=\" and value is \"$value\"\n");
+                $vars{$name} = make_flat_list($vars{$name}, $value);
+            }
+        }
+
+        return 1;
+    };
+
+    $self->visit($self->{TREE}, $visitor);
+
+    chatty("Result of merge blocks - VARS: ", Dumper(\%vars));
+
+    return \%vars;
+}
+
+sub get_single_value
+{
+    my $self = shift;
+    my $key = shift;
+    my $selects = shift || {};
+    my $default = shift || '';
+
+    my $value = $self->get_value($key, $selects, $default);
+
+    return ref $value eq 'ARRAY' ? ${$value}[0] : $value;
+}
+
+sub get_list_value
+{
+    my $self = shift;
+    my $key = shift;
+    my $selects = shift || {};
+    my $default = shift || '';
+
+    my $value = $self->get_value($key, $selects, $default);
+
+    return ref $value eq 'ARRAY' ? $value : [$value];
+}
+
+sub get_value
+{
+    my $self = shift;
+    my $key = shift;
+    my $selects = shift || {};
+    my $default = shift || '';
+
+    #$cfg_dbg = ($key eq 'sync_dest');
+    chatty("In get_single_value with key \"$key\"\n");
+    my $vars = $self->merge_blocks($selects);
+    chatty("get_single_value: list result for \"$key\" is: ", Dumper($vars->{$key}));
+    return defined $vars->{$key} ? $vars->{$key} : $default;
+}
+
+sub value_exists
+{
+    my $self = shift;
+    my $key = shift;
+    my $selects = shift || {};
+
+    my $vars = $self->merge_blocks($selects);
+    return defined($vars->{$key});
+}
+
+package Idval::Config::Block;
+
+use strict;
+use warnings;
+use Data::Dumper;
+use English '-no_match_vars';
+use Carp;
+
+use Idval::Common;
+use Idval::Constants;
+
+*verbose = Idval::Common::make_custom_logger({level => $VERBOSE, 
+                                              debugmask => $DBG_CONFIG,
+                                              decorate => 1}) unless defined(*verbose{CODE});
+*chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
+                                              debugmask => $DBG_CONFIG,
+                                              decorate => 1}) unless defined(*chatty{CODE});
 
 sub new
 {
@@ -39,18 +400,13 @@ sub _init
 {
     my $self = shift;
 
-    *verbose = Idval::Common::make_custom_logger({level => $VERBOSE, 
-                                                  debugmask => $DBG_CONFIG,
-                                                  decorate => 1}) unless defined(*verbose{CODE});
-    *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
-                                                  debugmask => $DBG_CONFIG,
-                                                  decorate => 1}) unless defined(*chatty{CODE});
-
     $self->{ASSIGN_OP_REGEX} = Idval::Select::get_assign_regex();
     $self->{datadir} = Idval::Common::get_top_dir('data');
     $self->{libdir} = Idval::Common::get_top_dir('lib');
 
     $self->{USK_OK} = 1;        # for now
+
+    return;
 }
 
 sub add_data
@@ -62,8 +418,8 @@ sub add_data
 
     confess "undef op" unless defined $op;
 
-    $value =~ s/\%DATA\%/$self->{datadir}/g;
-    $value =~ s/\%LIB\%/$self->{libdir}/g;
+    $value =~ s/\%DATA\%/$self->{datadir}/gx;
+    $value =~ s/\%LIB\%/$self->{libdir}/gx;
 
     if ($op eq '=')
     {
@@ -81,6 +437,8 @@ sub add_data
     {
         $self->{SELECT_DATA}->{$name} = [$op, $value];
     }
+
+    return;
 }
 
 sub get_select_data_names
@@ -163,6 +521,8 @@ sub add_node
 
     $self->{NODE}->{$nodename} = $node;
     $node->myname($nodename);
+
+    return;
 }
 
 sub get_children
@@ -196,7 +556,7 @@ sub evaluate
    my  %selectors = %{$select_list};
 
     # Special case
-    if (!%selectors and $self->{USK_OK})
+    if ((!%selectors) && $self->{USK_OK})
     {
         verbose("Eval: returning 1 since no selectors\n");
         return 1;
@@ -227,7 +587,7 @@ sub evaluate
         my $sel_value = $selectors{$key};
         my $cmp_op = $self->get_select_op($key);
         my $cmp_value = $self->get_select_value($key);
-        my $cmpfunc = $Idval::Select::compare_function{$cmp_op}->{FUNC}->{STR};
+        my $cmpfunc = Idval::Select::get_compare_function($cmp_op, 'STR');
         chatty("Comparing \"$cmp_value\" \"$cmp_op\" \"$sel_value\" resulted in ",
                 &$cmpfunc($sel_value, $cmp_value) ? "True\n" : "False\n");
         my $cmp_result = &$cmpfunc($sel_value, $cmp_value);
@@ -241,343 +601,6 @@ sub evaluate
 
     chatty("evaluate returning $retval\n");
     return $retval;
-}
-
-package Idval::Config;
-
-use strict;
-use warnings;
-use Data::Dumper;
-use English '-no_match_vars';
-use Carp;
-use Memoize;
-use Text::Balanced qw (
-                       extract_delimited
-                       extract_multiple
-                      );
-
-
-use Idval::Common;
-use Idval::Constants;
-use Idval::Select;
-use Idval::FileIO;
-
-use constant STRICT_MATCH => 0;
-use constant LOOSE_MATCH  => 1;
-
-our $octothorpe = "\x23";
-
-# Make a flat list out of the arguments, which may be scalars or array refs
-# Leave out any undefined args.
-sub make_flat_list
-{
-    my @result = map {ref $_ eq 'ARRAY' ? @{$_} : $_ } grep(defined, @_);
-    chatty("make_flat list: result is: ", Dumper(\@result));
-    return \@result;
-}
-
-##sub normalize { join ' ', $_[0], $_[1], map{ @{$_} } @{$_[2]}}
-###memoize('_merge_blocks', NORMALIZER => 'normalize');
-#memoize('_merge_blocks');
-#our %memohash;
-# memoize('_merge_blocks', INSTALL => 'fast_merge_blocks',
-#         SCALAR_CACHE => [HASH => \%memohash]);
-
-# memoize('_merge_blocks', INSTALL => 'fast_merge_blocks_1',
-#         NORMALIZER => 'normalize',
-#         SCALAR_CACHE => [HASH => \%memohash]);
-
-sub new
-{
-    my $class = shift;
-    my $self = {};
-    bless($self, ref($class) || $class);
-    $self->_init(@_);
-    return $self;
-}
-
-sub _init
-{
-    my $self = shift;
-    my $initfile = shift;
-    my $unmatched_selector_keys_ok = shift;
-    $unmatched_selector_keys_ok = LOOSE_MATCH unless defined($unmatched_selector_keys_ok);
-    *verbose = Idval::Common::make_custom_logger({level => $VERBOSE, 
-                                                  debugmask => $DBG_CONFIG,
-                                                  decorate => 1}) unless defined(*verbose{CODE});
-    *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
-                                                  debugmask => $DBG_CONFIG,
-                                                  decorate => 1}) unless defined(*chatty{CODE});
-
-    $self->{OP_REGEX} = Idval::Select::get_op_regex();
-    $self->{ASSIGN_OP_REGEX} = Idval::Select::get_assign_regex();
-    $self->{CMP_OP_REGEX} = Idval::Select::get_cmp_regex();
-    $self->{INITFILES} = [];
-    $self->{TREE} = {};
-
-    if ($initfile)
-    {
-        $self->add_file($initfile, $unmatched_selector_keys_ok);
-    }
-}
-
-sub add_file
-{
-    my $self = shift;
-    my $initfile = shift;
-    my $unmatched_selector_keys_ok = shift;
-    $unmatched_selector_keys_ok = LOOSE_MATCH unless defined($unmatched_selector_keys_ok);
-
-    #print "Adding file \"$initfile\"\n";
-    return unless $initfile;      # Blank input file names are OK...
-    push(@{$self->{INITFILES}}, $initfile);
-
-    my $text = '';
-    my $fh;
-
-    foreach my $fname (@{$self->{INITFILES}})
-    {
-        $fh = Idval::FileIO->new($fname, "r") || croak "Can't open \"$fname\" for reading: $!\n";
-        $text .= do { local $/; <$fh> };
-        $fh->close();
-    }
-
-    croak "Need a file\n" unless $text; # We do need at least one config file
-
-    $text =~ s/${octothorpe}.*$//mg;      # Remove comments
-    $text =~ s/^\n+//s;         # Trim off newline(s) at start
-    $text =~ s/\n+$//s;         # Trim off newline(s) at end
-
-
-    $self->{NODENAME} = 'Node0000';
-    my $top = $self->parse_blocks("\{$text\}");
-    $self->{TREE} = $top->{NODE}->{'Node0000'};
-}
-
-sub get_next_nodename
-{
-    my $self = shift;
-    my $newnode = $self->{NODENAME}++;
-    chatty("returning nodename $newnode\n");
-    return $newnode;
-}
-
-sub extract_blocks
-{
-    my $self = shift;
-    my $text = shift;
-
-    my @blocks;
-    my ($extracted, $remainder, $skipped);
-    my $front = '';
-
-    while(1)
-    {
-        ($extracted, $remainder, $skipped) = Text::Balanced::extract_codeblock($text, '{}', '[^{}]*');
-        chatty("extracted: \"$extracted\", remainder is: \"$remainder\", skipped: \"$skipped\"\n");
-
-        last unless $extracted;
-
-        push(@blocks, $extracted);
-
-        $text = $remainder;
-        $front .= $skipped;
-    }
-
-    $remainder = $front . $remainder;
-    chatty("** blocks are: ", join('::', @blocks), "   remainder is: \"$remainder\"\n");
-    return (\@blocks, $remainder);
-}
-
-sub parse_one_block
-{
-    my $self = shift;
-    my $node = shift;
-    my $text = shift;
-
-    my $op_regex = $self->{OP_REGEX};
-
-    my $current_tag = undef;
-    my $current_op;
-    my $current_value;
-
-    return unless defined $text; # Nothing to do...
-
-    chatty("parse_one_block, op_regex is: \"$op_regex\"\ndata is: <$text>\n");
-
-    foreach my $line (split(/\n/, $text))
-    {
-        chomp $line;
-        $line =~ s{\r}{}g;
-        $line =~ s/${octothorpe}.*$//;      # Remove comments
-        next if $line =~ m/^\s*$/;
-
-        $line =~ m{^([[:alnum:]]\w*)($op_regex)(.*)$}imx and do {
-            $node->add_data($current_tag, $current_op, $current_value) if defined $current_tag;
-            chatty("Got tag of \"$1\" \"$2\" \"$3\" \n");
-            $current_tag = $1;
-            $current_op = $2;
-            $current_value = $3;
-
-            $current_op =~ s/ //g;
-            next;
-        };
-
-        $line =~ m{^\s+(.*)$}imx and do {
-            croak("Found unexpected continuation line \"$line\" at the beginning of a block\n") unless defined $current_tag;
-            chatty("Got continuation tag of \"$1\" \"$2\" \"$3\" \n");
-            $current_value .= $3;
-            next;
-        };
-
-    }
-
-    $node->add_data($current_tag, $current_op, $current_value) if defined $current_tag;
-}
-
-sub parse_blocks
-{
-    my $self = shift;
-    my $text = shift;
-    
-    my $tree = Idval::Config::Block->new();
-    my ($kidsref, $data) = $self->extract_blocks($text);
-    my $child_name;
-    my $op_regex = $self->{OP_REGEX};
-
-    # Clean it up
-    $data =~ s/^\s+//gm;
-    $data =~ s/\s+$//gm;
-
-    # Preprocess the data, for use in the visit subroutine
-    $self->parse_one_block($tree, $data);
-
-    chatty("Current node has ", scalar(@{$kidsref}), " children.\n");
-    foreach my $blk (@{$kidsref})
-    {
-        chop $blk;
-        $blk = substr($blk, 1);
-        $child_name = $self->get_next_nodename();
-        chatty("At \"$child_name\", Looking at: \"$blk\"\n");
-        $tree->add_node($child_name, $self->parse_blocks($blk));
-    }
-
-    chatty("tree: ", Dumper($tree));
-    return $tree;
-}
-
-sub visit
-{
-    my $self = shift;
-    my $top = shift;
-    my $subr = shift;
-
-    my $retval = &$subr($top);
-
-    # If retval is undef, this node is not for us
-    # and therefore, none of its children are, either
-    return if not defined($retval);
-
-    # get_children returns a list of child nodes, sorted
-    # by nodename.
-    foreach my $node (@{$top->get_children()})
-    {
-        $self->visit($node, $subr);
-    }
-}
-
-sub merge_blocks
-{
-    my $self = shift;
-    my $selects = shift;
-    my %vars;
-
-    verbose("Start of _merge_blocks, selects: ", Dumper($selects));
-
-    # visit each node, in correct order
-    # if node evaluates to TRUE,
-    #    accumulate values (including appends)
-
-    # When finished with tree, return hash of values
-
-    my $visitor = sub {
-        my $node = shift;
-
-        return undef if $node->evaluate($selects) == 0;
-
-        foreach my $name (@{$node->get_assignment_data_names()})
-        {
-            my ($op, $value) = $node->get_assignment_data_values($name);
-            chatty("name \"$name\" op \"$op\" value \"$value\"\n");
-
-            if ($op eq '=')
-            {
-                chatty("For \"$name\", op is \"=\" and value is \"$value\"\n");
-                $vars{$name} = $value;
-            }
-            elsif ($op eq '+=')
-            {
-                chatty("For \"$name\", op is \"+=\" and value is \"$value\"\n");
-                $vars{$name} = make_flat_list($vars{$name}, $value);
-            }
-        }
-
-        return 1;
-    };
-
-    $self->visit($self->{TREE}, $visitor);
-
-    chatty("Result of merge blocks - VARS: ", Dumper(\%vars));
-
-    return \%vars;
-}
-
-sub get_single_value
-{
-    my $self = shift;
-    my $key = shift;
-    my $selects = shift || {};
-    my $default = shift || '';
-
-    my $value = $self->get_value($key, $selects, $default);
-
-    return ref $value eq 'ARRAY' ? ${$value}[0] : $value;
-}
-
-sub get_list_value
-{
-    my $self = shift;
-    my $key = shift;
-    my $selects = shift || {};
-    my $default = shift || '';
-
-    my $value = $self->get_value($key, $selects, $default);
-
-    return ref $value eq 'ARRAY' ? $value : [$value];
-}
-
-sub get_value
-{
-    my $self = shift;
-    my $key = shift;
-    my $selects = shift || {};
-    my $default = shift || '';
-
-    #$cfg_dbg = ($key eq 'sync_dest');
-    chatty("In get_single_value with key \"$key\"\n");
-    my $vars = $self->merge_blocks($selects);
-    chatty("get_single_value: list result for \"$key\" is: ", Dumper($vars->{$key}));
-    return defined $vars->{$key} ? $vars->{$key} : $default;
-}
-
-sub value_exists
-{
-    my $self = shift;
-    my $key = shift;
-    my $selects = shift || {};
-
-    my $vars = $self->merge_blocks($selects);
-    return defined($vars->{$key});
 }
 
 1;

@@ -54,6 +54,8 @@ sub _init
     }
 
     $self->commit_tags();
+
+    return;
 }
 
 # Return a subset of the tag/values so that
@@ -93,6 +95,8 @@ sub add_tag
 
     #$self->{TEMP}->{$name} = $value;
     $self->{$name} = $value;
+
+    return;
 }
 
 # Add a line of text to an already-existing tag.
@@ -104,11 +108,13 @@ sub add_to_tag
     my $name = shift;
     my $value = shift;
 
-    $value =~ s/[\n\r]//g;
-    return if $value =~ m/^\s*$/;
-    $value =~ s/^\s*/    /;
+    $value =~ s/[\n\r]//gx;
+    return if $value =~ m/^\s*$/x;
+    $value =~ s/^\s*/    /x;
     #$self->{TEMP}->{$name} .= "\n$value";
     $self->{$name} .= "\n$value";
+
+    return;
 }
 
 # NO! See docs/id3tags.txt (idv should not automatically add TCON tag from GENRE tag)
@@ -190,13 +196,15 @@ sub set_name
     my $name = shift;
 
     $self->{FILE} = $name;
+
+    return;
 }
 
 # Actually, "get all keys, except for those that are calculated"
 sub get_all_keys
 {
     my $self = shift;
-    return grep(!/^(:?FILE|CLASS|TYPE|__LINES|__NEXT_LINE)$/, sort keys %{$self});
+    return grep {!/^(:?FILE|CLASS|TYPE|__LINES|__NEXT_LINE)$/x} sort keys %{$self};
 }
 
 sub key_exists
@@ -266,7 +274,7 @@ sub diff
     my $other_val;
     my %common_diffs = ();
 
-    my ($self_not_other, $self_and_other, $other_not_self) = 
+    my ($self_not_other, $self_and_other, $other_not_self) =
         Idval::Ui::get_rec_diffs($self, $other);
 
     foreach my $tag (sort keys %{$self_and_other})
