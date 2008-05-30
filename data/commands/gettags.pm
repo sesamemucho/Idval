@@ -21,7 +21,7 @@ use strict;
 use warnings;
 
 use Data::Dumper;
-use English;
+use English '-no_match_vars';
 use Carp;
 
 use Idval::Common;
@@ -32,6 +32,8 @@ use Idval::Ui;
 sub init
 {
     set_pod_input();
+
+    return;
 }
 
 sub gettags
@@ -50,17 +52,17 @@ sub gettags
                                                  Idval::Common::get_common_object('config'),
                                                  @args);
 
-    my $record;
+    my $tag_record;
     my $type;
     my $prov;
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
         #print "Checking \"$key\"\n";
-        $record = $datastore->{RECORDS}->{$key};
-        $type = $record->get_value('TYPE');
+        $tag_record = $datastore->{RECORDS}->{$key};
+        $type = $tag_record->get_value('TYPE');
         $prov = $providers->get_provider('reads_tags', $type, 'NULL');
 
-        $status = $prov->read_tags($record);
+        $status = $prov->read_tags($tag_record);
         Idval::DoDots::dodots($dotmap->{$type});
 
         delete $datastore->{RECORDS}->{$key} if $status == 1;
@@ -94,12 +96,12 @@ sub gettags
 #     my $self = shift;
 #     my $hash = shift;
 #     my $key = shift;
-#     my $record = $hash->{$key};
+#     my $tag_record = $hash->{$key};
 
-#     my $type = $record->get_value('TYPE');
+#     my $type = $tag_record->get_value('TYPE');
 #     my $prov = $self->{PROVIDERS}->get_provider('reads_tags', $type, 'NULL');
 
-#     my $retval = $prov->read_tags($record);
+#     my $retval = $prov->read_tags($tag_record);
 #     Idval::DoDots::dodots($self->{DOTMAP}->{$type});
 
 #     delete $hash->{$key} if $retval == 1;
@@ -134,7 +136,7 @@ sub set_pod_input
 {
     my $help_file = Idval::Common::get_common_object('help_file');
 
-    my $pod_input =<<EOD;
+    my $pod_input =<<"EOD";
 
 =head1 NAME
 
@@ -163,6 +165,8 @@ is present).
 
 EOD
     $help_file->{'gettags'} = $pod_input;
+
+    return;
 }
 
 1;

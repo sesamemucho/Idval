@@ -1,4 +1,7 @@
 package TestUtils;
+use strict;
+use warnings;
+
 use Data::Dumper;
 use Carp;
 
@@ -8,14 +11,17 @@ sub _get_pkgs
     no strict 'refs';
     my $pname = shift;
     my $p = \%{$pname};
+    use strict;
 
     push(@packages, $pname);
-    foreach my $pkg (grep(/\:\:$/, keys %$p))
+    foreach my $pkg (grep {/\:\:$/} keys %$p)
     {
         next if $pkg =~ m/^[A-Z]+\:\:$/; # Don't mess with these?
 
         _get_pkgs($pname . $pkg);
     }
+
+    return;
 }
 
 sub _package2filename {
@@ -26,7 +32,9 @@ sub _package2filename {
      return $package;
 }
 
-sub _unload_package {
+## no critic (ProhibitPackageVars)
+
+sub unload_one_package {
      my $package = shift;
 
      my ($stash, $dynamic);
@@ -60,23 +68,33 @@ sub _unload_package {
      # Clear package from %INC
      #printf "About to delete \"$package\" (%s)\n", _package2filename($package);
      delete $INC{_package2filename($package)};
+
+    return;
 }
 
 sub unload_packages
 {
     my $module = shift;
-    confess "unload_packages: \"module\" is undefined" unless defined($module);
 
-    foreach my $pkg (@{$module->get_packages()})
+    if (defined($module))
     {
-        #print STDERR "*** Unloading $pkg\n";
-        _unload_package($pkg);
+        foreach my $pkg (@{$module->get_packages()})
+        {
+            #print STDERR "*** Unloading $pkg\n";
+            unload_one_package($pkg);
+        }
     }
+    else
+    {
+        carp "unload_packages: module arg is undefined";
+    }
+
+    return;
 }
 
 sub unload_plugins
 {
-    my @tst_pkgnames = grep(/^tsts\/unittest.*\.pm$/, keys %INC);
+    my @tst_pkgnames = grep {/^tsts\/unittest.*\.pm$/} keys %INC;
 
     foreach my $name (@tst_pkgnames)
     {
@@ -85,12 +103,12 @@ sub unload_plugins
         $pkg =~ s/\.pm//;
         $pkg =~ s{tsts/}{};
 
-        TestUtils::_unload_package($pkg);
+        TestUtils::unload_one_package($pkg);
 
         delete $INC{$name} if exists $INC{$name};
     }
 
-
+    return;
 }
 
 package TestUtils::FakeConfig;
@@ -111,6 +129,8 @@ sub _init
 
     $self->{ARGS} = \@args;
     $self->{ARGINDEX} = 0;
+
+    return;
 }
 
 sub get_single_value
@@ -159,6 +179,8 @@ sub _init
     $self->{TYPEMAP} = $type_mapping;
     $self->{CLASSMAP} = $class_mapping;
     $self->{TYPE} = (keys %{$type_mapping})[0];
+
+    return;
 }
 
 sub query
@@ -169,6 +191,8 @@ sub query
     return $self->{TYPE} if $qu eq 'type';
     return $self->{TYPEMAP} if $qu eq 'filetype_map';
     return $self->{CLASSMAP} if $qu eq 'classtype_map';
+
+    return;
 }
 
 package TestUtils::FakeProvider;
@@ -192,6 +216,8 @@ sub _init
                       TestUtils::FakeConverter->new({'OGG' => [qw{ ogg }]}, {'MUSIC' => [qw( OGG )]}),
                       TestUtils::FakeConverter->new({'FLAC' => [qw{ flac flac16 }]}, {'MUSIC' => [qw( FLAC )]}),
                       ];
+
+    return;
 }
 
 sub _get_providers

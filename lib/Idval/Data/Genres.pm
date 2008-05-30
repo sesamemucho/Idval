@@ -22,12 +22,7 @@ use warnings;
 
 use base qw(Exporter);
 
-our @EXPORT = qw(
-    %id2name
-    %name2id
-    );
-
-our %id2name = (
+my %id2name = (
     0 => "Blues",
     1 => "Classic Rock",
     2 => "Country",
@@ -157,6 +152,27 @@ our %id2name = (
     );
 
 
-our %name2id = map { lc($id2name{$_}) => $_ } keys %id2name;
+my %name2id = map { lc($id2name{$_}) => $_ } keys %id2name;
+
+sub id2name
+{
+    my $id = shift;
+
+    return exists $id2name{$id} ? $id2name{$id} : 'Other';
+}
+
+sub name2id
+{
+    my $name = lc shift;
+
+    return exists $name2id{$name} ? $name2id{$name} : 12;
+}
+
+sub isNameValid
+{
+    my $name = lc shift;
+
+    return exists $name2id{$name};
+}
 
 1;

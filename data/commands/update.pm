@@ -17,10 +17,13 @@ package Idval::UserPlugins::Update;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
+use strict;
+use warnings;
+
 use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
-use English;
+use English '-no_match_vars';;
 use Carp;
 
 use Idval::Collection;
@@ -30,6 +33,8 @@ use Idval::DoDots;
 sub init
 {
     set_pod_input();
+
+    return;
 }
 
 sub update
@@ -48,17 +53,17 @@ sub update
     my $dotmap = $typemap->get_dot_map();
     Idval::DoDots::init();
 
-    my $record;
+    my $tag_record;
     my $type;
     my $prov;
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
-        $record = $datastore->{RECORDS}->{$key};
+        $tag_record = $datastore->{RECORDS}->{$key};
 
-        $type = $record->get_value('TYPE');
+        $type = $tag_record->get_value('TYPE');
         $prov = $providers->get_provider('writes_tags', $type, 'NULL');
 
-        $retval = $prov->write_tags($record);
+        $retval = $prov->write_tags($tag_record);
         Idval::DoDots::dodots($dotmap->{$type});
     }
 
@@ -70,7 +75,7 @@ sub set_pod_input
 {
     my $help_file = Idval::Common::get_common_object('help_file');
 
-    my $pod_input =<<EOD;
+    my $pod_input =<<"EOD";
 
 =head1 NAME
 
@@ -94,6 +99,8 @@ use to change tag information in your files.
 
 EOD
     $help_file->{'update'} = $pod_input;
+
+    return;
 }
 
 1;

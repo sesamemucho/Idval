@@ -16,11 +16,13 @@ package Idval::Setup;
 
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
+use strict;
+use warnings;
 
 use Filter::Util::Call;
 use File::Basename;
 
-our %providers;
+my %providers;
 
 sub import
 {
@@ -30,6 +32,8 @@ sub import
     $top{linenum} = 0;
     $top{packagename} = '';
     filter_add(\%top);
+
+    return;
 }
 
 sub filter
@@ -59,7 +63,7 @@ sub filter
     }
 
     #print STDERR "XX: $self->{linenum}, \"$_\"\n";
-    $status;
+    return $status;
 }
 
 # This version does too much

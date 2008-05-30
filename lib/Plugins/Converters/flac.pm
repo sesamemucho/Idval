@@ -26,7 +26,7 @@ use Class::ISA;
 
 use base qw(Idval::Converter);
 
-our $name = 'flac';
+my $name = 'flac';
 
 Idval::Common::register_provider({provides=>'converts', name=>'flac_enc', from=>'WAV', to=>'FLAC'});
 Idval::Common::register_provider({provides=>'converts', name=>'flac_encogg', from=>'OGG', to=>'FLAC'});
@@ -71,19 +71,21 @@ sub init
     }
 
     $self->find_and_set_exe_path('flac');
+
+    return;
 }
 
 sub convert
 {
     my $self = shift;
-    my $record = shift;
+    my $tag_record = shift;
     my $dest = shift;
 
     return 0 if !$self->query('is_ok');
 
     my $name = $self->{NAME};
 
-    my $src = $record->get_name();
+    my $src = $tag_record->get_name();
 
     $dest = Idval::Common::mung_path($dest);
     $src = Idval::Common::mung_path($src);
@@ -92,18 +94,18 @@ sub convert
 
     if ($name eq 'flac_dec')
     {
-        return $self->decode($record, $dest, $src, $path);
+        return $self->decode($tag_record, $dest, $src, $path);
     }
     else
     {
-        return $self->encode($record, $dest, $src, $path);
+        return $self->encode($tag_record, $dest, $src, $path);
     }
 }
 
 sub decode
 {
     my $self = shift;
-    my $record = shift;
+    my $tag_record = shift;
     my $dest = shift;
     my $src = shift;
     my $path = shift;
@@ -124,7 +126,7 @@ sub decode
 sub encode
 {
     my $self = shift;
-    my $record = shift;
+    my $tag_record = shift;
     my $dest = shift;
     my $src = shift;
     my $path = shift;
@@ -132,9 +134,9 @@ sub encode
     my $extra_args = $self->{CONFIG}->get_single_value('extra_args', {'command_name' => 'flac_enc'});
 
     my @tags;
-    foreach my $tagname ($record->get_all_keys())
+    foreach my $tagname ($tag_record->get_all_keys())
     {
-        push(@tags, $record->get_value_as_arg("--tag=$tagname=", $tagname));
+        push(@tags, $tag_record->get_value_as_arg("--tag=$tagname=", $tagname));
     }
 
     my $status = Idval::Common::run($path,

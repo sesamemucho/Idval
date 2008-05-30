@@ -34,11 +34,11 @@ use IO::String;
 
 use base qw(IO::String);
 
-my $tree = {};
-my $pwd = '/';
-my $cwd = $tree;
+our $tree = {}; ## no critic (ProhibitPackageVars)
+our $pwd = '/'; ## no critic (ProhibitPackageVars)
+our $cwd = $tree; ## no critic (ProhibitPackageVars)
 our $cb; ## no critic (ProhibitPackageVars)
-my @curdir;
+our @curdir; ## no critic (ProhibitPackageVars)
 
 # This seems to be needed for AUTOLOAD to work
 sub new
@@ -48,6 +48,12 @@ sub new
     my $mode = shift || '';
 
     my $io;
+
+    if (!$filename && ($mode && ($mode =~ m/^[r<]/x)) && !idv_test_exists($filename))
+    {
+        print STDERR "Filename \"$filename\" opened in read mode but it doesn't exist.\n";
+        croak "Filename \"$filename\" opened in read mode but it doesn't exist.\n";
+    }
 
     if ($filename && ($mode && ($mode =~ m/^[r<]/x)) && idv_test_exists($filename))
     {
@@ -433,7 +439,7 @@ sub idv_mkdir
         croak "A regular file ($dpath) was found while creating the directory path \"$path\"\n";
     }
 
-    return;
+    return $retval;
 }
 
 sub _get_dir

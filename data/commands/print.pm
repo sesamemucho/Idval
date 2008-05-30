@@ -17,6 +17,9 @@ package Idval::UserPlugins::Print;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
+use strict;
+use warnings;
+
 use English '-no_match_vars';
 use Getopt::Long;
 use Data::Dumper;
@@ -28,9 +31,11 @@ use Idval::Common;
 sub init
 {
     set_pod_input();
+
+    return;
 }
 
-sub print
+sub print ## no critic (ProhibitBuiltinHomonyms)
 {
     my $datastore = shift;
     my $providers = shift;
@@ -52,7 +57,7 @@ sub set_pod_input
 {
     my $help_file = Idval::Common::get_common_object('help_file');
 
-    my $pod_input =<<EOD;
+    my $pod_input =<<"EOD";
 
 =head1 NAME
 
@@ -85,6 +90,8 @@ data store.
 
 EOD
     $help_file->{'print'} = $pod_input;
+
+    return;
 }
 
 1;

@@ -1,11 +1,14 @@
 package FileStringTest;
+use strict;
+use warnings;
+
 use Data::Dumper;
 
 use base qw(Test::Unit::TestCase);
 
 use Idval::FileString;
 
-our $tree1 = {'a' => {'a1' => {},
+my $tree1 = {'a' => {'a1' => {},
                       'a2' => 'foo bar goo',
                       },
               'b' => {'b1' => {
@@ -32,7 +35,11 @@ sub tear_down
 {
     # clean up after test
     Idval::FileString::idv_clear_tree();
+
+    return;
 }
+
+## no critic (ProtectPrivateSubs)
 
 sub test_getdir_1
 {
@@ -49,6 +56,8 @@ sub test_getdir_1
 
     @result = Idval::FileString::_get_dir('/b/b2');
     $self->assert_deep_equals([0, $tree1->{'b'}->{'b2'}, ''], \@result);
+
+    return;
 }
 
 sub test_getdir_2
@@ -73,6 +82,8 @@ sub test_getdir_2
     @result = Idval::FileString::_get_dir('/a/a2/goober');
     $self->assert_deep_equals([2, 'a2', 'a2/goober'], \@result);
 
+
+    return;
 }
 
 sub test_get_dirname
@@ -84,6 +95,8 @@ sub test_get_dirname
 
     @result = Idval::FileString::_get_dir('/b/b1');
     $self->assert_equals('/b/b1', Idval::FileString::idv_get_dirname($result[1]));
+
+    return;
 }
 
 sub test_getdir_with_special
@@ -102,6 +115,8 @@ sub test_getdir_with_special
     # Can't go above the root
     @result = Idval::FileString::_get_dir('/..');
     $self->assert_deep_equals([1, $tree1, '..'], \@result);
+
+    return;
 }
 
 sub test_getdir_1_cd
@@ -123,10 +138,12 @@ sub test_getdir_1_cd
     $self->assert_equals('/b/b2/b21', Idval::FileString::idv_get_dirname($result[1]));
 
     Idval::FileString::idv_cd('../../a');
-    $self->assert_equals('/a', Idval::FileString::idv_get_dirname($Idval::FileString::cwd));
+    $self->assert_equals('/a', Idval::FileString::idv_get_dirname($Idval::FileString::cwd)); ## no critic (ProhibitPackageVars)
     @result = Idval::FileString::_get_dir('a1');
     $self->assert_deep_equals([0, $tree1->{'a'}->{'a1'}, ''], \@result);
     $self->assert_equals('/a/a1', Idval::FileString::idv_get_dirname($result[1]));
+
+    return;
 }
 
 sub test_mkdir1
@@ -136,6 +153,8 @@ sub test_mkdir1
 
     $self->assert_equals("HASH", ref $dir);
     $self->assert_equals(1, Idval::FileString::idv_is_ref_dir($dir));
+
+    return;
 }
 
 sub test_mkdir2
@@ -150,6 +169,8 @@ sub test_mkdir2
     eval {$dir = Idval::FileString::idv_mkdir("/a/a2/goober")};
     my $str = $@;
     $self->assert_matches(qr{^A regular file \(a2\) was found while creating the directory path "/a/a2/goober"}, $str);
+
+    return;
 }
 
 sub test_add_file
@@ -162,6 +183,8 @@ sub test_add_file
 
     Idval::FileString::idv_cd("/a/b/c");
     #$self->assert_equals('/a/b/c', Idval::FileString::idv_get_dirname($Idval::FileString::cwd));
+
+    return;
 }
 
 sub test_new
@@ -175,6 +198,8 @@ sub test_new
 
     $self->assert("garf\n", $line);
 
+
+    return;
 }
 
 sub test_open_1
@@ -188,6 +213,8 @@ sub test_open_1
     $io->open("/a/b/c/foo.txt", "r");
 
     $self->assert("garf", $io->getline);
+
+    return;
 }
 
 sub test_find
@@ -202,6 +229,8 @@ sub test_find
                                 });
 
     $self->assert_deep_equals(['goo.txt', 'foo.txt'], \@flist);
+
+    return;
 }
 
 sub test_glob_star_matches
@@ -215,6 +244,8 @@ sub test_glob_star_matches
     my @files = Idval::FileString::idv_glob("/a/b/*oo.txt");
 
     $self->assert_deep_equals(['/a/b/foo.txt', '/a/b/goo.txt'], \@files);
+
+    return;
 }
 
 sub test_glob_question_matches
@@ -228,6 +259,8 @@ sub test_glob_question_matches
     my @files = Idval::FileString::idv_glob("/a/b/?oo.txt");
 
     $self->assert_deep_equals(['/a/b/foo.txt', '/a/b/goo.txt'], \@files);
+
+    return;
 }
 
 sub test_glob_exact_matches
@@ -241,6 +274,8 @@ sub test_glob_exact_matches
     my @files = Idval::FileString::idv_glob("/a/b/goo.txt");
 
     $self->assert_deep_equals(['/a/b/goo.txt'], \@files);
+
+    return;
 }
 
 sub test_mkdir
@@ -254,7 +289,14 @@ sub test_mkdir
     Idval::FileString::idv_mkdir('/a/goober/hoober');
 
     $self->assert_equals(1, Idval::FileString::idv_test_isdir('/a/goober/hoober'));
+
+    return;
 }
+
+
+
+
+
 
 # sub test_f
 # {

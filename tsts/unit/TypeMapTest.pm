@@ -1,4 +1,7 @@
 package TypeMapTest;
+use strict;
+use warnings;
+
 use base qw(Test::Unit::TestCase);
 
 use Benchmark qw(:all);
@@ -10,7 +13,7 @@ use TestUtils;
 use Idval::TypeMap;
 
 #our $testdir = "$FindBin::Bin/../tsts/unittest-data";
-our $testdir = "tsts/unittest-data";
+my $testdir = "tsts/unittest-data";
 
 sub new {
     my $self = shift()->SUPER::new(@_);
@@ -27,6 +30,8 @@ sub tear_down {
     my $self = shift;
     # clean up after test
     unlink(@{$self->{NEWFILES}});
+
+    return;
 }
 
 sub test_init1
@@ -36,6 +41,8 @@ sub test_init1
     my $bm = Idval::TypeMap->new($prov);
 
     $self->assert_equals(ref($bm), "Idval::TypeMap");
+
+    return;
 }
 
 sub test_get_map1
@@ -49,6 +56,8 @@ sub test_get_map1
     $self->assert_deep_equals([qw(flac flac16)], [$bm->get_exts_from_filetype('FLAC')]);
     $self->assert_deep_equals([qw(flac flac16 mp3 ogg)], [$bm->get_exts_from_class('MUSIC')]);
     $self->assert_deep_equals([qw(MUSIC FLAC)], [$bm->get_class_and_type_from_ext('flac16')]);
+
+    return;
 }
 
 1;

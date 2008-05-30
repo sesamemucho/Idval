@@ -21,6 +21,8 @@ sub _init
     my $prov = shift;
 
     $self->build_type_mapper($prov);
+
+    return;
 }
 
 sub _build_map
@@ -51,6 +53,8 @@ sub _build_map
             }
         }
     }
+
+    return;
 }
 
 # Ask each tag reader and writer for its file extension -> file type mapping,
@@ -90,6 +94,8 @@ sub build_type_mapper
             }
         }
     }
+
+    return;
 }
 
 sub get_all_classes
@@ -110,7 +116,7 @@ sub get_all_extensions
 {
     my $self = shift;
 
-    return map(lc, sort (keys %{$self->{MAPPING}->{CLASSEXT}->{REV}}));
+    return map {lc $_} sort (keys %{$self->{MAPPING}->{CLASSEXT}->{REV}});
 }
 
 sub get_filetypes_from_class
@@ -118,7 +124,7 @@ sub get_filetypes_from_class
     my $self = shift;
     my $class = shift;
 
-    return map(uc, sort (keys %{$self->{MAPPING}->{CLASSTYPE}->{FWD}->{$class}}));
+    return map {uc $_} sort (keys %{$self->{MAPPING}->{CLASSTYPE}->{FWD}->{$class}});
 }
 
 sub get_dot_map
@@ -148,7 +154,7 @@ sub get_exts_from_filetype
     my $self = shift;
     my $filetype = uc(shift);
 
-    return map(lc, sort (keys %{$self->{MAPPING}->{FILETYPE}->{FWD}->{$filetype}}));
+    return map {lc $_} sort (keys %{$self->{MAPPING}->{FILETYPE}->{FWD}->{$filetype}});
 }
 
 # For when we just want the output extension
@@ -172,7 +178,7 @@ sub get_exts_from_class
     my $self = shift;
     my $class = uc(shift);
 
-    return map(lc, sort (keys %{$self->{MAPPING}->{CLASSEXT}->{FWD}->{$class}}));
+    return map {lc $_} sort (keys %{$self->{MAPPING}->{CLASSEXT}->{FWD}->{$class}});
 }
 
 sub get_class_and_type_from_ext

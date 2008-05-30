@@ -39,6 +39,8 @@ sub CheckFunction
     return 1 if $func =~ m/^(Check_Genre_for_id3v1)$/;
 
     $perror = "Unknown validation function \"$func\"";
+
+    return;
 }
 
 sub perror
@@ -54,7 +56,7 @@ sub Check_Genre_for_id3v1
 {
     my $tagvalue = lc(shift);
 
-    return exists($Idval::Data::Genres::name2id{$tagvalue});
+    return Idval::Data::Genres::isNameValid($tagvalue);
 }
 
 sub new
@@ -88,7 +90,7 @@ sub get_blocks
     my $visitor = sub {
         my $node = shift;
 
-        return undef if $node->evaluate($selects) == 0;
+        return if $node->evaluate($selects) == 0;
 
         if (exists $node->{ASSIGNMENT_DATA})
         {

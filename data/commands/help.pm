@@ -17,6 +17,9 @@ package Idval::UserPlugins::Help;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
+use strict;
+use warnings;
+
 use Carp;
 use Data::Dumper;
 use Getopt::Long;
@@ -33,6 +36,8 @@ sub init
                                                   decorate => 0});
 
     set_pod_input();
+
+    return;
 }
 
 sub help
@@ -50,7 +55,7 @@ sub help
     my $help_file = Idval::Common::get_common_object('help_file');
 
     my @cmd_list = $providers->find_all_commands();
-    my $cmd_abbrev = abbrev map(lc, @cmd_list);
+    my $cmd_abbrev = abbrev map {lc $_} @cmd_list;
     my $cmd_name = $name;
 
     if (@ARGV)
@@ -149,7 +154,7 @@ sub set_pod_input
 {
     my $help_file = Idval::Common::get_common_object('help_file');
 
-    my $pod_input =<<EOD;
+    my $pod_input =<<"EOD";
 
 =head1 NAME
 
@@ -186,6 +191,8 @@ useful with the contents thereof.
 
 EOD
     $help_file->{'help'} = $pod_input;
+
+    return;
 }
 
 1;

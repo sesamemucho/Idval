@@ -1,4 +1,8 @@
 package GettagsTest;
+
+use strict;
+use warnings;
+
 use base qw(Test::Unit::TestCase);
 
 use Benchmark qw(:all);
@@ -33,7 +37,7 @@ sub test_gettags
     my $idval = $self->{IDVAL};
     my $errlist = '';
 
-    my @files = map{ $AcceptUtils::audiodir . "/sbeep$_" } qw(.flac .ogg .mp3);
+    my @files = map{ AcceptUtils::get_audiodir("/sbeep$_") } qw(.flac .ogg .mp3);
     my $taglist = $idval->datastore();
     $taglist = Idval::Scripts::gettags($taglist, $idval->providers(), $AcceptUtils::audiodir);
     #$taglist = Idval::Scripts::print($taglist, $idval->providers());
@@ -61,6 +65,8 @@ sub test_gettags
     }
 
     $self->assert(0, $errlist) if $errlist;
+
+    return;
 }
 
 1;

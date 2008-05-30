@@ -36,15 +36,13 @@ use Idval::FileIO;
 use Idval::Common;
 use Idval::Logger;
 
-our (
-    @standard_options,
-    %options,
-    $VERSION,
-    $AUTOLOAD,
-    $log,
-    );
+my @standard_options;
+my %options;
+my $VERSION;
+our $AUTOLOAD;  ## no critic (ProhibitPackageVars)
+my $log;
 
-$| = 1;
+local $| = 1;
 
 $VERSION = 0.50;
 
@@ -104,17 +102,17 @@ sub _init
     my $argref = shift;
 
     my $lfh;
-    local @ARGV;
+    my @realargv = @ARGV;
 
     if (!defined($argref))
     {
-        $argref = \@ARGV;
+        $argref = \@realargv;
     }
 
     if (ref $argref eq 'ARRAY')
     {
         # We need to do our own argument parsing
-        @ARGV = @{$argref};
+        local @ARGV = @{$argref};
 
         my $opts = Getopt::Long::Parser->new();
         $opts->configure("require_order");
@@ -141,7 +139,7 @@ sub _init
 #         defined($options{'log_out'}) ? ('log_out' => $options{'log_out'}) : '',
 #         defined($options{'print_to'}) ? ('print_to' => $options{'print_to'}) : '',
 
-    Idval::Logger::_initialize_logger(@logger_args);
+    Idval::Logger::initialize_logger(@logger_args);
     $log = Idval::Common::get_logger();
 
     # Set up a common location for help files
@@ -195,6 +193,8 @@ sub _init
     $self->{DATASTORE} = Idval::Collection->new({contents => '', source => 'blank'});
 
     $self->{REMAINING_ARGS} = (ref $argref eq 'ARRAY') ? [@ARGV] : [];
+
+    return;
 }
 
 # Here we enter the command loop. If there are any arguments left in @ARGV,
@@ -296,6 +296,8 @@ sub cmd_loop
             $self->{DATASTORE} = $temp_ds if $temp_ds;
         }
     }
+
+    return;
 }
 
 # Note:
@@ -383,7 +385,7 @@ use Idval::Constants;
 our $AUTOLOAD;
 
 # We should only get here if the command has not (previously) been defined.
-sub AUTOLOAD
+sub AUTOLOAD  ## no critic (RequireFinalReturn)
 {
     my $rtn = $AUTOLOAD;
     my $name;
@@ -392,18 +394,20 @@ sub AUTOLOAD
     return if $name =~ m/^[[:upper:]]+$/;
 
     #print STDERR "Checking \"$name\"\n";
-    $Idval::log->chatty($DBG_PROVIDERS, "Checking \"$name\"\n");
+    $log->chatty($DBG_PROVIDERS, "Checking \"$name\"\n");
     my $providers = Idval::Common::get_common_object('providers');
     croak "ERROR: Command \"$rtn\" called too early\n" unless defined $providers;
 
-    no strict 'refs';
-    $Idval::log->chatty($DBG_PROVIDERS, "In autoload; rtn is \"$rtn\"\n");
+    $log->chatty($DBG_PROVIDERS, "In autoload; rtn is \"$rtn\"\n");
 
     my $subr = $providers->find_command($name);
 
+    no strict 'refs';
     *$rtn = $subr;              # For next time, so we don't go through AUTOLOAD again
 
     goto &$rtn;
+
+    use strict;
 }
 
 package Idval;
@@ -413,7 +417,7 @@ sub set_pod_input
     my $self = shift;
     my $help_file = Idval::Common::get_common_object('help_file');
 
-    my $pod_input =<<EOD;
+    my $pod_input =<<"EOD";
 
 =head1 NAME
 
@@ -450,6 +454,8 @@ useful with the contents thereof.
 
 EOD
     $help_file->{'main'} = $pod_input;
+
+    return;
 }
 
 1;

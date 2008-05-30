@@ -26,8 +26,8 @@ use Carp;
 
 use base qw(Idval::Plugin);
 
-our $name = 'metaflac';
-our $type = 'FLAC';
+my $name = 'metaflac';
+my $type = 'FLAC';
 
 Idval::Common::register_provider({provides=>'reads_tags', name=>$name, type=>$type});
 Idval::Common::register_provider({provides=>'writes_tags', name=>$name, type=>$type});
@@ -52,50 +52,54 @@ sub init
     $self->set_param('type', $type);
 
     $self->find_and_set_exe_path();
+
+    return;
 }
 
 sub read_tags
 {
     my $self = shift;
-    my $record = shift;
+    my $tag_record = shift;
     my $line;
     my $current_tag;
     my $retval = 0;
 
     return $retval if !$self->query('is_ok');
 
-    my $filename = $record->get_value('FILE');
+    my $filename = $tag_record->get_value('FILE');
     my $path = $self->query('path');
 
     #$filename =~ s{/cygdrive/(.)}{$1:}; # Tag doesn't deal well with cygdrive pathnames
-    foreach $line (`$path --export-tags-to=- "$filename" 2>&1`) {
+    foreach my $line (`$path --export-tags-to=- "$filename" 2>&1`) {
         chomp $line;
         $line =~ s/\r//;
         #print "<$line>\n";
 
         next if $line =~ /^\s*$/;
 
-        $line =~ m/ERROR: reading metadata/ and do {
+        if ($line =~ m/ERROR: reading metadata/)
+        {
             print 'Getters::BadFlac', $line, $filename, "\n";
-            print "ref record: ", ref $record, "\n";
-            #delete $record;
+            print "ref record: ", ref $tag_record, "\n";
+            #delete $tag_record;
             $retval = 1;
             last;
         };
 
-        $line =~ m/^(\S+)\s*=\s*(.*)/ and do {
+        if ($line =~ m/^(\S+)\s*=\s*(.*)/)
+        {
             $current_tag = uc($1);
-            $record->add_tag($current_tag, $2);
+            $tag_record->add_tag($current_tag, $2);
             next;
         };
 
-        $record->add_to_tag($current_tag, "\n$line");
+        $tag_record->add_to_tag($current_tag, "\n$line");
     }
 
     #print "\nGot tag:\n";
-    #print join("\n", $record->format_record());
+    #print join("\n", $tag_record->format_record());
 
-    $record->commit_tags();
+    $tag_record->commit_tags();
 
     return $retval;
 }
@@ -103,18 +107,18 @@ sub read_tags
 sub write_tags
 {
     my $self = shift;
-    my $record = shift;
+    my $tag_record = shift;
 
     return 0 if !$self->query('is_ok');
 
-    my $filename = $record->get_value('FILE');
+    my $filename = $tag_record->get_value('FILE');
     my $path = $self->query('path');
 
     Idval::Common::run($path, '--remove-all-tags', $filename);
     my @taglist;
-    foreach my $tagname ($record->get_all_keys())
+    foreach my $tagname ($tag_record->get_all_keys())
     {
-        push(@taglist, $record->get_value_as_arg('--set-tag=' . $tagname . '=', $tagname));
+        push(@taglist, $tag_record->get_value_as_arg('--set-tag=' . $tagname . '=', $tagname));
     }
 
     my $status = Idval::Common::run($path,

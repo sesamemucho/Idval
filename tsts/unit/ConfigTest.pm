@@ -1,4 +1,7 @@
 package ConfigTest;
+use strict;
+use warnings;
+
 use base qw(Test::Unit::TestCase);
 
 use Benchmark qw(:all);
@@ -11,7 +14,7 @@ use Idval::Config;
 use Idval::FileIO;
 use Idval::ServiceLocator;
 
-our $tree1 = {'testdir' => {}};
+my $tree1 = {'testdir' => {}};
 
 sub new {
     my $self = shift()->SUPER::new(@_);
@@ -24,10 +27,14 @@ sub new {
 sub set_up {
     # provide fixture
     Idval::FileString::idv_set_tree($tree1);
+
+    return;
 }
 sub tear_down {
     # clean up after test
     Idval::FileString::idv_clear_tree();
+
+    return;
 }
 
 sub barf_test_get
@@ -37,6 +44,8 @@ sub barf_test_get
     my $obj = Idval::Config->new('/testdir/gt1.txt');
     $self->assert_equals(3, $obj->get_single_value('gubber'));
     $self->assert_equals(4, $obj->get_single_value('hubber'));
+
+    return;
 }
 
 sub barf_test_get_with_strange_chars
@@ -46,6 +55,8 @@ sub barf_test_get_with_strange_chars
     my $obj = Idval::Config->new('/testdir/gt1.txt');
     $self->assert_equals('pachoo', $obj->get_single_value('gubber'));
     $self->assert_equals(4, $obj->get_single_value('hubber'));
+
+    return;
 }
 
 # Test that we get the default default
@@ -55,6 +66,8 @@ sub barf_test_get_with_default1
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\ngubber = 3\nhubber=4\n\n");
     my $obj = Idval::Config->new('/testdir/gt1.txt');
     $self->assert_equals('', $obj->get_single_value('flubber'));
+
+    return;
 }
 
 sub barf_test_get_with_default2
@@ -63,6 +76,8 @@ sub barf_test_get_with_default2
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\ngubber = 3\nhubber=4\n\n");
     my $obj = Idval::Config->new('/testdir/gt1.txt');
     $self->assert_equals(18, $obj->get_single_value('flubber', {}, 18));
+
+    return;
 }
 
 sub barf_test_get_list_1
@@ -71,6 +86,8 @@ sub barf_test_get_list_1
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\ngubber = pachoo wachoo\n\n");
     my $obj = Idval::Config->new('/testdir/gt1.txt');
     $self->assert_equals('pachoo wachoo', $obj->get_value('gubber'));
+
+    return;
 }
 
 # # An append should replace an assignment in the same block
@@ -106,6 +123,8 @@ sub barf_test_get_list_3
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\ngubber = pachoo nachoo \"huggery muggery\" hoofah\n\n");
     my $obj = Idval::Config->new('/testdir/gt1.txt');
     $self->assert_equals('pachoo nachoo "huggery muggery" hoofah', $obj->get_value('gubber'));
+
+    return;
 }
 
 sub barf_test_get_list_4
@@ -114,6 +133,8 @@ sub barf_test_get_list_4
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\ngubber = pachoo nachoo \"huggery muggery\" hoofah\n\n");
     my $obj = Idval::Config->new('/testdir/gt1.txt');
     $self->assert_equals('pachoo nachoo "huggery muggery" hoofah', $obj->get_value('gubber'));
+
+    return;
 }
 
 # # Not correct to call keyword routines from outside
@@ -124,6 +145,8 @@ sub barf_test_block_1
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\ngubber = pachoo wachoo\n\n");
     my $obj = Idval::Config->new('/testdir/gt1.txt');
     $self->assert_equals('pachoo wachoo', $obj->get_value('gubber'));
+
+    return;
 }
 
 sub barf_test_block_two_blocks_ok
@@ -134,6 +157,8 @@ sub barf_test_block_two_blocks_ok
 
     $self->assert_equals('pachoo wachoo', $obj->get_value('gubber'));
     $self->assert_equals('bouncy', $obj->get_single_value('rubber'));
+
+    return;
 }
 
 # sub test_block_two_blocks_append
@@ -153,6 +178,8 @@ sub barf_test_block_two_blocks_replace
 
     $self->assert_equals('bouncy', $obj->get_value('gubber'));
     $self->assert_equals('bouncy', $obj->get_single_value('gubber'));
+
+    return;
 }
 
 # # # Memoization wins; about twice as fast
@@ -298,10 +325,12 @@ sub test_block_two_blocks_select_1
     my $self = shift;
     Idval::FileString::idv_add_file('/testdir/gt1.txt',
                                     "{\ntype == foo\ngubber = pachoo wachoo\n}\n{\ntype == boo\ngubber = bouncy}\n");
-    $Idval::Config::cfg_dbg = 1;
+    #$Idval::Config::cfg_dbg = 1;
     my $obj = Idval::Config->new('/testdir/gt1.txt');
 
     $self->assert_equals('pachoo wachoo', $obj->get_value('gubber', {'type' => 'foo'}));
+
+    return;
 }
 
 sub barf_test_block_two_blocks_select_1a
@@ -310,11 +339,13 @@ sub barf_test_block_two_blocks_select_1a
     Idval::FileString::idv_add_file('/testdir/gt1.txt',
                                     "{\ntype = foo\ngubber = pachoo wachoo\nhubber=~boo}\n" . 
                                     "type = boo\ngubber = bouncy\n\n");
-    $Idval::Config::cfg_dbg = 1;
+    #$Idval::Config::cfg_dbg = 1;
     my $obj = Idval::Config->new('/testdir/gt1.txt');
 
     $self->assert_equals('pachoo wachoo', $obj->get_value('gubber', {'type' => 'foo',
                                                                      'hubber' => 'bugaboo'}));
+
+    return;
 }
 
 # A selector key that isn't in the config block doesn't prevent a match
@@ -329,6 +360,8 @@ sub barf_test_block_two_blocks_select_1b
     $self->assert_equals('pachoo wachoo', $obj->get_value('gubber', 
                                                           {'type' => 'foo',
                                                            'whacko' => 'gobble'}));
+
+    return;
 }
 
 # A selector key that isn't in the config block doesn't prevent a match
@@ -344,6 +377,8 @@ sub barf_test_block_two_blocks_select_1c
     $self->assert_equals('', $obj->get_value('gubber', 
                                         {'type' => 'foo',
                                          'hubber' => 'gobble'}));
+
+    return;
 }
 
 # Test default when it should not be needed (see test_block_two_blocks_select_1)
@@ -358,6 +393,8 @@ sub barf_test_block_two_blocks_select_2a
                          $obj->get_value('gubber',
                                          {selects=>{'type' => 'foo'},
                                           default=>'scooby doo'}));
+
+    return;
 }
 
 # Test default when it should be needed (see test_block_two_blocks_select_1c)
@@ -374,6 +411,8 @@ sub barf_test_block_two_blocks_select_2b
                                          {selects=>{'type' => 'foo',
                                                     'hubber' => 'gobble'},
                                           default=>'scooby doo'}));
+
+    return;
 }
 
 
@@ -382,7 +421,7 @@ sub barf_test_block_two_blocks_select_2b
 sub barf_test_block_config1
 {
     my $self = shift;
-    my $cfg1 =<<EOS;
+    my $cfg1 =<<"EOS";
    type = foo
    gubber = pachoo wachoo
    {
@@ -420,6 +459,8 @@ EOS
 #     $self->assert_equals("gubber = pachoo wachoo\ntype = foo", $nodes[0]);
 #     $self->assert_equals("gubber = pachoo wachoo\nlubber = boo hoo\ntype = woo", $nodes[1]);
 #     #$self->assert_deep_equals(['=', 'woo'], $nodes->{$nodelist[1]}->{'type'});
+
+    return;
 }
 
 

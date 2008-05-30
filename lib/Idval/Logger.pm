@@ -44,8 +44,8 @@ my %level_to_name = (-1 => 'SILENT',
 END {
     if (@warnings)
     {
-        $lo->log({level => $SILENT, debugmask => 0}, "The following warnings occurred:\n");
-        $lo->log({level => $SILENT, debugmask => 0}, @warnings);
+        $lo->_log({level => $SILENT, debugmask => 0}, "The following warnings occurred:\n");
+        $lo->_log({level => $SILENT, debugmask => 0}, @warnings);
     }
     }
 
@@ -85,6 +85,8 @@ sub _init
     $self->set_fh('PRINT_TO', safe_get($argref, 'print_to', 'STDOUT'));
 
     $self->{WARNINGS} = ();
+
+    return;
 }
 
 sub str
@@ -98,6 +100,8 @@ sub str
     printf "  show time:  %d\n", $self->accessor('SHOW_TIME');
     printf "  use xml:    %d\n", $self->accessor('USE_XML');
     printf "  output:     %s\n", $self->accessor('LOG_OUT');
+
+    return;
 }
 
 sub set_fh
@@ -109,14 +113,19 @@ sub set_fh
 
   NLOG:
     {
-        $fh = *STDOUT{IO}, last NLOG if $name eq "STDOUT";
-        $fh = *STDERR{IO}, last NLOG if $name eq "STDERR";
+        if ($name eq "STDOUT" or $name eq "STDERR")
+        {
+            $fh = *STDOUT{IO};
+            last NLOG;
+        }
         
         undef $fh;
-        open($fh, ">&=", $name) || croak "Can't duplicate file descriptor \"$name\" for writing: $!\n";
+        open($fh, ">&=", $name) || croak "Can't duplicate file descriptor \"$name\" for writing: $!\n"; ## no critic (RequireBriefOpen)
     }
 
     $self->{$fhtype} = $fh;
+
+    return $fh;
 }
 
 sub accessor
@@ -170,7 +179,7 @@ sub ok
     return $level <= $self->accessor('LOGLEVEL');
 }
 
-sub log
+sub _log
 {
     my $self = shift;
     my $argref = shift;
@@ -217,7 +226,7 @@ sub log
     if ($isquery)
     {
         my $ans;
-        $ans = <STDIN>;
+        $ans = <>;
         if( defined $ans ) {
             chomp $ans;
         }
@@ -234,7 +243,7 @@ sub silent
     my $self = shift;
     my $dbgmask = shift;
 
-    return $self->log({level => $SILENT, debugmask => $dbgmask}, @_);
+    return $self->_log({level => $SILENT, debugmask => $dbgmask}, @_);
 }
 
 sub silent_q
@@ -242,21 +251,21 @@ sub silent_q
     my $self = shift;
     my $dbgmask = shift;
 
-    return $self->log({level => $SILENT, decorate => 0, debugmask => $dbgmask}, @_);
+    return $self->_log({level => $SILENT, decorate => 0, debugmask => $dbgmask}, @_);
 }
 
 sub quiet
 {
     my $self = shift;
     my $dbgmask = shift;
-    return $self->log({level => $QUIET, debugmask => $dbgmask}, @_);
+    return $self->_log({level => $QUIET, debugmask => $dbgmask}, @_);
 }
 
 sub info
 {
     my $self = shift;
     my $dbgmask = shift;
-    return $self->log({level => $INFO, debugmask => $dbgmask}, @_);
+    return $self->_log({level => $INFO, debugmask => $dbgmask}, @_);
 }
 
 sub info_q
@@ -264,7 +273,7 @@ sub info_q
     my $self = shift;
     my $dbgmask = shift;
 
-    return $self->log({level => $INFO, decorate => 0, debugmask => $dbgmask}, @_);
+    return $self->_log({level => $INFO, decorate => 0, debugmask => $dbgmask}, @_);
 #     return unless $dbgmask & $self->{DEBUGMASK};
 #     print $self->{INFO_OUT} (@_) if $self->ok($INFO);
 }
@@ -273,21 +282,21 @@ sub verbose
 {
     my $self = shift;
     my $dbgmask = shift;
-    return $self->log({level => $VERBOSE, debugmask => $dbgmask}, @_);
+    return $self->_log({level => $VERBOSE, debugmask => $dbgmask}, @_);
 }
 
 sub chatty
 {
     my $self = shift;
     my $dbgmask = shift;
-    return $self->log({level => $CHATTY, debugmask => $dbgmask}, @_);
+    return $self->_log({level => $CHATTY, debugmask => $dbgmask}, @_);
 }
 
-sub warn
+sub idv_warn
 {
     my $self = shift;
     push(@warnings, join("", @_));
-    return $self->log({level => $QUIET, debugmask => $DBG_ALL}, @_);
+    return $self->_log({level => $QUIET, debugmask => $DBG_ALL}, @_);
 }
 
 sub _warn
@@ -295,14 +304,14 @@ sub _warn
     my $self = shift;
 
     push(@warnings, join("", @_));
-    return $self->log({level => $QUIET, debugmask => $DBG_ALL, call_depth => 2}, @_);
+    return $self->_log({level => $QUIET, debugmask => $DBG_ALL, call_depth => 2}, @_);
 }
 
 sub _fatal
 {
     my $self = shift;
 
-    $self->log({level => $QUIET, debugmask => $DBG_ALL, call_depth => 2}, @_);
+    $self->_log({level => $QUIET, debugmask => $DBG_ALL, call_depth => 2}, @_);
     if ($self->{SHOW_TRACE})
     {
         Carp::confess('Backtrace');
@@ -326,17 +335,19 @@ sub make_custom_logger
     my $argref = shift;
 
     return sub {
-        return $self->log($argref, @_)
+        return $self->_log($argref, @_)
     }
 }
 
 # Not for general use - should only be used (once) by the driver program, after
 # enough options are known.
 
-sub _initialize_logger
+sub initialize_logger
 {
     #print "Got ", join(':', @_), "\n";
     $lo = new Idval::Logger({@_});
+
+    return;
 }
 
 sub get_logger

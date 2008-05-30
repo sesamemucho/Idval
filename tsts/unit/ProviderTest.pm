@@ -1,4 +1,7 @@
 package ProviderTest;
+use strict;
+use warnings;
+
 use base qw(Test::Unit::TestCase);
 
 use Benchmark qw(:all);
@@ -12,10 +15,9 @@ use Idval::Common;
 use Idval::Config;
 use Idval::ServiceLocator;
 
-our $tree1 = {'testdir' => {}};
-#our $testdir = "$FindBin::Bin/../tsts/unittest-data";
-our $testdir = "tsts/unittest-data";
-our $provs;
+my $tree1 = {'testdir' => {}};
+my $testdir = "tsts/unittest-data";
+my $provs;
 
 sub new {
     my $self = shift()->SUPER::new(@_);
@@ -27,12 +29,16 @@ sub new {
 sub set_up {
     # provide fixture
     Idval::FileString::idv_set_tree($tree1);
+
+    return;
 }
 
 sub tear_down {
     # clean up after test
     Idval::FileString::idv_clear_tree();
     TestUtils::unload_packages($provs);
+
+    return;
 }
 
 sub test_init
@@ -43,6 +49,8 @@ sub test_init
     my $fc = Idval::Config->new("/testdir/gt1.txt");
     $provs = eval{Idval::Providers->new($fc)};
     $self->assert_equals('Idval::Providers', ref $provs);
+
+    return;
 }
 
 sub test_get_providers
@@ -57,6 +65,8 @@ sub test_get_providers
     my $fc = Idval::Config->new("/testdir/gt1.txt");
     $provs = eval{Idval::Providers->new($fc)};
     $self->assert_equals(4, $provs->num_providers());
+
+    return;
 }
 
 sub test_get_packages
@@ -75,6 +85,8 @@ sub test_get_packages
                                'Idval::UserPlugins::Up2',
                                'Idval::UserPlugins::Up3',
                                'Idval::UserPlugins::Up4'], $provs->get_packages());
+
+    return;
 }
 
 sub test_get_a_provider_1
@@ -91,6 +103,8 @@ sub test_get_a_provider_1
     my $writer = $provs->get_provider('writes_tags', 'OGG');
 
     $self->assert_equals('Idval::UserPlugins::Up2', ref $writer);
+
+    return;
 }
 
 sub test_get_a_provider_2
@@ -108,6 +122,8 @@ sub test_get_a_provider_2
     my $str = $@;
     $self->assert_null($item);
     $self->assert_matches(qr/^No "converts" provider found for "FLAC,WAV"/, $str);
+
+    return;
 }
 
 sub test_choose_provider_by_weight_in_config_file_1
@@ -125,6 +141,8 @@ sub test_choose_provider_by_weight_in_config_file_1
     my $writer = $provs->get_provider('writes_tags', 'MP3');
 
     $self->assert_equals('Idval::UserPlugins::Up1', ref $writer);
+
+    return;
 }
 
 sub test_choose_provider_by_weight_in_config_file_2
@@ -145,6 +163,8 @@ sub test_choose_provider_by_weight_in_config_file_2
     #$Idval::Config::BlockReader::cfg_dbg = 0;
 
     $self->assert_equals('Idval::UserPlugins::Up4', ref $writer);
+
+    return;
 }
 
 # sub test_get_a_provider_3
@@ -170,6 +190,8 @@ sub test_get_a_command_1
     my $cmd = $provs->find_command('cmd1');
 
     $self->assert_equals('Idval::UserPlugins::Cmd1::cmd1', $cmd);
+
+    return;
 }
 
 ##-------------------------------------------------##
@@ -209,6 +231,8 @@ sub _init
 EOF
 
     Idval::FileString::idv_add_file('/testdir/Idval/up1.pm', $plugin);
+
+    return;
 }
 
 sub add_UserPlugin3_up2
@@ -246,6 +270,8 @@ sub _init
 EOF
 
     Idval::FileString::idv_add_file('/testdir/Idval/up2.pm', $plugin);
+
+    return;
 }
 
 sub add_UserPlugin3_up3
@@ -283,6 +309,8 @@ sub _init
 EOF
 
     Idval::FileString::idv_add_file('/testdir/Idval/up3.pm', $plugin);
+
+    return;
 }
 
 sub add_UserPlugin3_up4
@@ -320,6 +348,8 @@ sub _init
 EOF
 
     Idval::FileString::idv_add_file('/testdir/Idval/up4.pm', $plugin);
+
+    return;
 }
 
 sub add_command_1
@@ -346,6 +376,8 @@ sub cmd1
 EOF
 
     Idval::FileString::idv_add_file('/testdir/Idval/cmd1.pm', $plugin);
+
+    return;
 }
 
 1;

@@ -26,9 +26,9 @@ use Class::ISA;
 
 use base qw(Idval::Plugin);
 
-our $name = 'id3ed';
-our $type = 'MP3';
-our %xlat_tags = 
+my $name = 'id3ed';
+my $type = 'MP3';
+my %xlat_tags = 
     ( TIME => 'DATE',
       YEAR => 'DATE',
       NAME => 'TITLE',
@@ -59,23 +59,25 @@ sub init
     $self->set_param('type', $type);
 
     $self->find_and_set_exe_path();
+
+    return;
 }
 
 sub read_tags
 {
     my $self = shift;
-    my $record = shift;
+    my $tag_record = shift;
     my $line;
     my $current_tag;
     my $retval = 0;
 
     return $retval if !$self->query('is_ok');
 
-    my $filename = $record->get_value('FILE');
+    my $filename = $tag_record->get_value('FILE');
     my $path = $self->query('path');
 
     $filename =~ s{/cygdrive/(.)}{$1:}; # Tag doesn't deal well with cygdrive pathnames
-    foreach $line (`$path --hideinfo --hidenames "$filename" 2>&1`) {
+    foreach my $line (`$path --hideinfo --hidenames "$filename" 2>&1`) {
         chomp $line;
         $line =~ s/\r//;
         #print "<$line>\n";
@@ -85,29 +87,32 @@ sub read_tags
         next if $line =~ /^Version /;
         next if $line =~ /^\s*$/;
 
-        $line =~ m/^File has no known tags./ and do {
+        if ($line =~ m/^File has no known tags./)
+        {
             $retval = 1;
             last;
         };
 
-        $line =~ m/^(\S+):\s+(.*)/ and do {
+        if ($line =~ m/^(\S+):\s+(.*)/)
+        {
             $current_tag = $1;
             $current_tag = $xlat_tags{$current_tag} if exists $xlat_tags{$current_tag};
-            $record->add_tag($current_tag, $2);
+            $tag_record->add_tag($current_tag, $2);
             next;
         };
 
-        $line =~ m/^(\S+)\s*=\s*(.*)/ and do {
+        if ($line =~ m/^(\S+)\s*=\s*(.*)/)
+        {
             $current_tag = $1;
             $current_tag = $xlat_tags{$current_tag} if exists $xlat_tags{$current_tag};
-            $record->add_tag($current_tag, $2);
+            $tag_record->add_tag($current_tag, $2);
             next;
         };
 
-        $record->add_to_tag($current_tag, "$line");
+        $tag_record->add_to_tag($current_tag, "$line");
     }
 
-    $record->commit_tags();
+    $tag_record->commit_tags();
 
     return $retval;
 }
@@ -115,23 +120,23 @@ sub read_tags
 sub write_tags
 {
     my $self = shift;
-    my $record = shift;
+    my $tag_record = shift;
 
     return 0 if !$self->query('is_ok');
 
-    my $filename = $record->get_name();
+    my $filename = $tag_record->get_name();
     my $path = $self->query('path') . " ";
 
     Idval::Common::run($path, '--remove', $filename);
 
     my $status = Idval::Common::run($path,
-                                    $record->get_value_as_arg('--title ', 'TITLE'),
-                                    $record->get_value_as_arg('--artist ', 'ARTIST'),
-                                    $record->get_value_as_arg('--album ', 'ALBUM'),
-                                    $record->get_value_as_arg('--year ', 'DATE'),
-                                    $record->get_value_as_arg('--comment ', 'COMMENT'),
-                                    $record->get_value_as_arg('--track ', 'TRACKNUMBER'),
-                                    $record->get_value_as_arg('--genre ', 'GENRE'),
+                                    $tag_record->get_value_as_arg('--title ', 'TITLE'),
+                                    $tag_record->get_value_as_arg('--artist ', 'ARTIST'),
+                                    $tag_record->get_value_as_arg('--album ', 'ALBUM'),
+                                    $tag_record->get_value_as_arg('--year ', 'DATE'),
+                                    $tag_record->get_value_as_arg('--comment ', 'COMMENT'),
+                                    $tag_record->get_value_as_arg('--track ', 'TRACKNUMBER'),
+                                    $tag_record->get_value_as_arg('--genre ', 'GENRE'),
                                     $filename);
 
     return $status;

@@ -23,8 +23,8 @@ use Data::Dumper;
 use List::Util;
 use Carp;
 
-our @path_list;
-our $extracted_paths = {};
+my @path_list;
+my $extracted_paths = {};
 
 sub new
 {
@@ -52,6 +52,8 @@ sub _init
 #     $self->add_edge('F', 'loo', 'O', 100);
 #     $self->add_edge('O', 'moo', 'W', 100);
 #     $self->add_edge('M', 'noo', 'W', 100);
+
+    return;
 }
 
 sub add_edge
@@ -70,6 +72,7 @@ sub add_edge
     $self->{GRAPH}->{$type}->{$to}->{LINK} = 1;
     $self->{GRAPH}->{$type}->{$to}->{WEIGHT} = $weight;
 
+    return;
 }
 
 sub get_paths
@@ -87,7 +90,7 @@ sub get_paths
         my %path_info;
         #print "Inspecting (", join(',', @{$list}), "); length is: ", scalar(@{$list}), "\n";
         # We don't want just a NODEX->NODEX loop (it must be at least NODEX->converter->NODEX).
-        next unless scalar(@{$list}) > 1;
+        next if scalar(@{$list}) <= 1;
         #%path_info = ();
         $num_paths = (scalar(@{$list}) - 1) / 2;
         $path_index = 0;
@@ -109,6 +112,8 @@ sub get_paths
         push(@{$self->{EXTRACTED_PATHS}->{$path_info{START} . '.' . $path_info{END}}}, \%path_info);
     }
     #print Dumper($self);
+
+    return;
 }
 
 sub do_walk
@@ -128,6 +133,8 @@ sub do_walk
 #     {
 #         #print "(", join(',', @{$list}), ")\n";
 #     }
+
+    return;
 }
 
 #
@@ -184,6 +191,8 @@ sub walkit
 
     #print "Restoring (", join(',', @{$self->{CURRENT_PATH}}), ') to (', join(',', @saved_path), ")\n";
     @{$self->{CURRENT_PATH}} = (@saved_path);
+
+    return;
 }
 
 sub process_graph
@@ -195,6 +204,8 @@ sub process_graph
         $self->do_walk();
         $self->get_paths();
     }
+
+    return;
 }
 
 sub get_best_path
@@ -208,7 +219,7 @@ sub get_best_path
     #print "Looking for path: \"", $from . '.' . $to, "\"\n";
     if(!exists($self->{EXTRACTED_PATHS}->{$from . '.' . $to}))
     {
-        return undef;
+        return;
     }
 
     # Sort in order of weight

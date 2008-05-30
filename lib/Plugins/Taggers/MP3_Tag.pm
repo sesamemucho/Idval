@@ -31,8 +31,8 @@ my $req_msg = !defined($req_status) ? "$!" :
                    $req_status == 0 ? "$@" :
                                        "Load OK";
 
-our $name = 'mp3_tag';
-our $type = 'MP3';
+my $name = 'mp3_tag';
+my $type = 'MP3';
 
 Idval::Common::register_provider({provides=>'reads_tags', name=>$name, type=>$type, weight=>50});
 
@@ -62,34 +62,36 @@ sub init
         $req_msg = "Perl module MP3::Tag not found";
     }
     $self->set_param('status', $req_msg);
+
+    return;
 }
 
 sub read_tags
 {
     my $self = shift;
-    my $record = shift;
+    my $tag_record = shift;
     my $line;
     my $current_tag;
     my $retval = 0;
 
     return $retval if !$self->query('is_ok');
 
-    my $filename = $record->get_value('FILE');
+    my $filename = $tag_record->get_value('FILE');
 
     my $mp3 = MP3::Tag->new($filename);
     my ($title, $track, $artist, $album, $comment, $year, $genre) = $mp3->autoinfo();
 
-    $record->add_tag('TITLE', $title);
-    $record->add_tag('TRACKNUMBER', $track);
-    $record->add_tag('ARTIST', $artist);
-    $record->add_tag('ALBUM', $album);
-    $record->add_tag('COMMENT', $comment);
-    $record->add_tag('DATE', $year);
-    $record->add_tag('GENRE', $genre);
+    $tag_record->add_tag('TITLE', $title);
+    $tag_record->add_tag('TRACKNUMBER', $track);
+    $tag_record->add_tag('ARTIST', $artist);
+    $tag_record->add_tag('ALBUM', $album);
+    $tag_record->add_tag('COMMENT', $comment);
+    $tag_record->add_tag('DATE', $year);
+    $tag_record->add_tag('GENRE', $genre);
 
-    #print join("\n", $record->format_record());
+    #print join("\n", $tag_record->format_record());
 
-    $record->commit_tags();
+    $tag_record->commit_tags();
 
     return $retval;
 }

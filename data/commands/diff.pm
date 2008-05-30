@@ -16,6 +16,8 @@ package Idval::UserPlugins::Diff;
 
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
+use strict;
+use warnings;
 
 use English '-no_match_vars';
 use Getopt::Long;
@@ -35,6 +37,8 @@ sub init
                                                   decorate => 0});
 
     set_pod_input();
+
+    return;
 }
 
 sub diff
@@ -325,7 +329,7 @@ sub set_pod_input
     my $help_file = Idval::Common::get_common_object('help_file');
 
     my $name = shift;
-    my $pod_input =<<EOD;
+    my $pod_input =<<"EOD";
 
 =head1 NAME
 
@@ -359,6 +363,8 @@ data store.
 
 EOD
     $help_file->{'diff'} = $pod_input;
+
+    return;
 }
 
 1;

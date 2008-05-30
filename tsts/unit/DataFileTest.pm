@@ -1,4 +1,7 @@
 package DataFileTest;
+use strict;
+use warnings;
+
 use base qw(Test::Unit::TestCase);
 
 use Benchmark qw(:all);
@@ -8,8 +11,8 @@ use Idval::DataFile;
 use Idval::FileIO;
 use Idval::ServiceLocator;
 
-our $tree1 = {'testdir' => {}};
-our $testresult;
+my $tree1 = {'testdir' => {}};
+my $testresult;
 
 sub new {
     my $self = shift()->SUPER::new(@_);
@@ -22,10 +25,15 @@ sub new {
 sub set_up {
     # provide fixture
     Idval::FileString::idv_set_tree($tree1);
+
+    return;
 }
+
 sub tear_down {
     # clean up after test
     Idval::FileString::idv_clear_tree();
+
+    return;
 }
 
 # sub test_split_1
@@ -48,61 +56,63 @@ sub parse_block
 
     # Make a copy to save the information...
     push(@{$self->{TESTRESULT}}, [@{$blockref}]);
+
+    return;
 }
 
 package DataFileTest;
 
-sub test_parse_block_bogus_tag_1
-{
-    my $self = shift;
-    my $br = [" gubber foo = 99",
-        ];
+# # sub test_parse_block_bogus_tag_1
+# # {
+# #     my $self = shift;
+# #     my $br = [" gubber foo = 99",
+# #         ];
 
-    my $obj = Idval::DataFile->new();
-    my $val;
-    eval {$val = $obj->parse_block($br)};
-    my $str = $@;
-    $self->assert_matches(qr'Unrecognized line in tag data file: " gubber foo = 99"', $str);
-}
+# #     my $obj = Idval::DataFile->new();
+# #     my $val;
+# #     eval {$val = $obj->parse_block($br)};
+# #     my $str = $@;
+# #     $self->assert_matches(qr'Unrecognized line in tag data file: " gubber foo = 99"', $str);
+# # }
 
-sub test_parse_block_bogus_tag_2
-{
-    my $self = shift;
-    my $br = [" foo = 99",
-        ];
+# # sub test_parse_block_bogus_tag_2
+# # {
+# #     my $self = shift;
+# #     my $br = [" foo = 99",
+# #         ];
 
-    my $obj = Idval::DataFile->new();
-    my $val;
-    eval {$val = $obj->parse_block($br)};
-    my $str = $@;
-    $self->assert_matches(qr'Unrecognized line in tag data file: " foo = 99"', $str);
-}
+# #     my $obj = Idval::DataFile->new();
+# #     my $val;
+# #     eval {$val = $obj->parse_block($br)};
+# #     my $str = $@;
+# #     $self->assert_matches(qr'Unrecognized line in tag data file: " foo = 99"', $str);
+# # }
 
-sub test_parse_block_no_FILE_tag
-{
-    my $self = shift;
-    my $br = ["foo = 99",
-        ];
+# # sub test_parse_block_no_FILE_tag
+# # {
+# #     my $self = shift;
+# #     my $br = ["foo = 99",
+# #         ];
 
-    my $obj = Idval::DataFile->new();
-    my $val;
-    eval {$val = $obj->parse_block($br)};
-    my $str = $@;
-    $self->assert_matches(qr'No FILE tag in tag data record "foo = 99"', $str);
-}
+# #     my $obj = Idval::DataFile->new();
+# #     my $val;
+# #     eval {$val = $obj->parse_block($br)};
+# #     my $str = $@;
+# #     $self->assert_matches(qr'No FILE tag in tag data record "foo = 99"', $str);
+# # }
 
-sub test_parse_block_ok
-{
-    my $self = shift;
-    my $br = ["FILE = gubber/hoo",
-              "foo = 99",
-        ];
+# # sub test_parse_block_ok
+# # {
+# #     my $self = shift;
+# #     my $br = ["FILE = gubber/hoo",
+# #               "foo = 99",
+# #         ];
 
-    my $obj = Idval::DataFile->new();
-    my $val = $obj->parse_block($br);
-    $self->assert_equals('gubber/hoo', $val->get_name());
-    $self->assert_equals('99', $val->get_value('foo'));
-}
+# #     my $obj = Idval::DataFile->new();
+# #     my $val = $obj->parse_block($br);
+# #     $self->assert_equals('gubber/hoo', $val->get_name());
+# #     $self->assert_equals('99', $val->get_value('foo'));
+# # }
 
 sub test_get_one_block_ok
 {
@@ -115,6 +125,8 @@ sub test_get_one_block_ok
     my $rec = $coll->get_value('hartford+vassar1974-10-13t04.ogg');
     $self->assert_equals('hartford+vassar1974-10-13t04.ogg',
                          $rec->get_name());
+
+    return;
 }
 
 # sub test_get_one_block

@@ -1,4 +1,7 @@
 package GraphTest;
+use strict;
+use warnings;
+
 use base qw(Test::Unit::TestCase);
 
 use Benchmark qw(:all);
@@ -36,6 +39,8 @@ sub test_init
 
 #     print STDERR Dumper($graph);
 
+
+    return;
 }
 
 # Find the lowest-weighted path between A and W
@@ -52,6 +57,8 @@ sub test_graph1
 
     my $result = $graph->get_best_path('A', 'W');
     $self->assert_deep_equals([['A','boo','B'],['B','goo','W']], $result);
+
+    return;
 }
 
 # Find the lowest-weighted path between A and W
@@ -68,6 +75,8 @@ sub test_graph1a
 
     my $result = $graph->get_best_path('A', 'W');
     $self->assert_deep_equals([['A','boo::hoo','B'],['B','goo::hoo','W']], $result);
+
+    return;
 }
 
 # Find the lowest-weighted path between AXX and WXX
@@ -84,6 +93,8 @@ sub test_graph1b
 
     my $result = $graph->get_best_path('AXX', 'WXX');
     $self->assert_deep_equals([['AXX','boo::hoo','BXX'],['BXX','goo::hoo','WXX']], $result);
+
+    return;
 }
 
 sub test_graph1c
@@ -97,6 +108,8 @@ sub test_graph1c
 
     my $result = $graph->get_best_path('AXX', 'WXX');
     $self->assert_deep_equals([['AXX','foo::hoo','BXX'],['BXX','goo::hoo','WXX']], $result);
+
+    return;
 }
 
 sub test_graph_flac_to_ogg
@@ -113,6 +126,8 @@ sub test_graph_flac_to_ogg
     $self->assert_deep_equals([['WAV','Idval::UserPlugins::Garfinkle::flacker','FLAC'],
                                ['FLAC','Idval::UserPlugins::Simon::whacker','OGG']],
                               $result);
+
+    return;
 }
 
 sub test_graph_bogus_requested_path
@@ -128,6 +143,8 @@ sub test_graph_bogus_requested_path
 
     my $result = $graph->get_best_path('A', 'Q');
     $self->assert_null($result);
+
+    return;
 }
 
 # We should be able to get a loop
@@ -145,6 +162,8 @@ sub test_graph2
 
     my $result = $graph->get_best_path('A', 'A');
     $self->assert_deep_equals([['A','gak','A']], $result);
+
+    return;
 }
 
 1;

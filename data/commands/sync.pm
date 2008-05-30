@@ -17,11 +17,14 @@ package Idval::UserPlugins::Sync;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
+use strict;
+use warnings;
+
 use Data::Dumper;
 use File::Spec;
 use File::stat;
 use File::Basename;
-use English;
+use English '-no_match_vars';;
 use Carp;
 use Memoize;
 use Storable;
@@ -31,11 +34,11 @@ use Idval::Common;
 use Idval::FileIO;
 use Idval::DoDots;
 
-our $first = 1;
-our $total_number_of_records;
-our $total_number_to_process;
-our $number_of_seen_records;
-our $number_of_processed_records;
+my $first = 1;
+my $total_number_of_records;
+my $total_number_to_process;
+my $number_of_seen_records;
+my $number_of_processed_records;
 
 
 memoize('get_file_ext');
@@ -53,6 +56,8 @@ sub init
                                                   decorate => 0});
 
     set_pod_input();
+
+    return;
 }
 
 sub sync
@@ -82,9 +87,9 @@ sub sync
 
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
-        my $record = $datastore->{RECORDS}->{$key};
-        my $sync_dest = $config->get_single_value('sync_dest', $record);
-        my $do_sync = $config->get_single_value('sync', $record);
+        my $tag_record = $datastore->{RECORDS}->{$key};
+        my $sync_dest = $config->get_single_value('sync_dest', $tag_record);
+        my $do_sync = $config->get_single_value('sync', $tag_record);
         if ($sync_dest and $do_sync)
         {
             $total_number_to_process++;
@@ -167,18 +172,18 @@ sub each_item
     my $key = shift;
     my $config = shift;
 
-    my $record = $hash->{$key};
+    my $tag_record = $hash->{$key};
     my $retval = 0;
 
     if ($first and ($key =~ m/ogg/))
     {
-        #print STDERR "Record is: ", Dumper($record);
+        #print STDERR "Record is: ", Dumper($tag_record);
         #print STDERR Dumper($config);
         $first = 0;
     }
 
-    my $sync_dest = Idval::Common::mung_to_unix($config->get_single_value('sync_dest', $record));
-    my $do_sync = $config->get_single_value('sync', $record);
+    my $sync_dest = Idval::Common::mung_to_unix($config->get_single_value('sync_dest', $tag_record));
+    my $do_sync = $config->get_single_value('sync', $tag_record);
 #     if ($sync_dest or $do_sync)
 #     {
 #         print STDERR "sync_dest = \"$sync_dest\", do_sync = \"$do_sync\"\n";
@@ -191,27 +196,27 @@ sub each_item
         return $retval;
     }
 
-    my $src_type = $record->get_value('TYPE');
-    my $dest_type = $config->get_single_value('convert', $record);
+    my $src_type = $tag_record->get_value('TYPE');
+    my $dest_type = $config->get_single_value('convert', $tag_record);
     my $prov = get_converter($src_type, $dest_type);
 
 
-    my $src_path = $prov->get_source_filepath($record);
+    my $src_path = $prov->get_source_filepath($tag_record);
     my ($volume, $src_dir, $src_name) = File::Spec->splitpath($src_path);
     #print STDERR "For $src_path\n";
-    my $remote_top = Idval::Common::mung_to_unix($config->get_single_value('remote_top', $record));
+    my $remote_top = Idval::Common::mung_to_unix($config->get_single_value('remote_top', $tag_record));
     #print STDERR "   remote top is \"$remote_top\"\n";
-    my $dest_name = $prov->get_dest_filename($record, $src_name, get_file_ext($dest_type));
+    my $dest_name = $prov->get_dest_filename($tag_record, $src_name, get_file_ext($dest_type));
 
 
 
-#     my $src_path =  $record->get_name();
+#     my $src_path =  $tag_record->get_name();
 #     my ($volume, $src_dir, $src_name) = File::Spec->splitpath($src_path);
 #     #print STDERR "For $src_path\n";
-#     my $remote_top = Idval::Common::mung_to_unix($config->get_single_value('remote_top', $record));
+#     my $remote_top = Idval::Common::mung_to_unix($config->get_single_value('remote_top', $tag_record));
 #     #print STDERR "   remote top is \"$remote_top\"\n";
-#     my $src_type = $record->get_value('TYPE');
-#     my $dest_type = $config->get_single_value('convert', $record);
+#     my $src_type = $tag_record->get_value('TYPE');
+#     my $dest_type = $config->get_single_value('convert', $tag_record);
 
 #     my $dest_name;
 #     my $dest_ext = get_file_ext($dest_type);
@@ -247,7 +252,7 @@ sub each_item
             Idval::FileIO::idv_mkdir($dest_dir);
         }
 
-        $retval = $prov->convert($record, $dest_path);
+        $retval = $prov->convert($tag_record, $dest_path);
         $retval = 0;
 
         progress(sprintf("%6d %6d %6d %2.0f%%\n",
@@ -302,7 +307,7 @@ sub set_pod_input
 {
     my $help_file = Idval::Common::get_common_object('help_file');
 
-    my $pod_input =<<EOD;
+    my $pod_input =<<"EOD";
 
 =head1 NAME
 
@@ -328,6 +333,8 @@ useful with the contents thereof.
 
 EOD
     $help_file->{'sync'} = $pod_input;
+
+    return;
 }
 
 1;

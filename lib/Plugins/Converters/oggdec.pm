@@ -26,9 +26,9 @@ use Class::ISA;
 
 use base qw(Idval::Converter);
 
-our $name = 'oggdec';
-our $from = 'OGG';
-our $to = 'WAV';
+my $name = 'oggdec';
+my $from = 'OGG';
+my $to = 'WAV';
 
 Idval::Common::register_provider({provides=>'converts', name=>$name, from=>$from, to=>$to});
 
@@ -53,6 +53,8 @@ sub init
     $self->set_param('to', $to);
 
     $self->find_and_set_exe_path();
+
+    return;
 }
 
 sub convert

@@ -1,4 +1,7 @@
 package RecordTest;
+use strict;
+use warnings;
+
 use base qw(Test::Unit::TestCase);
 
 use Benchmark qw(:all);
@@ -31,6 +34,8 @@ sub test_diff_eq
 
     my @retval = $rec1->diff($rec2);
     $self->assert_deep_equals([{}, {}, {}], \@retval);
+
+    return;
 }
 
 sub test_diff_ne_add_tag
@@ -48,6 +53,8 @@ sub test_diff_ne_add_tag
 
     my @retval = $rec1->diff($rec2);
     $self->assert_deep_equals([{}, {}, {'BOBBLE' => 'bobble'}], \@retval);
+
+    return;
 }
 
 sub test_diff_ne_delete_tag
@@ -65,6 +72,8 @@ sub test_diff_ne_delete_tag
 
     my @retval = $rec1->diff($rec2);
     $self->assert_deep_equals([{'BOBBLE' => 'bobble'}, {}, {}], \@retval);
+
+    return;
 }
 
 sub test_diff_ne_change_tag
@@ -85,6 +94,8 @@ sub test_diff_ne_change_tag
                                          'hobble',
                                          'wobble'
                                         ]}, {}], \@retval);
+
+    return;
 }
 
 1;

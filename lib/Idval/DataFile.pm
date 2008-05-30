@@ -69,7 +69,7 @@ sub parse
     while(defined($line = <$fh>))
     {
         chomp $line;
-        next if $line =~ m/^#/x;
+        next if $line =~ m/^\#/x;
         if ($line =~ m/^\s*$/x)
         {
             push(@block, $accumulate_line) if $accumulate_line;
@@ -79,7 +79,7 @@ sub parse
             next;
         }
 
-        if ($line =~ m/^  (.*)/x)
+        if ($line =~ m/^\ \ (.*)/x)
         {
             $accumulate_line .= "\n" . $1;
         }
@@ -124,11 +124,12 @@ sub parse_block
     {
         # The key already exists, so don't add it
         next if ($key eq 'FILE');
+        print STDERR "Adding key \"$key\", value \"$hash{$key}\"\n";
         $rec->add_tag($key, $hash{$key});
     }
 
-    #print "Returning ", Dumper($rec);
     $rec->commit_tags();
+    #print STDERR "Returning ", Dumper($rec);
     return $rec;
 }
 
@@ -136,8 +137,8 @@ sub get_reclist
 {
     my $self = shift;
 
-    #print "2: ", Dumper($self);
-    #print "2: ref ", ref $self->{BLOCKS}, "\n";
+    #print STDERR "2: ", Dumper($self);
+    #print STDERR "2: ref ", ref $self->{BLOCKS}, "\n";
     return $self->{BLOCKS};
 }
 

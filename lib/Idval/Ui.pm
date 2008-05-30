@@ -37,7 +37,7 @@ use Idval::Record;
 use Idval::DataFile;
 use Idval::DoDots;
 
-our $srclist;
+my $srclist;
 
 sub get_userconfig_file
 {
@@ -54,7 +54,7 @@ sub get_userconfig_file
         $cfgname = "idvaluser.cfg" if Idval::FileIO::idv_test_exists("idvaluser.cfg");
         $cfgname = "$datadir/idvaluser.cfg" if Idval::FileIO::idv_test_exists("$datadir/idvaluser.cfg");
     }
-    elsif ($osname =~ m/ux$/i or $osname =~ m/cygwin/i)
+    elsif ($osname =~ m/ux$/ix or $osname =~ m/cygwin/ix)
     {
         $cfgname = '.idvalrc' if Idval::FileIO::idv_test_exists('.idvalrc');
         $cfgname = "$datadir/idvaluser.cfg" if Idval::FileIO::idv_test_exists("$datadir/idvaluser.cfg");
@@ -79,7 +79,7 @@ sub find_command_file
 
     if ($cmd_name)
     {
-        if ($cmd_name !~ m{\.[^.]+$})
+        if ($cmd_name !~ m{\.[^.]+$}x)
         {
             $cmd_name .= '.idv';
         }
@@ -137,7 +137,11 @@ sub make_wanted
 
         my $obj = $record_creators{$type};
 
-        $obj->create_records($_, $File::Find::name, $class, $type, $srclist);
+        $obj->create_records({filename => $_,
+                              path     => $File::Find::name,
+                              class    => $class,
+                              type     => $type,
+                              srclist  => $srclist});
     };
 }
 
@@ -214,6 +218,8 @@ sub put_source_to_file
         print $out join("\n", @{$datastore->stringify()});
         $out->close();
     }
+
+    return;
 }
 
 # Given two record lists (Idval::Collection) or two records (Idval::Record) (a & b),

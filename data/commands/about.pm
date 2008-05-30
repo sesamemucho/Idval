@@ -33,6 +33,8 @@ sub init
                                                    debugmask => $DBG_PROCESS,
                                                    decorate => 0});
     set_pod_input();
+
+    return;
 }
 
 sub about
@@ -122,7 +124,7 @@ sub about
     #print STDERR "TypeMap: ", Dumper($typemap);
     foreach my $filetype ($typemap->get_all_filetypes()) {
         silent_q("\tType $filetype files have extensions: ",
-                       join(', ', map lc,$typemap->get_exts_from_filetype($filetype)), "\n");
+                       join(', ', map {lc $_} $typemap->get_exts_from_filetype($filetype), "\n");
     }
     silent_q("\n");
     foreach my $class ($typemap->get_all_classes()) {
@@ -133,7 +135,7 @@ sub about
     #if ((exists $options->{'all'}) and $options->{'all'})
     {
         silent_q("\nProvider paths:\n");
-        foreach $provider (sort keys %provider_paths)
+        foreach my $provider (sort keys %provider_paths)
         {
             next if $provider =~ m{/}; # This indicates a 'smooshed' combined converter,
             # whose individual components will be displayed
@@ -162,7 +164,7 @@ sub set_pod_input
 {
     my $help_file = Idval::Common::get_common_object('help_file');
 
-    my $pod_input =<<EOD;
+    my $pod_input =<<"EOD";
 =head1 NAME
 
 about - Using GetOpt::Long and Pod::Usage blah blah foo booaljasdf
@@ -198,6 +200,8 @@ useful with the contents thereof.
 
 EOD
     $help_file->{'about'} = $pod_input;
+
+    return;
 }
 
 1;

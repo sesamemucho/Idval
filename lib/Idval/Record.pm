@@ -110,7 +110,7 @@ sub add_to_tag
 
     $value =~ s/[\n\r]//gx;
     return if $value =~ m/^\s*$/x;
-    $value =~ s/^\s*/    /x;
+    $value =~ s/^\s*/\ \ \ \ /x;
     #$self->{TEMP}->{$name} .= "\n$value";
     $self->{$name} .= "\n$value";
 

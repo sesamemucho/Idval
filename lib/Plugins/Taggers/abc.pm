@@ -27,8 +27,8 @@ use Carp;
 use Idval::FileIO;
 use base qw(Idval::Plugin);
 
-our $name = 'abc';
-our $type = 'ABC';
+my $name = 'abc';
+my $type = 'ABC';
 
 Idval::Common::register_provider({provides=>'reads_tags', name=>$name, type=>$type});
 Idval::Common::register_provider({provides=>'writes_tags', name=>$name, type=>$type});
@@ -56,70 +56,72 @@ sub init
     $self->set_param('path', '(Builtin)');
     $self->set_param('is_ok', 1);
     $self->set_param('status', 'ok');
+
+    return;
 }
 
 sub read_tags
 {
     my $self = shift;
-    my $record = shift;
+    my $tag_record = shift;
     my $line;
     my $current_tag;
     my $retval = 0;
 
-    my $filename = $record->get_value('FILE');
+    my $filename = $tag_record->get_value('FILE');
 
     return $retval;
     
-    my $path = $self->query('path');
+#     my $path = $self->query('path');
 
-    #$filename =~ s{/cygdrive/(.)}{$1:}; # Tag doesn't deal well with cygdrive pathnames
-    foreach $line (`$path --export-tags-to=- "$filename" 2>&1`) {
-        chomp $line;
-        $line =~ s/\r//;
-        #print "<$line>\n";
+#     #$filename =~ s{/cygdrive/(.)}{$1:}; # Tag doesn't deal well with cygdrive pathnames
+#     foreach $line (`$path --export-tags-to=- "$filename" 2>&1`) {
+#         chomp $line;
+#         $line =~ s/\r//;
+#         #print "<$line>\n";
 
-        next if $line =~ /^\s*$/;
+#         next if $line =~ /^\s*$/;
 
-        $line =~ m/ERROR: reading metadata/ and do {
-            print 'Getters::BadFlac', $line, $filename, "\n";
-            print "ref record: ", ref $record, "\n";
-            #delete $record;
-            $retval = 1;
-            last;
-        };
+#         $line =~ m/ERROR: reading metadata/ and do {
+#             print 'Getters::BadFlac', $line, $filename, "\n";
+#             print "ref record: ", ref $tag_record, "\n";
+#             #delete $tag_record;
+#             $retval = 1;
+#             last;
+#         };
 
-        $line =~ m/^(\S+)\s*=\s*(.*)/ and do {
-            $current_tag = uc($1);
-            $record->add_tag($current_tag, $2);
-            next;
-        };
+#         $line =~ m/^(\S+)\s*=\s*(.*)/ and do {
+#             $current_tag = uc($1);
+#             $tag_record->add_tag($current_tag, $2);
+#             next;
+#         };
 
-        $record->add_to_tag($current_tag, "\n$line");
-    }
+#         $tag_record->add_to_tag($current_tag, "\n$line");
+#     }
 
-    #print "\nGot tag:\n";
-    #print join("\n", $record->format_record());
+#     #print "\nGot tag:\n";
+#     #print join("\n", $tag_record->format_record());
 
-    $record->commit_tags();
+#     $tag_record->commit_tags();
 
-    return $retval;
+#     return $retval;
 }
 
 sub write_tags
 {
     my $self = shift;
-    my $record = shift;
+    my $tag_record = shift;
 
     return 0 if !$self->query('is_ok');
 
-    my $filename = $record->get_value('FILE');
+    my $filename = $tag_record->get_value('FILE');
     my $path = $self->query('path');
 
     Idval::Common::run($path, '--remove-all-tags', $filename);
     my @taglist;
-    foreach my $tagname ($record->get_all_keys())
+    foreach my $tagname ($tag_record->get_all_keys())
     {
-        push(@taglist, $record->get_value_as_arg('--set-tag=' . $tagname . '=', $tagname));
+        push(@taglist, $tag_record->get_value_as_arg('--set-tag=' . $tagname . '=', $tagname));
     }
 
     my $status = Idval::Common::run($path,
@@ -132,21 +134,23 @@ sub write_tags
 sub create_records
 {
     my $self = shift;
-    my $fname = shift;
-    my $path = shift;
-    my $class = shift;
-    my $type = shift;
-    my $srclist = shift;
+    my $arglist = shift;
+
+    my $fname   = $arglist->{filename};
+    my $path    = $arglist->{path};
+    my $class   = $arglist->{class};
+    my $type    = $arglist->{type};
+    my $srclist = $arglist->{srclist};
 
     my $fh = Idval::FileIO->new($fname, "r") || croak "Can't open \"$fname\" for reading: $!\n";
-    my $text .= do { local $/; <$fh> };
+    my $text .= do { local $/ = undef; <$fh> };
     $fh->close();
 
     my $item;
 
     foreach my $line (split("\n", $text))
     {
-        $line =~ m/^X:(\d+)/ and do {
+        $line =~ m/^X:(\d+)/x and do {
             $item = $1;
 
             my $rec = Idval::Record->new($path . '%%' . $item);
@@ -157,6 +161,8 @@ sub create_records
         };
     }
 
+
+    return;
 }
 
 1;

@@ -17,10 +17,13 @@ package Idval::UserPlugins::Select;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
+use strict;
+use warnings;
+
 use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
-use English;
+use English '-no_match_vars';;
 use Carp;
 
 use Idval::Collection;
@@ -28,14 +31,14 @@ use Idval::Record;
 use Idval::FileIO;
 use Idval::DoDots;
 
-our $first = 0;
+my $first = 0;
 
 sub init
 {
     #set_pod_input();
 }
 
-sub select
+sub select ## no critic (ProhibitBuiltinHomonyms)
 {
     my $datastore = shift;
     my $providers = shift;
@@ -57,15 +60,15 @@ sub select
 
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
-        my $record = $datastore->{RECORDS}->{$key};
-        my $select_p = $config->get_single_value('select', $record);
-        if (($first == 0) and ($record->get_value('ARTIST') eq 'John Hartford & Friends'))
+        my $tag_record = $datastore->{RECORDS}->{$key};
+        my $select_p = $config->get_single_value('select', $tag_record);
+        if (($first == 0) and ($tag_record->get_value('ARTIST') eq 'John Hartford & Friends'))
         {
-            print "For record: ", Dumper($record);
+            print "For record: ", Dumper($tag_record);
             print "config: ", Dumper($config);
             $first = 1;
         }
-        $select_coll->add($record) if $select_p;
+        $select_coll->add($tag_record) if $select_p;
     }
 
     my $coll = $select_coll->stringify();

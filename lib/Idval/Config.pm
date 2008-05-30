@@ -37,8 +37,6 @@ use Idval::FileIO;
 use constant STRICT_MATCH => 0;
 use constant LOOSE_MATCH  => 1;
 
-my $octothorpe = "\x23";
-
 *verbose = Idval::Common::make_custom_logger({level => $VERBOSE, 
                                               debugmask => $DBG_CONFIG,
                                               decorate => 1}) unless defined(*verbose{CODE});
@@ -125,7 +123,7 @@ sub add_file
 
     croak "Need a file\n" unless $text; # We do need at least one config file
 
-    $text =~ s/${octothorpe}.*$//mgx;      # Remove comments
+    $text =~ s/\#.*$//mgx;      # Remove comments
     $text =~ s/^\n+//sx;         # Trim off newline(s) at start
     $text =~ s/\n+$//sx;         # Trim off newline(s) at end
 
@@ -192,7 +190,7 @@ sub parse_one_block
     {
         chomp $line;
         $line =~ s{\r}{}gx;
-        $line =~ s/${octothorpe}.*$//x;      # Remove comments
+        $line =~ s/\#.*$//x;      # Remove comments
         next if $line =~ m/^\s*$/x;
 
         if ($line =~ m{^([[:alnum:]]\w*)($op_regex)(.*)$}imx)

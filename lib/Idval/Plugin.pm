@@ -56,7 +56,7 @@ sub query
     }
     else
     {
-        return undef;
+        return;
     }
 }
 
@@ -67,16 +67,20 @@ sub set_param
     my $value = shift;
 
     $self->{PARAMS}->{$key} = $value;
+
+    return;
 }
 
 sub create_records
 {
     my $self = shift;
-    my $fname = shift;
-    my $path = shift;
-    my $class = shift;
-    my $type = shift;
-    my $srclist = shift;
+    my $arglist = shift;
+
+    my $fname   = $arglist->{filename};
+    my $path    = $arglist->{path};
+    my $class   = $arglist->{class};
+    my $type    = $arglist->{type};
+    my $srclist = $arglist->{srclist};
 
     my $rec = Idval::Record->new($path);
     $rec->add_tag('CLASS', $class);
@@ -84,6 +88,8 @@ sub create_records
     $rec->commit_tags();
 
     $srclist->add($rec);
+
+    return;
 }
 
 sub get_source_filepath
@@ -101,7 +107,7 @@ sub get_dest_filename
     my $dest_name = shift;
     my $dest_ext = shift;
 
-    $dest_name =~ s{\.[^.]+$}{.$dest_ext};
+    $dest_name =~ s{\.[^.]+$}{.$dest_ext}x;
 
     return $dest_name;
 }
@@ -111,7 +117,7 @@ sub _call_pod2usage
     my $self = shift;
     # If the next argument starts with a '-', that's an argument to pod2usage.
     # Otherwise, it's a string that we should use as an input to pod2usage.
-    my $input = $_[0] =~ m/^-/ ? $self->query('pod_input') : shift;
+    my $input = $_[0] =~ m/^-/x ? $self->query('pod_input') : shift;
     my $usage = '';
 
     return "no information available" unless $input;
@@ -132,9 +138,9 @@ sub get_short_description
     my $usage = $self->_call_pod2usage(-verbose => 99, -sections => "NAME");
 
     # Now trim it
-    $usage =~ s/Name:\s*//s;
-    $usage =~ s/\n\n*/\n/gs;
-    $usage =~ s/\n*$//;
+    $usage =~ s/Name:\s*//sx;
+    $usage =~ s/\n\n*/\n/gsx;
+    $usage =~ s/\n*$//x;
     return $usage;
 }
 
@@ -181,7 +187,7 @@ sub find_exe_path
     {
         if (!Idval::FileIO::idv_test_exists($file))
         {
-            $file .= $Config{_exe} unless $file =~ m/$Config{_exe}$/i;
+            $file .= $Config{_exe} unless $file =~ m/$Config{_exe}$/ix;
         }
     }
 

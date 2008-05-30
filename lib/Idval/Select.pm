@@ -110,7 +110,7 @@ my %compare_function =
                        STR => 'Idval::Select::passes'}},
      );
 
-our %assignments =
+my %assignments =
     (
      '=' => 1,                  # For now...
      '+=' => 1,
@@ -136,7 +136,7 @@ sub cmp_ge_str { return ($_[0] ge $_[1]); }
 sub cmp_has_str { return (index("$_[0]", "$_[1]") != -1); }
 
 sub passes { my $funcname = $_[1];
-             return undef unless Idval::Validate::CheckFunction($funcname);
+             return unless Idval::Validate::CheckFunction($funcname);
              my $func = \&{"Idval::Validate::$funcname"};
              return (&$func(split(/,/, $_[0])) != 0 ); }
 
@@ -163,9 +163,9 @@ sub get_regex
     my @op_hash_refs = @_;
 
     #my @op_set = map(quotemeta, (keys %compare_function, keys %assignments));
-    my @op_set = map(quotemeta, map {keys %{$_}} @_);
-    my @ops_that_dont_need_spaces = grep(/\\/, @op_set);
-    my @ops_that_need_spaces = grep(!/\\/, @op_set);
+    my @op_set = map {quotemeta $_} map {keys %{$_}} @_;
+    my @ops_that_dont_need_spaces = grep {/\\/} @op_set;
+    my @ops_that_need_spaces = grep {!/\\/} @op_set;
     # Sort in reverse order of length so that (for instance) 'foo =~ boo' doesn't
     # get matched as (foo)(=)(~ boo)
     #my $op_string_no_spaces = join('|',  sort {length($b) <=> length($a)} @ops_that_dont_need_spaces);

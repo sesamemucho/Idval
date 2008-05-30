@@ -1,0 +1,36 @@
+severity  = 3
+verbose   = %f:%l:%c:%m (%e)\n
+#verbose   = 1
+theme     = core
+exclude   =  RequireLineBoundaryMatching RequireArgUnpacking
+color = 0
+
+[InputOutput::ProhibitBacktickOperators]
+only_in_void_context = 1
+
+[Variables::ProhibitPackageVars]
+packages = File::Find Data::Dumper FindBin Carp main AcceptUtils
+
+[TestingAndDebugging::ProhibitNoStrict]
+allow = refs
+
+[TestingAndDebugging::ProhibitNoWarnings]
+allow = redefine
+
+[RegularExpressions::ProhibitComplexRegexes]
+max_characters = 90
+
+[-Perl::Critic::Policy::RegularExpressions::RequireExtendedFormatting]
+
+[-Perl::Critic::Policy::ValuesAndExpressions::ProhibitConstantPragma]
+
+[-Perl::Critic::Policy::Modules::ProhibitMultiplePackages]
+
+[-Perl::Critic::Policy::ClassHierarchies::ProhibitAutoloading]
+
+[-Perl::Critic::Policy::BuiltinFunctions::ProhibitStringyEval]
+
+[-Perl::Critic::Policy::Modules::RequireFilenameMatchesPackage]
+
+
+

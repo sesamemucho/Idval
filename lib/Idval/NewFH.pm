@@ -17,6 +17,8 @@ package Idval::NewFH;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
+use strict;
+use warnings;
 use base qw(IO::File);
 
 sub save_filename {
@@ -24,6 +26,8 @@ sub save_filename {
     my $fname = shift;
 
     ${$glob}->{SAVE_FILENAME} = $fname;
+
+    return;
 }
 
 sub get_filename {

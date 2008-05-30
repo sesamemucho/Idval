@@ -17,10 +17,13 @@ package Idval::UserPlugins::Store;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
+use strict;
+use warnings;
+
 use Data::Dumper;
 use Getopt::Long;
 use Storable;
-use English;
+use English '-no_match_vars';;
 use Carp;
 
 use Idval::FileIO;
@@ -30,6 +33,8 @@ use Idval::Ui;
 sub init
 {
     set_pod_input();
+
+    return;
 }
 
 sub store
@@ -62,7 +67,7 @@ sub set_pod_input
 {
     my $help_file = Idval::Common::get_common_object('help_file');
 
-    my $pod_input =<<EOD;
+    my $pod_input =<<"EOD";
 
 =head1 NAME
 
@@ -98,6 +103,8 @@ unless a B<store> command is issued!
 
 EOD
     $help_file->{'store'} = $pod_input;
+
+    return;
 }
 
 1;

@@ -26,9 +26,9 @@ use Class::ISA;
 
 use base qw(Idval::Converter);
 
-our $name = 'oggenc';
-our $from = 'WAV';
-our $to = 'OGG';
+my $name = 'oggenc';
+my $from = 'WAV';
+my $to = 'OGG';
 
 Idval::Common::register_provider({provides=>'converts', name=>$name, from=>$from, to=>$to});
 
@@ -53,15 +53,17 @@ sub init
     $self->set_param('to', $to);
 
     $self->find_and_set_exe_path();
+
+    return;
 }
 
 sub convert
 {
     my $self = shift;
-    my $record = shift;
+    my $tag_record = shift;
     my $dest = shift;
 
-    my $src = $record->get_name();
+    my $src = $tag_record->get_name();
 
     return 0 if !$self->query('is_ok');
 
@@ -70,13 +72,13 @@ sub convert
     my $status = Idval::Common::run($path,
                                     Idval::Common::mkarglist(
                                         "--output=$dest",
-                                        $record->get_value_as_arg('--title ', 'TITLE'),
-                                        $record->get_value_as_arg('--artist ', 'ARTIST'),
-                                        $record->get_value_as_arg('--album ', 'ALBUM'),
-                                        $record->get_value_as_arg('--date ', 'DATE'),
-                                        $record->get_value_as_arg('--comment ', 'COMMENT'),
-                                        $record->get_value_as_arg('--tracknum ', 'TRACKNUMBER'),
-                                        $record->get_value_as_arg('--genre ', 'GENRE'),
+                                        $tag_record->get_value_as_arg('--title ', 'TITLE'),
+                                        $tag_record->get_value_as_arg('--artist ', 'ARTIST'),
+                                        $tag_record->get_value_as_arg('--album ', 'ALBUM'),
+                                        $tag_record->get_value_as_arg('--date ', 'DATE'),
+                                        $tag_record->get_value_as_arg('--comment ', 'COMMENT'),
+                                        $tag_record->get_value_as_arg('--tracknum ', 'TRACKNUMBER'),
+                                        $tag_record->get_value_as_arg('--genre ', 'GENRE'),
                                         $src));
 
     return $status;

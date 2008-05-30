@@ -19,7 +19,7 @@ package Idval::Providers;
 
 use strict;
 use warnings;
-no warnings qw(redefine);
+#no warnings qw(redefine);
 use Data::Dumper;
 use Text::Abbrev;
 use File::Basename;
@@ -61,7 +61,7 @@ sub _init
     $self->{NUM_PROVIDERS} = 0;
     $self->{PROVIDERS} = {};
     $self->{LOG} = Idval::Common::get_logger();
-    *verbose = Idval::Common::make_custom_logger({level => $VERBOSE, 
+    *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
                                                   debugmask => $DBG_STARTUP,
                                                   decorate => 1}) unless defined(*verbose{CODE});
     *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
@@ -80,6 +80,8 @@ sub _init
     #print STDERR "converter graph: ", Dumper($self->{GRAPH}->{converts});
 
     $self->setup_command_abbreviations();
+
+    return;
 }
 
 sub local_get_list_value
@@ -131,7 +133,7 @@ sub get_provider
         foreach my $cnvinfo (@{$path})
         {
 
-            my ($converter, $name) = ($$cnvinfo[1] =~ m{^(.*)::([^:]+)});
+            my ($converter, $name) = ($$cnvinfo[1] =~ m{^(.*)::([^:]+)}x);
             #print STDERR "cnvinfo is <", join(", ", @{$cnvinfo}), ">\n";
             #print STDERR "converter is <$converter>\n";
             #print STDERR "name is <$name>\n";
@@ -182,7 +184,7 @@ sub _get_providers
         # For each provider
         foreach my $conversion (keys %{$self->{GRAPH}->{$provider_id}->{EXTRACTED_PATHS}})
         {
-            my ($from, $to) = ($conversion =~ m/^([^.]+)\.([^.]+)$/);
+            my ($from, $to) = ($conversion =~ m/^([^.]+)\.([^.]+)$/x);
             next if $from eq $to;
 
             push(@prov_list, $self->get_provider($prov_type, $from, $to));
@@ -213,7 +215,7 @@ sub direct_get_providers
         }
     }
 
-    
+
     return map { $_->[0] }
            sort { $a->[1] cmp $b->[1] }
            map { [$_, $_->{name}] } @prov_list;
@@ -239,12 +241,12 @@ sub get_all_active_providers
 #         {
 #             foreach my $cnv_name (keys %{$self->{ALL_PROVIDERS}->{$type}->{$pkgname}))
 #             {
-#                 $prov_list{$type}->{$pkgname . '::' . $cnv_name} = 
+#                 $prov_list{$type}->{$pkgname . '::' . $cnv_name} =
 #                     $self->{ALL_PROVIDERS}->{$type}->{$pkgname}->{$cnv_name};
 #             }
 #         }
 #     }
-    
+
 #     return \%prov_list;
 # }
 
@@ -285,7 +287,7 @@ sub _get_command
     my $fh = Idval::FileIO->new($filename, "r");
     confess "Bad filehandle: $! for item \"$filename\"" unless defined $fh;
 
-    my $plugin = do { local $/; <$fh> };
+    my $plugin = do { local $/ = undef; <$fh> };
     $fh->close();
 
     croak "Could not read plugin \"$_\"\n" unless $plugin;
@@ -297,18 +299,18 @@ sub _get_command
 
     foreach my $line (split("\n", $plugin))
     {
-        $line =~ m/package\s+([\w:]+)\s*;/ and do {
+        $line =~ m/package\s+([\w:]+)\s*;/x and do {
             $self->{LOG}->chatty($DBG_PROVIDERS, "Found package \"$1\"\n");
             $pkg = $1;
             next;
         };
 
-        $line =~ m/sub\s+init\s*$/ and do {
+        $line =~ m/sub\s+init\s*$/x and do {
             $found_an_init = 1;
             next;
         };
 
-        $line =~ m/sub\s+$name\s*$/ and do {
+        $line =~ m/sub\s+$name\s*$/x and do {
             last;
         };
     }
@@ -316,7 +318,11 @@ sub _get_command
     my $full_name = $pkg . '::' . $name;
 
     my $insert = $pkg eq "Idval::Scripts" ? 'package Idval::Scripts;' : '';
-    my $status = do {eval "$insert\n$plugin" };
+    $insert .= "\n$plugin";
+    #my $status = do {eval "$insert\n$plugin" };
+#    my $status = do {eval {$insert} };
+    no warnings 'redefine';
+    my $status = do {eval "$insert" };
 
     if (defined $status)
     {
@@ -336,7 +342,7 @@ sub _get_command
     }
 
     # The first time a command is encountered, if it has an "init" routine, call it
-    if (not exists $self->{COMMAND_LIST}->{$name} && $found_an_init)
+    if ((!exists $self->{COMMAND_LIST}->{$name}) && $found_an_init)
     {
         my $init_name = $pkg . '::init';
         no strict 'refs';
@@ -369,9 +375,9 @@ sub find_command
             $filename = $sources[0];
             if (scalar @sources >= 2)
             {
-                $self->{LOG}->warn("Multiple script files found for command ",
-                                   "\"$name\": \"", join("\"\n\t\"", @sources),
-                                   "\". Picking the first one.\n");
+                $self->{LOG}->idv_warn("Multiple script files found for command ",
+                                       "\"$name\": \"", join("\"\n\t\"", @sources),
+                                       "\". Picking the first one.\n");
             }
             last;
         }
@@ -421,6 +427,8 @@ sub make_sub
     no strict 'refs';
     *$sub = sub { return $cmd->$name(@_); };
     use strict;
+
+    return;
 }
 
 sub setup_command_abbreviations
@@ -437,6 +445,8 @@ sub setup_command_abbreviations
     }
 
     $self->{CMD_ABBREVS} = abbrev(@cmd_list);
+
+    return;
 }
 
 sub _get_arg
@@ -467,6 +477,8 @@ sub clear_providers
 {
     my $self = shift;
     %{$self->{PROVIDERS}} = ();
+
+    return;
 }
 
 # The routine "get_packages" is needed for tsts/TestUtils.pm
@@ -480,8 +492,15 @@ sub get_packages
 sub _add_provider
 {
     my $self = shift;
-    my $prov_type = shift;
-    my ($package, $name, $src, $dest, $weight) = @_;
+    my $argref = shift;
+
+    my $prov_type = $argref->{prov_type};
+    my $package   = $argref->{package};
+    my $name      = $argref->{name};
+    my $src       = $argref->{src};
+    my $dest      = $argref->{dest};
+    my $weight    = $argref->{weight};
+
     my $config = $self->{CONFIG};
     my $cnv;
 
@@ -498,6 +517,8 @@ sub _add_provider
         my $status = $cnv->query('status') ? $cnv->query('status') : 'no status';
         verbose($DBG_STARTUP, "Provider \"$name\" is not ok: status is: $status\n");
     }
+
+    return;
 }
 
 # A provider:
@@ -534,30 +555,48 @@ sub register_provider
         $self->{LOADED_PACKAGES}->{$package}++;
 
         $provides eq 'reads_tags' and do {
-            my $type     = uc($self->_get_arg($argref, 'type'));
-            $self->_add_provider($provides, $package, $name, $type, 'NULL', $weight);
+            $self->_add_provider({prov_type => $provides,
+                                  package => $package,
+                                  name => $name,
+                                  src => uc($self->_get_arg($argref, 'type')),
+                                  dest => 'NULL',
+                                  weight => $weight});
             next;
         };
         $provides eq 'writes_tags' and do {
-            my $type     = uc($self->_get_arg($argref, 'type'));
-            $self->_add_provider($provides, $package, $name, $type, 'NULL', $weight);
+            $self->_add_provider({prov_type => $provides,
+                                  package => $package,
+                                  name => $name,
+                                  src => uc($self->_get_arg($argref, 'type')),
+                                  dest => 'NULL',
+                                  weight => $weight});
             next;
         };
         $provides eq 'converts' and do {
-            my $from     = uc($self->_get_arg($argref, 'from'));
-            my $to       = uc($self->_get_arg($argref, 'to'));
             #print STDERR "Converter registering: name is $name: $from to $to\n";
-            $self->_add_provider($provides, $package, $name, $from, $to, $weight);
+            $self->_add_provider({prov_type => $provides,
+                                  package => $package,
+                                  name => $name,
+                                  src => uc($self->_get_arg($argref, 'from')),
+                                  dest => uc($self->_get_arg($argref, 'to')),
+                                  weight => $weight});
             next;
         };
         $provides eq 'command' and do {
             #print STDERR "Command registering: name is \"$name\": package is \"$package\"\n";
-            $self->_add_provider($provides, $package, $name, $name, 'NULL', $weight);
+            $self->_add_provider({prov_type => $provides,
+                                  package => $package,
+                                  name => $name,
+                                  src => $name,
+                                  dest => 'NULL',
+                                  weight => $weight});
             next;
         };
 
         carp "Unrecognized provider type \"$provides\" in ", Dumper($argref);
     }
+
+    return;
 }
 
 # sub register_program
@@ -575,13 +614,13 @@ sub register_provider
 
 sub get_plugin_cb
 {
-    return unless $_ =~ m/\.pm$/;
+    return unless $_ =~ m/\.pm$/x;
     my $fh = Idval::FileIO->new($_, "r");
     confess "Bad filehandle: $! for item \"$_\"" unless defined $fh;
 
     # Doing it this way instead of just "do ..." to allow for use
     # of in-core files for testing (see FileString.pm)
-    my $plugin = do { local $/; <$fh> };
+    my $plugin = do { local $/ = undef; <$fh> };
     $fh->close();
 
     #print "Plugin is \"$plugin\"\n" if $_ eq "id3v2";
@@ -590,7 +629,9 @@ sub get_plugin_cb
     #print STDERR "Plugin $_\n";
     #my $status = do {eval "$plugin" };
     ##my $status = do "$_";
+    no warnings 'redefine';
     my $status = eval "$plugin";
+    ###my $status = eval {$plugin};
     #print STDERR "eval result is: $@\n" if $@;
     if (defined $status)
     {
@@ -608,6 +649,8 @@ sub get_plugin_cb
     {
         croak "Error reading \"$_\":($!) ($@)" unless $status;
     }
+
+    return;
 }
 
 sub get_plugins
@@ -618,6 +661,8 @@ sub get_plugins
     #print STDERR "In get_plugins, looking into \"", join(':', @{$dirlist}), "\"\n";
     Idval::FileIO::idv_find(\&get_plugin_cb, @{$dirlist});
     # Each plugin should self-register
+
+    return;
 }
 
 # sub get_command_cb
@@ -631,7 +676,7 @@ sub get_plugins
 
 #     croak "Could not read plugin \"$_\"\n" unless $plugin;
 
-    
+
 #     my $status = do {eval "$plugin" };
 
 #     if (defined $status)

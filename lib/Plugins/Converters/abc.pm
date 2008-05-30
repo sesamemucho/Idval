@@ -52,6 +52,8 @@ sub init
     #$self->set_param('is_ok', defined($path));
     $self->set_param('is_ok', 0);
     $self->set_param('status', 'not implemented');
+
+    return;
 }
 
 #
@@ -86,7 +88,7 @@ sub get_dest_filename
 sub convert
 {
     my $self = shift;
-    my $record = shift;
+    my $tag_record = shift;
     my $dest = shift;
 
     my $src = $self->get_source_filepath();
@@ -97,9 +99,9 @@ sub convert
 #     #my $extra_args = $self->{CONFIG}->get_single_value('extra_args', {'command_name' => 'flac_enc'});
 
 #     my @tags;
-#     foreach my $tagname ($record->get_all_keys())
+#     foreach my $tagname ($tag_record->get_all_keys())
 #     {
-#         push(@tags, $record->get_value_as_arg("--tag=$tagname=", $tagname));
+#         push(@tags, $tag_record->get_value_as_arg("--tag=$tagname=", $tagname));
 #     }
 
 #     my $status = Idval::Common::run($path,

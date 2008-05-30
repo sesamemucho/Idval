@@ -27,9 +27,9 @@ use Carp;
 use Idval::Constants;
 use Idval::Common;
 
-our %services;
-our %callbacks;
-our %registered_callbacks;
+my %services;
+my %callbacks;
+my %registered_callbacks;
 
 sub provide
 {
@@ -46,6 +46,8 @@ sub provide
             &$cb($service_name, $service);
         }
     }
+
+    return;
 }
 
 #
@@ -67,6 +69,8 @@ sub register_callback
         push(@{$callbacks{$service_name}}, [$callback_name, $cb]);
         $registered_callbacks{"$service_name/$callback_name/$callback_routine_name"} = 1;
     }
+
+    return;
 }
 
 sub locate

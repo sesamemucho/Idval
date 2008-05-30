@@ -1,4 +1,7 @@
 package ConverterTest;
+use strict;
+use warnings;
+
 use base qw(Test::Unit::TestCase);
 
 use Benchmark qw(:all);
@@ -12,9 +15,9 @@ use Idval::Config;
 use Idval::Providers;
 use Idval::ServiceLocator;
 
-our $tree1 = {'testdir' => {}};
-our $testdir = "tsts/unittest-data";
-our $provs;
+my $tree1 = {'testdir' => {}};
+my $testdir = "tsts/unittest-data";
+my $provs;
 
 sub new {
     my $self = shift()->SUPER::new(@_);
@@ -26,12 +29,16 @@ sub new {
 sub set_up {
     # provide fixture
     Idval::FileString::idv_set_tree($tree1);
+
+    return;
 }
 
 sub tear_down {
     # clean up after test
     Idval::FileString::idv_clear_tree();
     TestUtils::unload_packages($provs);
+
+    return;
 }
 
 sub test_get_converter
@@ -46,6 +53,8 @@ sub test_get_converter
     my $conv = $provs->get_converter('WAV', 'FLAC');
 
     $self->assert_equals('flacker', $conv->query('name'));
+
+    return;
 }
 
 # sub test_get_converter_1
@@ -114,6 +123,8 @@ sub _init
 EOF
 
     Idval::FileString::idv_add_file('/testdir/Idval/up1.pm', $plugin);
+
+    return;
 }
 
 1;

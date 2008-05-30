@@ -26,8 +26,8 @@ use Carp;
 
 use base qw(Idval::Plugin);
 
-our $name = 'vorbiscomment';
-our $type = 'OGG';
+my $name = 'vorbiscomment';
+my $type = 'OGG';
 
 Idval::Common::register_provider({provides=>'reads_tags', name=>$name, type=>$type});
 Idval::Common::register_provider({provides=>'writes_tags', name=>$name, type=>$type});
@@ -53,49 +53,53 @@ sub init
     $self->set_param('type', $type);
 
     $self->find_and_set_exe_path();
+
+    return;
 }
 
 sub read_tags
 {
     my $self = shift;
-    my $record = shift;
+    my $tag_record = shift;
     my $line;
     my $current_tag;
     my $retval = 0;
 
     return 0 if !$self->query('is_ok');
 
-    my $filename = $record->get_value('FILE');
+    my $filename = $tag_record->get_value('FILE');
     my $path = $self->query('path');
 
     #$filename =~ s{/cygdrive/(.)}{$1:}; # Tag doesn't deal well with cygdrive pathnames
-    foreach $line (`$path -l "$filename" 2>&1`) {
+    foreach my $line (`$path -l "$filename" 2>&1`) {
         chomp $line;
         $line =~ s/\r//;
         #print "<$line>\n";
 
         next if $line =~ /^\s*$/;
 
-        $line =~ m/Failed to open file as vorbis/ and do {
+        if ($line =~ m/Failed to open file as vorbis/)
+        {
             print 'Getters::BadVorbis', $line, $filename, "\n";
-            print "ref record: ", ref $record, "\n";
+            print "ref record: ", ref $tag_record, "\n";
             $retval = 1;
             last;
-        };
+        }
 
-        $line =~ m/^(\S+)\s*=\s*(.*)/ and do {
+        if ($line =~ m/^(\S+)\s*=\s*(.*)/)
+        {
             $current_tag = uc($1);
-            $record->add_tag($current_tag, $2);
+            $tag_record->add_tag($current_tag, $2);
             next;
-        };
+        }
 
-        $record->add_to_tag($current_tag, "\n$line");
+        $tag_record->add_to_tag($current_tag, "\n$line");
     }
 
     #print "\nGot tag:\n";
-    #print join("\n", $record->format_record());
+    #print join("\n", $tag_record->format_record());
 
-    $record->commit_tags();
+    $tag_record->commit_tags();
 
     return $retval;
 }
@@ -103,17 +107,17 @@ sub read_tags
 sub write_tags
 {
     my $self = shift;
-    my $record = shift;
+    my $tag_record = shift;
 
     return 0 if !$self->query('is_ok');
 
-    my $filename = $record->get_value('FILE');
+    my $filename = $tag_record->get_value('FILE');
     my $path = $self->query('path');
 
     my @taglist;
-    foreach my $tagname ($record->get_all_keys())
+    foreach my $tagname ($tag_record->get_all_keys())
     {
-        push(@taglist, $record->get_value_as_arg('-t ' . $tagname . '=', $tagname));
+        push(@taglist, $tag_record->get_value_as_arg('-t ' . $tagname . '=', $tagname));
     }
 
     my $status = Idval::Common::run($path,

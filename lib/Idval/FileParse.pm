@@ -31,8 +31,6 @@ use Idval::FileIO;
 use Idval::Select;
 use IO::String;
 
-my $octothorpe = "\x23";
-
 # Given a reader object and one or more IO::Handles, parse
 # the input file(s) and call reader to handle the results.
 
@@ -100,7 +98,7 @@ sub parse
 
     croak "Need a file\n" unless $text; # We do need at least one config file
 
-    $text =~ s/${octothorpe}.*$//mgx;      # Remove comments
+    $text =~ s/\#.*$//mgx;      # Remove comments
     $text =~ s/^\n+//sx;         # Trim off newline(s) at start
     $text =~ s/\n+$//sx;         # Trim off newline(s) at end
 
@@ -141,7 +139,7 @@ sub parse_block
     {
         chomp $line;
         $line =~ s{\r}{}gx;
-        $line =~ s/${octothorpe}.*$//x;      # Remove comments
+        $line =~ s/\#.*$//x;      # Remove comments
         next if $line =~ m/^\s*$/x;
 
         if ($line =~ m{^([[:alnum:]]\w*)($op_regex)(\S.*)\s*$}imx)
@@ -151,7 +149,7 @@ sub parse_block
             $current_op = $2;
             $value = $3;
 
-            $current_op =~ s/ //gx;
+            $current_op =~ s/\ //gx;
             $reader->store_value($current_op, $current_tag, $value);
             next;
         }

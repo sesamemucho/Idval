@@ -1,4 +1,8 @@
 package CommandTest;
+
+use strict;
+use warnings;
+
 use base qw(Test::Unit::TestCase);
 
 use Benchmark qw(:all);
@@ -11,9 +15,9 @@ use Idval::Config;
 use Idval::Providers;
 use Idval::ServiceLocator;
 
-our $tree1 = {'testdir' => {}};
-our $testdir = "tsts/unittest-data";
-our $provs;
+my $tree1 = {'testdir' => {}};
+my $testdir = "tsts/unittest-data";
+my $provs;
 
 sub new {
     my $self = shift()->SUPER::new(@_);
@@ -25,26 +29,37 @@ sub new {
 sub set_up {
     # provide fixture
     Idval::FileString::idv_set_tree($tree1);
+
+    return;
 }
 
 sub tear_down {
     # clean up after test
     Idval::FileString::idv_clear_tree();
     TestUtils::unload_packages($provs);
+
+    return;
 }
 
 sub test_get_converter
 {
     my $self = shift;
 
+    print STDERR "Hello from test_get_converter\n";
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nplugin_dir = /testdir/Idval\n\n");
+    print STDERR "Hello 1 from test_get_converter\n";
     add_UserPlugin3_up1();
+    print STDERR "Hello 2 from test_get_converter\n";
 
     my $fc = Idval::Config->new("/testdir/gt1.txt");
+    print STDERR "Hello 3 from test_get_converter\n";
     $provs = Idval::Providers->new($fc);
-    my $conv = $provs->get_command('goober');
+    #print STDERR "provs is:", Dumper($provs);
+    my $conv = $provs->_get_command('goober', '/testdir/Idval/up1.pm');
 
     $self->assert($conv);
+
+    return;
 }
 
 ##-------------------------------------------------##
@@ -53,29 +68,16 @@ sub add_UserPlugin3_up1
 {
     my $plugin =<<'EOF';
 package Idval::UserPlugins::Up1;
-use Idval::Setup;
 use Idval::Common;
 use base qw(Idval::Plugin);
 no warnings qw(redefine);
 
-Idval::Common::register_provider({provides=>'command', name=>'goober'});
+#Idval::Common::register_provider({provides=>'command', name=>'goober'});
 
-sub new
+sub init
 {
-    my $class = shift;
-    my $self = $class->SUPER::new(@_);
-    bless($self, ref($class) || $class);
-    $self->_init(@_);
-    return $self;
-}
 
-sub _init
-{
-    my $self = shift;
-
-    $self->set_param('name', $self->{NAME});
-    $self->set_param('is_ok', 1);
-    $self->set_param('short_status', 'OK');
+    return;
 }
 
 sub goober
@@ -90,6 +92,8 @@ sub goober
 EOF
 
     Idval::FileString::idv_add_file('/testdir/Idval/up1.pm', $plugin);
+
+    return;
 }
 
 1;

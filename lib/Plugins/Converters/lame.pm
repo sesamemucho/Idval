@@ -25,7 +25,7 @@ use Class::ISA;
 
 use base qw(Idval::Converter);
 
-our $name = 'lame';
+my $name = 'lame';
 #our $from = 'WAV';
 #our $to = 'MP3';
 
@@ -64,6 +64,8 @@ sub init
     }
 
     $self->find_and_set_exe_path('lame');
+
+    return;
 }
 
 sub convert
@@ -84,10 +86,10 @@ sub convert
 sub decode
 {
     my $self = shift;
-    my $record = shift;
+    my $tag_record = shift;
     my $dest = shift;
 
-    my $src = $record->get_name();
+    my $src = $tag_record->get_name();
 
     return 0 if !$self->query('is_ok');
 
@@ -109,10 +111,10 @@ sub decode
 sub encode
 {
     my $self = shift;
-    my $record = shift;
+    my $tag_record = shift;
     my $dest = shift;
 
-    my $src = $record->get_name();
+    my $src = $tag_record->get_name();
 
     return 0 if !$self->query('is_ok');
 
@@ -126,13 +128,13 @@ sub encode
                                         "--quiet",
                                         "--add-id3v2",
                                         "--ignore-tag-errors",
-                                        $record->get_value_as_arg('--tt ', 'TITLE'),
-                                        $record->get_value_as_arg('--ta ', 'ARTIST'),
-                                        $record->get_value_as_arg('--tl ', 'ALBUM'),
-                                        $record->get_value_as_arg('--ty ', 'DATE'),
-                                        $record->get_value_as_arg('--tc ', 'COMMENT'),
-                                        $record->get_value_as_arg('--tn ', 'TRACKNUMBER'),
-                                        $record->get_value_as_arg('--tg ', 'GENRE'),
+                                        $tag_record->get_value_as_arg('--tt ', 'TITLE'),
+                                        $tag_record->get_value_as_arg('--ta ', 'ARTIST'),
+                                        $tag_record->get_value_as_arg('--tl ', 'ALBUM'),
+                                        $tag_record->get_value_as_arg('--ty ', 'DATE'),
+                                        $tag_record->get_value_as_arg('--tc ', 'COMMENT'),
+                                        $tag_record->get_value_as_arg('--tn ', 'TRACKNUMBER'),
+                                        $tag_record->get_value_as_arg('--tg ', 'GENRE'),
                                         $src,
                                         $dest));
 

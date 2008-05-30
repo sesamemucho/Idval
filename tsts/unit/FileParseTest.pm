@@ -1,4 +1,7 @@
 package FileParseTest;
+use strict;
+use warnings;
+
 use base qw(Test::Unit::TestCase);
 
 use Benchmark qw(:all);
@@ -8,7 +11,7 @@ use Idval::FileIO;
 use Idval::ServiceLocator;
 use Idval::FileParse;
 
-our $tree1 = {'testdir' => {}};
+my $tree1 = {'testdir' => {}};
 
 sub new {
     my $self = shift()->SUPER::new(@_);
@@ -21,10 +24,15 @@ sub new {
 sub set_up {
     # provide fixture
     Idval::FileString::idv_set_tree($tree1);
+
+    return;
 }
+
 sub tear_down {
     # clean up after test
     Idval::FileString::idv_clear_tree();
+
+    return;
 }
 
 sub test_create {
@@ -33,6 +41,8 @@ sub test_create {
     my $reader = FakeReader_FPT->new();
     my $obj = Idval::FileParse->new($reader, '/testdir/gt1.txt');
     $self->assert_not_null($obj);
+
+    return;
 }
 
 sub test_basic
@@ -46,6 +56,8 @@ sub test_basic
     my $result = $obj->parse();
 
     $self->assert_deep_equals([{'a' => '4','boo' => 'hoo',}], $result);
+
+    return;
 }
 
 sub test_no_comments
@@ -58,6 +70,8 @@ sub test_no_comments
     my $result = $obj->parse();
 
     $self->assert_deep_equals([{'a' => '4'},{'boo' => 'hoo',}], $result);
+
+    return;
 }
 
 sub test_plusequals
@@ -70,6 +84,8 @@ sub test_plusequals
     my $result = $obj->parse();
 
     $self->assert_deep_equals([{'a' => '4 3','boo' => 'hoo',}], $result);
+
+    return;
 }
 
 sub test_append
@@ -82,6 +98,8 @@ sub test_append
     my $result = $obj->parse();
 
     $self->assert_deep_equals([{'a' => '4','boo' => 'hoo 3',}], $result);
+
+    return;
 }
 
 sub test_two_blocks
@@ -95,6 +113,8 @@ sub test_two_blocks
 
     $self->assert_deep_equals([{'a' => '4','boo' => 'hoo',},
                               {'gak' => 'bak','huf' => 'fuf'}], $result);
+
+    return;
 }
 
 sub test_two_inputs
@@ -109,6 +129,8 @@ sub test_two_inputs
 
     $self->assert_deep_equals([{'a' => '4','boo' => 'hoo',},
                               {'gak' => 'bak','huf' => 'fuf'}], $result);
+
+    return;
 }
 
 package FakeReader_FPT;
@@ -127,6 +149,8 @@ sub _init
     my $self = shift;
     my @args = @_;
     $self->{DATA} = {};
+
+    return;
 }
 
 sub get_keyword_set
@@ -158,6 +182,8 @@ sub store_value
     {
         $self->{DATA}->{$tag} .= ' ' . $value;
     }
+
+    return;
 }
 
 sub store_keyword_value
@@ -169,6 +195,8 @@ sub store_keyword_value
     my $value = shift;
 
     $self->{DATA}->{$tag} = "$kw $tag $op $value";
+
+    return;
 }
 
 # Split the input text into blocks and return a list
@@ -184,6 +212,8 @@ sub get_blocks
 sub start_block
 {
     my $self = shift;
+
+    return;
 }
 
 # Make a copy and return that
@@ -210,6 +240,8 @@ sub add_block
 
     confess ("Not an ARRAY reference (", ref $collection, ")\n") if ref $collection eq 'HASH';
     push(@{$collection}, $block);
+
+    return;
 }
 
 sub collection_type
