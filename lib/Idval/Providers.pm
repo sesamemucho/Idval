@@ -64,9 +64,9 @@ sub _init
     *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
                                                   debugmask => $DBG_STARTUP,
                                                   decorate => 1}) unless defined(*verbose{CODE});
-    *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
+    *info    = Idval::Common::make_custom_logger({level => $INFO,
                                                   debugmask => $DBG_STARTUP,
-                                                  decorate => 1}) unless defined(*chatty{CODE});
+                                                  decorate => 1}) unless defined(*info{CODE});
 
     map{$self->{GRAPH}->{$_} = Idval::Graph->new()} @provider_types;
 

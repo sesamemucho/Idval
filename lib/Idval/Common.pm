@@ -234,7 +234,7 @@ sub deep_copy {
     }
     foreach my $item (keys %value_for)
     {
-        if (ref $this =~ m/$item/x)
+        if (ref($this) =~ m/$item/)
         {
             my $ret_sub = $value_for{$item};
             return &$ret_sub($this);

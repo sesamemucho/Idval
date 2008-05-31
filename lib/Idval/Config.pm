@@ -116,12 +116,13 @@ sub add_file
 
     foreach my $fname (@{$self->{INITFILES}})
     {
-        $fh = Idval::FileIO->new($fname, "r") || croak "Can't open \"$fname\" for reading: $!\n";
+        $fh = Idval::FileIO->new($fname, "r") || do {print STDERR Carp::shortmess("shormess");
+                                                     croak "Can't open \"$fname\" for reading: $! in " . __PACKAGE__ . " line(" . __LINE__ . ")";};
         $text .= do { local $/ = undef; <$fh> };
         $fh->close();
     }
 
-    croak "Need a file\n" unless $text; # We do need at least one config file
+    croak "Need a file" unless $text; # We do need at least one config file
 
     $text =~ s/\#.*$//mgx;      # Remove comments
     $text =~ s/^\n+//sx;         # Trim off newline(s) at start
@@ -207,7 +208,7 @@ sub parse_one_block
 
         if ($line =~ m{^\s+(.*)$}imx)
         {
-            croak("Found unexpected continuation line \"$line\" at the beginning of a block\n") unless defined $current_tag;
+            croak("Found unexpected continuation line \"$line\" at the beginning of a block") unless defined $current_tag;
             chatty("Got continuation tag of \"$1\" \"$2\" \"$3\" \n");
             $current_value .= $3;
             next;

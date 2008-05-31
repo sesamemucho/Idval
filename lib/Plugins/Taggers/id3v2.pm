@@ -113,49 +113,49 @@ sub read_tags
         my $tsse_comment = '\(Software/Hardware and settings used for encoding\)';
         if ($line =~ m|^TSSE\s+$tsse_comment:\s*(.*)$|)
         {
-            $tag_record->add_tag(TSSE, $1);
+            $tag_record->add_tag("TSSE", $1);
             next;
         };
 
         if ($line =~ m|^TIT2:\s*\(Title/songname/content description\):\s*(.*)$|)
         {
-            $tag_record->add_tag(TITLE, $1);
+            $tag_record->add_tag("TITLE", $1);
             next;
         };
 
         if ($line =~ m|^TPE1:\s*\(Lead performer\(s\)/Soloist\(s\)\):\s*(.*)$|)
         {
-            $tag_record->add_tag(ARTIST, $1);
+            $tag_record->add_tag("ARTIST", $1);
             next;
         };
 
         if ($line =~ m|^TALB:\s*\(Album/Movie/Show title\):\s*(.*)$|)
         {
-            $tag_record->add_tag(ALBUM, $1);
+            $tag_record->add_tag("ALBUM", $1);
             next;
         };
 
         if ($line =~ m|^TYER:\s*\(Year\):\s*(.*)$|)
         {
-            $tag_record->add_tag(YEAR, $1);
+            $tag_record->add_tag("YEAR", $1);
             next;
         };
 
         if ($line =~ m|^COMM:\s*\(Comments\):\s*\(.*\)\s*\[.*\]:\s*(.*)$|)
         {
-            $tag_record->add_tag(COMMENT, $1);
+            $tag_record->add_tag("COMMENT", $1);
             next;
         };
 
         if ($line =~ m|^TCON:\s*\(Content type\):\s*(\S*)|)
         {
-            $tag_record->add_tag(GENRE, $1);
+            $tag_record->add_tag("GENRE", $1);
             next;
         };
 
         if ($line =~ m|^APIC:\s*\(Attached picture\)(.*)$|)
         {
-            $tag_record->add_tag(PICTURE, $1);
+            $tag_record->add_tag("PICTURE", $1);
             next;
         };
     }

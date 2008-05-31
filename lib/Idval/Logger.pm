@@ -307,7 +307,7 @@ sub _warn
     return $self->_log({level => $QUIET, debugmask => $DBG_ALL, call_depth => 2}, @_);
 }
 
-sub _fatal
+sub fatal
 {
     my $self = shift;
 

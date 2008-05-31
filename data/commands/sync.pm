@@ -24,6 +24,7 @@ use Data::Dumper;
 use File::Spec;
 use File::stat;
 use File::Basename;
+use Getopt::Long;
 use English '-no_match_vars';;
 use Carp;
 use Memoize;
@@ -40,6 +41,16 @@ my $total_number_to_process;
 my $number_of_seen_records;
 my $number_of_processed_records;
 
+my @options = 
+    (
+     'mp3',
+     'ogg',
+    );
+
+my %option_values = (
+    mp3 => 0,
+    ogg => 0,
+    );
 
 memoize('get_file_ext');
 memoize('get_all_extensions_regexp');
@@ -48,6 +59,10 @@ memoize('get_converter');
 sub init
 {
     *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
+                                                  debugmask => $DBG_PROCESS,
+                                                  decorate => 1});
+
+    *chatty = Idval::Common::make_custom_logger({level => $CHATTY,
                                                   debugmask => $DBG_PROCESS,
                                                   decorate => 1});
 
@@ -67,6 +82,7 @@ sub sync
     my @args = @_;
     my $status;
 
+    $Devel::Trace::TRACE = 1;
     # We want to add to the config object, but not pollute it for those who follow
     # Storable::dclone doesn't work with regexps
     my $config = Idval::Common::deep_copy(Idval::Common::get_common_object('config'));
@@ -75,8 +91,11 @@ sub sync
     my $dotmap = $typemap->get_dot_map();
     Idval::DoDots::init();
 
-    my $syncfile = defined($args[0]) ? $args[0] : '';
-    croak "Need a sync file." unless $syncfile;
+    print "args are: ", join(":", @args), "\n";
+    my ($syncfile, $should_delete_syncfile) = _parse_args(@args);
+
+    #my $syncfile = defined($args[0]) ? $args[0] : '';
+    #croak "Need a sync file." unless $syncfile;
     # Now, make a new config object that incorporates the sync file info.
     $config->add_file($syncfile);
 
@@ -111,6 +130,8 @@ sub sync
             last;
         }
     }
+
+    unlink $syncfile if $should_delete_syncfile;
 
     return $datastore;
 }
@@ -184,10 +205,10 @@ sub each_item
 
     my $sync_dest = Idval::Common::mung_to_unix($config->get_single_value('sync_dest', $tag_record));
     my $do_sync = $config->get_single_value('sync', $tag_record);
-#     if ($sync_dest or $do_sync)
-#     {
-#         print STDERR "sync_dest = \"$sync_dest\", do_sync = \"$do_sync\"\n";
-#     }
+    if ($sync_dest or $do_sync)
+    {
+        print STDERR "sync_dest = \"$sync_dest\", do_sync = \"$do_sync\"\n";
+    }
 
     $number_of_seen_records++;
 
@@ -203,9 +224,9 @@ sub each_item
 
     my $src_path = $prov->get_source_filepath($tag_record);
     my ($volume, $src_dir, $src_name) = File::Spec->splitpath($src_path);
-    #print STDERR "For $src_path\n";
+    chatty("For $src_path\n");
     my $remote_top = Idval::Common::mung_to_unix($config->get_single_value('remote_top', $tag_record));
-    #print STDERR "   remote top is \"$remote_top\"\n";
+    chatty("   remote top is \"$remote_top\"\n");
     my $dest_name = $prov->get_dest_filename($tag_record, $src_name, get_file_ext($dest_type));
 
 
@@ -301,6 +322,65 @@ sub get_converter
     my $dest_type = shift;
 
     return $providers->get_provider('converts', $src_type, $dest_type);
+}
+
+sub _parse_args
+{
+    my @args = @_;
+
+    {
+        # We need to do our own argument parsing
+        local @ARGV = @args;
+
+        my $opts = Getopt::Long::Parser->new();
+        my $retval = $opts->getoptions(\%option_values, @options);
+        @args = (@ARGV);
+    }
+
+    if ( !((scalar @args == 1) || (scalar @args == 2)))
+    {
+        # We're going to need a Help module...
+        Idval::Common::get_logger()->fatal("Sync: Need at least one argument to sync\n");
+        # Should print out Synopsis here
+    }
+
+#     if (scalar @args == 1)
+#     {
+#         return ($args[0], 0);
+#     }
+
+    # Else, assume it's src/dest specs
+
+    my $convert_type = $option_values{'ogg'}            ? 'OGG'
+                     : $option_values{'mp3'}            ? 'MP3'
+                     : 'MP3';
+
+    my $syncfile = '';
+
+    $syncfile .= "remote_top = $args[1]\n";
+    $syncfile .= "convert    = $convert_type\n";
+
+    $syncfile .= "\n{\n";
+    foreach my $src (split(/:/, $args[0]))
+    {
+        # A src argument that is just a file name is assumed to be a FILE parameter
+
+        if (-e $src)
+        {
+            $syncfile .= "\tFILE has $src\n";
+        }
+        else
+        {
+            $syncfile .= "\t$src\n";
+        }
+    }
+
+    $syncfile .= "\tsync=1\n}\n\n";
+    
+
+    # Write it to temp file...
+
+    print "syncfile is: <$syncfile>\n";
 }
 
 sub set_pod_input

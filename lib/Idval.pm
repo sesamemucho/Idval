@@ -16,7 +16,7 @@ package Idval;
 
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
-
+$Devel::Trace::TRACE = 0;
 use strict;
 use warnings;
 
@@ -118,6 +118,7 @@ sub _init
         $opts->configure("require_order");
         #print "Standard options are: ", join("\n", @standard_options), "\n";
         my $retval = $opts->getoptions(\%options, @standard_options);
+        @{$argref} = (@ARGV);
     }
     else
     {
@@ -192,7 +193,9 @@ sub _init
 
     $self->{DATASTORE} = Idval::Collection->new({contents => '', source => 'blank'});
 
-    $self->{REMAINING_ARGS} = (ref $argref eq 'ARRAY') ? [@ARGV] : [];
+    #$self->{REMAINING_ARGS} = (ref $argref eq 'ARRAY') ? [@ARGV] : [];
+    $self->{REMAINING_ARGS} = $argref;
+    $log->chatty($DBG_PROVIDERS, "Remaining args: <", join(", ", @{$self->{REMAINING_ARGS}}), ">\n");
 
     return;
 }
@@ -213,7 +216,7 @@ sub cmd_loop
         no strict 'refs';
         if ($cmd ne 'gettags')
         {
-            my $read_rtn = 'Idval::Scripts::read_data';
+            my $read_rtn = 'Idval::Scripts::read';
             $self->{DATASTORE} = &$read_rtn($self->datastore(),
                                             $self->providers(),
                                             $input_datafile,
@@ -267,7 +270,7 @@ sub cmd_loop
             @line_args = @{Idval::Common::split_line($line)};
 
             my $cmd_name = shift @line_args;
-            #print "command name: \"$cmd_name\", line args: ", join(" ", @line_args), "\n";
+            $log->chatty($DBG_PROVIDERS, "command name: \"$cmd_name\", line args: ", join(" ", @line_args), "\n");
             my $rtn = 'Idval::Scripts::' . $cmd_name;
             no strict 'refs';
             eval { $temp_ds = &$rtn($self->datastore(), $self->providers(), @line_args); };
@@ -287,7 +290,7 @@ sub cmd_loop
                 else
                 {
                     print STDERR "Yipes\n";
-                    croak "Error \"$status\", \"$reason\"\n";
+                    croak "Error in \"$cmd_name\": \"$status\", \"$reason\"\n";
                 }
             }
             next if $error_occurred;
