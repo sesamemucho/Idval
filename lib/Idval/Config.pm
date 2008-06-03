@@ -28,7 +28,6 @@ use Text::Balanced qw (
                        extract_multiple
                       );
 
-
 use Idval::Common;
 use Idval::Constants;
 use Idval::Select;
@@ -37,19 +36,24 @@ use Idval::FileIO;
 use constant STRICT_MATCH => 0;
 use constant LOOSE_MATCH  => 1;
 
+our $DEBUG = 0;
+
 *verbose = Idval::Common::make_custom_logger({level => $VERBOSE, 
                                               debugmask => $DBG_CONFIG,
                                               decorate => 1}) unless defined(*verbose{CODE});
 *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
                                               debugmask => $DBG_CONFIG,
                                               decorate => 1}) unless defined(*chatty{CODE});
+*harfo  = Idval::Common::make_custom_logger({level => $CHATTY,
+                                              debugmask => $DBG_CONFIG,
+                                              decorate => 1}) unless defined(*harfo{CODE});
 
 # Make a flat list out of the arguments, which may be scalars or array refs
 # Leave out any undefined args.
 sub make_flat_list
 {
     my @result = map {ref $_ eq 'ARRAY' ? @{$_} : $_ } grep {defined($_)} @_;
-    chatty("make_flat list: result is: ", Dumper(\@result));
+    harfo ("make_flat list: result is: ", Dumper(\@result));
     return \@result;
 }
 
@@ -85,6 +89,11 @@ sub _init
     *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
                                                   debugmask => $DBG_CONFIG,
                                                   decorate => 1}) unless defined(*chatty{CODE});
+
+    *barfo  = Idval::Common::make_custom_logger({level => $CHATTY,
+                                                  debugmask => $DBG_CONFIG,
+                                                  decorate => 1,
+                                                from=>'BARFO'}) unless defined(*barfo{CODE});
 
     $self->{OP_REGEX} = Idval::Select::get_op_regex();
     $self->{ASSIGN_OP_REGEX} = Idval::Select::get_assign_regex();
@@ -140,7 +149,7 @@ sub get_next_nodename
 {
     my $self = shift;
     my $newnode = $self->{NODENAME}++;
-    chatty("returning nodename $newnode\n");
+    barfo ("returning nodename $newnode\n");
     return $newnode;
 }
 
@@ -153,10 +162,12 @@ sub extract_blocks
     my ($extracted, $remainder, $skipped);
     my $front = '';
 
+    barfo ("in extract_blocks\n");
     while(1)
     {
         ($extracted, $remainder, $skipped) = Text::Balanced::extract_codeblock($text, '{}', '[^{}]*');
-        chatty("extracted: \"$extracted\", remainder is: \"$remainder\", skipped: \"$skipped\"\n");
+        barfo ("extracted: \"$extracted\", remainder is: \"$remainder\", skipped: \"$skipped\"\n");
+        barfo ("extracted: \"$extracted\", remainder is: \"$remainder\", skipped: \"$skipped\"\n");
 
         last unless $extracted;
 
@@ -167,7 +178,7 @@ sub extract_blocks
     }
 
     $remainder = $front . $remainder;
-    chatty("** blocks are: ", join('::', @blocks), "   remainder is: \"$remainder\"\n");
+    barfo ("** blocks are: ", join('::', @blocks), "   remainder is: \"$remainder\"\n");
     return (\@blocks, $remainder);
 }
 
@@ -185,7 +196,7 @@ sub parse_one_block
 
     return unless defined $text; # Nothing to do...
 
-    chatty("parse_one_block, op_regex is: \"$op_regex\"\ndata is: <$text>\n");
+    barfo ("parse_one_block, op_regex is: \"$op_regex\"\ndata is: <$text>\n");
 
     foreach my $line (split(/\n/x, $text))
     {
@@ -197,7 +208,7 @@ sub parse_one_block
         if ($line =~ m{^([[:alnum:]]\w*)($op_regex)(.*)$}imx)
         {
             $node->add_data($current_tag, $current_op, $current_value) if defined $current_tag;
-            chatty("Got tag of \"$1\" \"$2\" \"$3\" \n");
+            barfo ("Got tag of \"$1\" \"$2\" \"$3\" \n");
             $current_tag = $1;
             $current_op = $2;
             $current_value = $3;
@@ -209,7 +220,7 @@ sub parse_one_block
         if ($line =~ m{^\s+(.*)$}imx)
         {
             croak("Found unexpected continuation line \"$line\" at the beginning of a block") unless defined $current_tag;
-            chatty("Got continuation tag of \"$1\" \"$2\" \"$3\" \n");
+            barfo ("Got continuation tag of \"$1\" \"$2\" \"$3\" \n");
             $current_value .= $3;
             next;
         };
@@ -238,17 +249,17 @@ sub parse_blocks
     # Preprocess the data, for use in the visit subroutine
     $self->parse_one_block($tree, $data);
 
-    chatty("Current node has ", scalar(@{$kidsref}), " children.\n");
+    barfo ("Current node has ", scalar(@{$kidsref}), " children.\n");
     foreach my $blk (@{$kidsref})
     {
         chop $blk;
         $blk = substr($blk, 1);
         $child_name = $self->get_next_nodename();
-        chatty("At \"$child_name\", Looking at: \"$blk\"\n");
+        barfo ("At \"$child_name\", Looking at: \"$blk\"\n");
         $tree->add_node($child_name, $self->parse_blocks($blk));
     }
 
-    chatty("tree: ", Dumper($tree));
+    barfo ("tree: ", Dumper($tree));
     return $tree;
 }
 
@@ -280,7 +291,12 @@ sub merge_blocks
     my $selects = shift;
     my %vars;
 
-    verbose("Start of _merge_blocks, selects: ", Dumper($selects));
+    verbose ("Start of _merge_blocks, selects: ", Dumper($selects));
+
+    if ($Idval::Config::DEBUG)
+    {
+        print STDERR "Start of _merge_blocks, selects: ", Dumper($selects);
+    }
 
     # visit each node, in correct order
     # if node evaluates to TRUE,
@@ -296,16 +312,16 @@ sub merge_blocks
         foreach my $name (@{$node->get_assignment_data_names()})
         {
             my ($op, $value) = $node->get_assignment_data_values($name);
-            chatty("name \"$name\" op \"$op\" value \"$value\"\n");
+            barfo ("name \"$name\" op \"$op\" value \"$value\"\n");
 
             if ($op eq '=')
             {
-                chatty("For \"$name\", op is \"=\" and value is \"$value\"\n");
+                barfo ("For \"$name\", op is \"=\" and value is \"$value\"\n");
                 $vars{$name} = $value;
             }
             elsif ($op eq '+=')
             {
-                chatty("For \"$name\", op is \"+=\" and value is \"$value\"\n");
+                barfo ("For \"$name\", op is \"+=\" and value is \"$value\"\n");
                 $vars{$name} = make_flat_list($vars{$name}, $value);
             }
         }
@@ -315,7 +331,7 @@ sub merge_blocks
 
     $self->visit($self->{TREE}, $visitor);
 
-    chatty("Result of merge blocks - VARS: ", Dumper(\%vars));
+    barfo ("Result of merge blocks - VARS: ", Dumper(\%vars));
 
     return \%vars;
 }
@@ -352,9 +368,9 @@ sub get_value
     my $default = shift || '';
 
     #$cfg_dbg = ($key eq 'sync_dest');
-    chatty("In get_single_value with key \"$key\"\n");
+    barfo ("In get_single_value with key \"$key\"\n");
     my $vars = $self->merge_blocks($selects);
-    chatty("get_single_value: list result for \"$key\" is: ", Dumper($vars->{$key}));
+    barfo ("get_single_value: list result for \"$key\" is: ", Dumper($vars->{$key}));
     return defined $vars->{$key} ? $vars->{$key} : $default;
 }
 
@@ -382,9 +398,9 @@ use Idval::Constants;
 *verbose = Idval::Common::make_custom_logger({level => $VERBOSE, 
                                               debugmask => $DBG_CONFIG,
                                               decorate => 1}) unless defined(*verbose{CODE});
-*chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
+*barfo  = Idval::Common::make_custom_logger({level => $CHATTY,
                                               debugmask => $DBG_CONFIG,
-                                              decorate => 1}) unless defined(*chatty{CODE});
+                                              decorate => 1}) unless defined(*barfo{CODE});
 
 sub new
 {
@@ -561,14 +577,14 @@ sub evaluate
         return 1;
     }
 
-    chatty("In node \"", $self->myname(), "\"\n");
+    barfo ("In node \"", $self->myname(), "\"\n");
     print Dumper($self) unless $self->myname();
     foreach my $key (keys %selectors)
     {
-        chatty("Checking select key \"$key\" with a value of \"$selectors{$key}\"\n");
+        barfo ("Checking select key \"$key\" with a value of \"$selectors{$key}\"\n");
         if (!exists($self->{SELECT_DATA}->{$key}))
         {
-            chatty("Got null key \"$key\". USK_OK is: $self->{USK_OK}\n");
+            barfo ("Got null key \"$key\". USK_OK is: $self->{USK_OK}\n");
             if ($self->{USK_OK})
             {
                 # One vote for this being OK
@@ -587,7 +603,7 @@ sub evaluate
         my $cmp_op = $self->get_select_op($key);
         my $cmp_value = $self->get_select_value($key);
         my $cmpfunc = Idval::Select::get_compare_function($cmp_op, 'STR');
-        chatty("Comparing \"$cmp_value\" \"$cmp_op\" \"$sel_value\" resulted in ",
+        barfo ("Comparing \"$cmp_value\" \"$cmp_op\" \"$sel_value\" resulted in ",
                 &$cmpfunc($sel_value, $cmp_value) ? "True\n" : "False\n");
         my $cmp_result = &$cmpfunc($sel_value, $cmp_value);
 
@@ -598,7 +614,7 @@ sub evaluate
         }
     }
 
-    chatty("evaluate returning $retval\n");
+    barfo ("evaluate returning $retval\n");
     return $retval;
 }
 

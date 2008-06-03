@@ -92,6 +92,8 @@ sub get_keys
 sub stringify
 {
     my $self = shift;
+    my $full = shift || 0;
+
     my @output = ();
     my @reclist;
     my $date = $self->{CREATIONDATE};
@@ -106,7 +108,7 @@ sub stringify
     {
         # The __LINE tag is used only in cmd_validate
         #$self->{RECORDS}->{$fname}->{__LINE} = $lineno; # Side effect!
-        @reclist = $self->{RECORDS}->{$fname}->format_record($lineno);
+        @reclist = $self->{RECORDS}->{$fname}->format_record($lineno, $full);
         push(@output, @reclist);
         #print "line $lineno for \"", $self->{RECORDS}->{$fname}->get_name(), "\"\n";
         #print "Lines for ", $self->{RECORDS}->{$fname}->get_name(), Dumper($self->{RECORDS}->{$fname}->{__LINES});

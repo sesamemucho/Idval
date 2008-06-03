@@ -110,6 +110,7 @@ sub test_get_a_provider_1
 sub test_get_a_provider_2
 {
     my $self = shift;
+    my $item;
 
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nplugin_dir = /testdir/Idval\n\n");
     add_UserPlugin3_up1();

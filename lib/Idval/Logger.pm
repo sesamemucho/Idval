@@ -80,6 +80,7 @@ sub _init
     $self->accessor('SHOW_TRACE', exists $argref->{show_trace} ? $argref->{show_trace} : 0);
     $self->accessor('SHOW_TIME', exists $argref->{show_time} ? $argref->{show_time} : 0);
     $self->accessor('USE_XML', exists $argref->{xml} ? $argref->{xml} : 0);
+    $self->accessor('FROM',  exists $argref->{from} ? $argref->{from} : 'nowhere');
 
     $self->set_fh('LOG_OUT',  safe_get($argref, 'log_out', 'STDOUT'));
     $self->set_fh('PRINT_TO', safe_get($argref, 'print_to', 'STDOUT'));
@@ -100,7 +101,7 @@ sub str
     printf "  show time:  %d\n", $self->accessor('SHOW_TIME');
     printf "  use xml:    %d\n", $self->accessor('USE_XML');
     printf "  output:     %s\n", $self->accessor('LOG_OUT');
-
+    printf "  from:       %s\n", $self->accessor('FROM');
     return;
 }
 
@@ -199,6 +200,12 @@ sub _log
         $decorate = 0;
     }
     
+    if (($self->accessor("FROM") eq 'BARFO') || ($_[0] =~ m/Well/))
+    {
+        print "debugmask: $debugmask; stored value: $self->{DEBUGMASK}\n";
+        print "level: $level; stored value: $self->{LOGLEVEL}\n";
+    }
+
     return unless $debugmask & $self->{DEBUGMASK};
 
     if ($self->{USE_XML})
@@ -334,6 +341,7 @@ sub make_custom_logger
     my $self = shift;
     my $argref = shift;
 
+    print "Making custom logger with: ", Dumper($argref);
     return sub {
         return $self->_log($argref, @_)
     }

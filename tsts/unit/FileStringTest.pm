@@ -8,6 +8,7 @@ use base qw(Test::Unit::TestCase);
 
 use Idval::FileString;
 
+our @flist = ();
 my $tree1 = {'a' => {'a1' => {},
                       'a2' => 'foo bar goo',
                       },
@@ -220,7 +221,7 @@ sub test_open_1
 sub test_find
 {
     my $self = shift;
-    local @flist = ();
+    local @flist;
     Idval::FileString::idv_add_file("/a/b/c/foo.txt", "garf\nharf\n");
     Idval::FileString::idv_add_file("/a/b/goo.txt", "arf\nlarf\n");
 

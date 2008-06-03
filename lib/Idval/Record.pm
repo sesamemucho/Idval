@@ -234,7 +234,8 @@ sub get_value_as_arg
 sub format_record
 {
     my $self = shift;
-    my $start_line = shift; # = undef if not present
+    my $start_line = shift;
+    my $full = shift;
 
     my @output = ('FILE = ' . $self->get_name());
     my %lines;
@@ -243,11 +244,14 @@ sub format_record
 
     foreach my $tag (sort keys %{$self})
     {
-        next if $tag eq 'FILE';
-        next if $tag eq 'CLASS';
-        next if $tag eq 'TYPE';
-        next if $tag eq '__LINES';
-        next if $tag eq '__NEXT_LINE';
+        next if $tag eq 'FILE'; # Already formatted
+        if (!$full)
+        {
+            next if $tag eq 'CLASS';
+            next if $tag eq 'TYPE';
+            next if $tag eq '__LINES';
+            next if $tag eq '__NEXT_LINE';
+        }
 
         confess "Uninitialized value for tag \"$tag\"\n" if !defined($self->get_value($tag));
         push(@output, "$tag = " . $self->get_value($tag));

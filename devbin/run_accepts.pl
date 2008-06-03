@@ -47,7 +47,7 @@ my @logger_args = Idval::Common::mkarglist(
     defined($options{'log_out'}) ? ('log_out' => $options{'log_out'}) : '',
     );
 
-Idval::Logger::_initialize_logger(@logger_args);
+Idval::Logger::initialize_logger(@logger_args);
 my $log = Idval::Logger::get_logger();
 #print STDERR $log->str(), "\n";
 

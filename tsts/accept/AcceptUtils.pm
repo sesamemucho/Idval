@@ -12,6 +12,8 @@ use File::Path;
 use File::Basename;
 use Idval;
 
+our $audiodir = $main::topdir . '/data/audio';
+
 my %startfiles = (
     'FLAC' => $audiodir . '/sbeep.flac',
     'MP3'  => $audiodir . '/sbeep.mp3',

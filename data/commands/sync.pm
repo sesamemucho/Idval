@@ -24,6 +24,7 @@ use Data::Dumper;
 use File::Spec;
 use File::stat;
 use File::Basename;
+use File::Temp qw/ tempfile /;
 use Getopt::Long;
 use English '-no_match_vars';;
 use Carp;
@@ -40,17 +41,6 @@ my $total_number_of_records;
 my $total_number_to_process;
 my $number_of_seen_records;
 my $number_of_processed_records;
-
-my @options = 
-    (
-     'mp3',
-     'ogg',
-    );
-
-my %option_values = (
-    mp3 => 0,
-    ogg => 0,
-    );
 
 memoize('get_file_ext');
 memoize('get_all_extensions_regexp');
@@ -107,9 +97,10 @@ sub sync
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
         my $tag_record = $datastore->{RECORDS}->{$key};
-        my $sync_dest = $config->get_single_value('sync_dest', $tag_record);
+        #my $sync_dest = $config->get_single_value('sync_dest', $tag_record);
         my $do_sync = $config->get_single_value('sync', $tag_record);
-        if ($sync_dest and $do_sync)
+        print "do_sync for <$key> is: $do_sync\n";
+        if ($do_sync)
         {
             $total_number_to_process++;
         }
@@ -196,12 +187,12 @@ sub each_item
     my $tag_record = $hash->{$key};
     my $retval = 0;
 
-    if ($first and ($key =~ m/ogg/))
-    {
-        #print STDERR "Record is: ", Dumper($tag_record);
+    #if ($first and ($key =~ m/ogg/))
+    #{
+    #print STDERR "Record is: ", Dumper($tag_record);
         #print STDERR Dumper($config);
-        $first = 0;
-    }
+        #$first = 0;
+    #}
 
     my $sync_dest = Idval::Common::mung_to_unix($config->get_single_value('sync_dest', $tag_record));
     my $do_sync = $config->get_single_value('sync', $tag_record);
@@ -217,7 +208,11 @@ sub each_item
         return $retval;
     }
 
+    #print STDERR "Record is: ", Dumper($tag_record);
+    #$Idval::Config::DEBUG=1;
+    print STDERR "GETTING src_type\n";
     my $src_type = $tag_record->get_value('TYPE');
+    print STDERR "src type is: <$src_type>\n";
     my $dest_type = $config->get_single_value('convert', $tag_record);
     my $prov = get_converter($src_type, $dest_type);
 
@@ -320,7 +315,7 @@ sub get_converter
 
     my $src_type = shift;
     my $dest_type = shift;
-
+    print "Getting provider for src:$src_type dest:$dest_type\n";
     return $providers->get_provider('converts', $src_type, $dest_type);
 }
 
@@ -328,59 +323,89 @@ sub _parse_args
 {
     my @args = @_;
 
+    my $orig_args = join(' ', @args);
+    my $mp3 = 0;
+    my $ogg = 0;
+    my @blocks = ();
+
     {
         # We need to do our own argument parsing
         local @ARGV = @args;
 
         my $opts = Getopt::Long::Parser->new();
-        my $retval = $opts->getoptions(\%option_values, @options);
+        my $retval = $opts->getoptions('mp3' => \$mp3,
+                                       'ogg' => \$ogg,
+                                       'block=s' => \@blocks,
+            );
+
         @args = (@ARGV);
     }
 
-    if ( !((scalar @args == 1) || (scalar @args == 2)))
+    if ((scalar @args == 0) && !@blocks)
+    {
+        Idval::Common::get_logger()->fatal("Sync: Need at least one argument to sync\n");
+        # Should print out Synopsis here
+    }
+    elsif (scalar @args == 1)
+    {
+        return ($args[0], 0);
+    }
+    elsif (scalar @args == 2)
+    {
+        $blocks[0] = $args[0] . ':' . $args[1];
+    }
+    else
     {
         # We're going to need a Help module...
         Idval::Common::get_logger()->fatal("Sync: Need at least one argument to sync\n");
         # Should print out Synopsis here
     }
 
-#     if (scalar @args == 1)
-#     {
-#         return ($args[0], 0);
-#     }
-
     # Else, assume it's src/dest specs
 
-    my $convert_type = $option_values{'ogg'}            ? 'OGG'
-                     : $option_values{'mp3'}            ? 'MP3'
+    my $convert_type = $ogg            ? 'OGG'
+                     : $mp3            ? 'MP3'
                      : 'MP3';
 
     my $syncfile = '';
-
-    $syncfile .= "remote_top = $args[1]\n";
-    $syncfile .= "convert    = $convert_type\n";
-
-    $syncfile .= "\n{\n";
-    foreach my $src (split(/:/, $args[0]))
+    foreach my $blockspec (@blocks)
     {
-        # A src argument that is just a file name is assumed to be a FILE parameter
+        my ($selectors, $remote_top) = split(/:/, $blockspec);
+        if (!(defined($selectors) && defined($remote_top)))
+        {
+            Idval::Common::get_logger()->fatal("Sync: argument error ($orig_args)\n");
+            # Should print out Synopsis here
+        }
 
-        if (-e $src)
+        $syncfile .= "convert    = $convert_type\n";
+
+        $syncfile .= "\n{\n";
+        $syncfile .= "\tremote_top = $remote_top\n";
+        foreach my $src (split(/;/, $selectors))
         {
-            $syncfile .= "\tFILE has $src\n";
+            # A src argument that is just a file name is assumed to be a FILE parameter
+            
+            if (-e $src)
+            {
+                $syncfile .= "\tFILE has $src\n";
+            }
+            else
+            {
+                $syncfile .= "\t$src\n";
+            }
         }
-        else
-        {
-            $syncfile .= "\t$src\n";
-        }
+
+        $syncfile .= "\tsync=1\n}\n\n";
     }
 
-    $syncfile .= "\tsync=1\n}\n\n";
-    
-
     # Write it to temp file...
-
     print "syncfile is: <$syncfile>\n";
+    my ($fh, $filename) = tempfile();
+
+    print $fh $syncfile;
+    $fh->close();
+
+    return $filename;
 }
 
 sub set_pod_input

@@ -103,6 +103,7 @@ sub _init
 
     my $lfh;
     my @realargv = @ARGV;
+    my @other_args = ();
 
     if (!defined($argref))
     {
@@ -118,7 +119,7 @@ sub _init
         $opts->configure("require_order");
         #print "Standard options are: ", join("\n", @standard_options), "\n";
         my $retval = $opts->getoptions(\%options, @standard_options);
-        @{$argref} = (@ARGV);
+        @other_args = (@ARGV);
     }
     else
     {
@@ -194,7 +195,9 @@ sub _init
     $self->{DATASTORE} = Idval::Collection->new({contents => '', source => 'blank'});
 
     #$self->{REMAINING_ARGS} = (ref $argref eq 'ARRAY') ? [@ARGV] : [];
-    $self->{REMAINING_ARGS} = $argref;
+    $self->{REMAINING_ARGS} = [@other_args];
+    print STDERR "rem args: ", Dumper($self->{REMAINING_ARGS});
+    #confess "Got here from:";
     $log->chatty($DBG_PROVIDERS, "Remaining args: <", join(", ", @{$self->{REMAINING_ARGS}}), ">\n");
 
     return;

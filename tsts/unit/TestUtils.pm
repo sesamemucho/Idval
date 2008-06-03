@@ -6,23 +6,23 @@ use Data::Dumper;
 use Carp;
 
 # Recursively get package names
-sub _get_pkgs
-{
-    no strict 'refs';
-    my $pname = shift;
-    my $p = \%{$pname};
-    use strict;
+# sub _get_pkgs
+# {
+#     no strict 'refs';
+#     my $pname = shift;
+#     my $p = \%{$pname};
+#     use strict;
 
-    push(@packages, $pname);
-    foreach my $pkg (grep {/\:\:$/} keys %$p)
-    {
-        next if $pkg =~ m/^[A-Z]+\:\:$/; # Don't mess with these?
+#     push(@packages, $pname);
+#     foreach my $pkg (grep {/\:\:$/} keys %$p)
+#     {
+#         next if $pkg =~ m/^[A-Z]+\:\:$/; # Don't mess with these?
 
-        _get_pkgs($pname . $pkg);
-    }
+#         _get_pkgs($pname . $pkg);
+#     }
 
-    return;
-}
+#     return;
+# }
 
 sub _package2filename {
      my $package = shift;
@@ -95,6 +95,7 @@ sub unload_packages
 sub unload_plugins
 {
     my @tst_pkgnames = grep {/^tsts\/unittest.*\.pm$/} keys %INC;
+    my $pkg;
 
     foreach my $name (@tst_pkgnames)
     {

@@ -41,12 +41,16 @@ sub print ## no critic (ProhibitBuiltinHomonyms)
     my $providers = shift;
     local @ARGV = @_;
     my $outputfile = '-';
-    my $result = GetOptions("output=s" => \$outputfile);
+    my $full = 0;
+
+    my $result = GetOptions(
+        "output=s" => \$outputfile,
+        'full' => \$full);
 
     my $out = Idval::FileIO->new($outputfile, '>') or croak "Can't open $outputfile for writing: $ERRNO\n";
 
     #print STDERR Dumper($datastore);
-    my $coll = $datastore->stringify();
+    my $coll = $datastore->stringify($full);
     $out->print(join("\n", @{$coll}), "\n");
     $out->close();
 

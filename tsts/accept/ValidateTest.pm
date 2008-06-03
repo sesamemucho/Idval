@@ -50,7 +50,7 @@ sub test_validation_with_one_error
     my $io = IO::String->new();
     my $old_logfh = $self->{LOG}->accessor('LOG_OUT');
     $self->{LOG}->accessor('LOG_OUT', $io);
-    $taglist = Idval::Scripts::val($taglist, $self->{IDVAL}->providers(), "$data_dir/val1.cfg");
+    $taglist = Idval::Scripts::validate($taglist, $self->{IDVAL}->providers(), "$data_dir/val1.cfg");
     $self->{LOG}->accessor('LOG_OUT', $old_logfh);
 
     $self->assert_matches(qr/$expected_result/, ${$io->string_ref});
