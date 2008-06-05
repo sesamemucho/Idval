@@ -64,6 +64,12 @@ sub _init
     *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
                                                   debugmask => $DBG_STARTUP,
                                                   decorate => 1}) unless defined(*verbose{CODE});
+    *chatty = Idval::Common::make_custom_logger({level => $CHATTY,
+                                                 debugmask => $DBG_STARTUP,
+                                                 decorate => 1}) unless defined(*chatty{CODE});
+    *chatty_graph = Idval::Common::make_custom_logger({level => $CHATTY,
+                                                 debugmask => $DBG_GRAPH,
+                                                 decorate => 1}) unless defined(*chatty_graph{CODE});
     *info    = Idval::Common::make_custom_logger({level => $INFO,
                                                   debugmask => $DBG_STARTUP,
                                                   decorate => 1}) unless defined(*info{CODE});
@@ -74,10 +80,10 @@ sub _init
 
     map{$self->{GRAPH}->{$_}->process_graph()} @provider_types;
 
-    #print STDERR "loaded packages: ", Dumper($self->{LOADED_PACKAGES});
-    #print STDERR "TAGREADER graph: ", Dumper($self->{GRAPH}->{reads_tags});
-    #print STDERR "command graph: ", Dumper($self->{GRAPH}->{command});
-    #print STDERR "converter graph: ", Dumper($self->{GRAPH}->{converts});
+    chatty_graph("loaded packages: ", Dumper($self->{LOADED_PACKAGES}));
+    chatty_graph("TAGREADER graph: ", Dumper($self->{GRAPH}->{reads_tags}));
+    chatty_graph("command graph: ", Dumper($self->{GRAPH}->{command}));
+    chatty_graph("converter graph: ", Dumper($self->{GRAPH}->{converts}));
 
     $self->setup_command_abbreviations();
 
@@ -321,26 +327,30 @@ sub _get_command
     $insert .= "\n$plugin";
     #my $status = do {eval "$insert\n$plugin" };
 #    my $status = do {eval {$insert} };
-    no warnings 'redefine';
-    my $status = do {eval "$insert" };
 
-    if (defined $status)
     {
-        #print STDERR "Status is <$status>\n";
-    }
-    else
-    {
-        print STDERR "Error return from \"$_\"\n";
-    }
-    if (not ($status or $! or $@))
-    {
-        croak "Error reading \"$_\": Does it return a true value at the end of the file?\n";
-    }
-    else
-    {
-        croak "Error reading \"$_\":($!) ($@)" unless $status;
-    }
+        local $SIG{__WARN__} = sub { print "evaluating plugin \"$name\": $_[0]"; };
+        no warnings 'redefine';
+        my $status = do {eval "$insert" };
 
+        if (defined $status)
+        {
+            #print STDERR "Status is <$status>\n";
+        }
+        else
+        {
+            print STDERR "Error return from \"$full_name\"\n";
+        }
+        if (not ($status or $! or $@))
+        {
+            croak "Error reading \"$full_name\": Does it return a true value at the end of the file?\n";
+        }
+        else
+        {
+            croak "Error reading \"$full_name\":($!) ($@)" unless $status;
+        }
+
+    }
     # The first time a command is encountered, if it has an "init" routine, call it
     if ((!exists $self->{COMMAND_LIST}->{$name}) && $found_an_init)
     {
@@ -515,7 +525,7 @@ sub _add_provider
     else
     {
         my $status = $cnv->query('status') ? $cnv->query('status') : 'no status';
-        verbose($DBG_STARTUP, "Provider \"$name\" is not ok: status is: $status\n");
+        verbose("Provider \"$name\" is not ok: status is: $status\n");
     }
 
     return;
@@ -550,7 +560,7 @@ sub register_provider
         # otherwise, use what the provider says... otherwise, use 100
         my $weight   = $config_weight || $self->_get_arg($argref, 'weight', 100);
 
-        $self->{LOG}->verbose($DBG_PROCESS, "reading $package\n");
+        $self->{LOG}->chatty($DBG_PROCESS, "reading $package\n");
         #print STDERR "Adding \"$provides\" $package\n";
         $self->{LOADED_PACKAGES}->{$package}++;
 
@@ -635,7 +645,7 @@ sub get_plugin_cb
     #print STDERR "eval result is: $@\n" if $@;
     if (defined $status)
     {
-        verbose($DBG_STARTUP, "Status is <$status>\n");
+        chatty($DBG_STARTUP, "Status is <$status>\n");
     }
     else
     {

@@ -50,7 +50,7 @@ $VERSION = 0.50;
     (
      'help',
      'man',
-     'version',
+     'Version',
      'topdir=s',
      'input=s',
      'output=s',
@@ -116,7 +116,7 @@ sub _init
         local @ARGV = @{$argref};
 
         my $opts = Getopt::Long::Parser->new();
-        $opts->configure("require_order");
+        $opts->configure("require_order", "no_ignore_case");
         #print "Standard options are: ", join("\n", @standard_options), "\n";
         my $retval = $opts->getoptions(\%options, @standard_options);
         @other_args = (@ARGV);
@@ -194,10 +194,7 @@ sub _init
 
     $self->{DATASTORE} = Idval::Collection->new({contents => '', source => 'blank'});
 
-    #$self->{REMAINING_ARGS} = (ref $argref eq 'ARRAY') ? [@ARGV] : [];
     $self->{REMAINING_ARGS} = [@other_args];
-    print STDERR "rem args: ", Dumper($self->{REMAINING_ARGS});
-    #confess "Got here from:";
     $log->chatty($DBG_PROVIDERS, "Remaining args: <", join(", ", @{$self->{REMAINING_ARGS}}), ">\n");
 
     return;
@@ -222,8 +219,7 @@ sub cmd_loop
             my $read_rtn = 'Idval::Scripts::read';
             $self->{DATASTORE} = &$read_rtn($self->datastore(),
                                             $self->providers(),
-                                            $input_datafile,
-                                            @args);
+                                            $input_datafile);
         }
 
         $self->{DATASTORE} = &$rtn($self->datastore(),
@@ -238,15 +234,13 @@ sub cmd_loop
             {
                 $self->{DATASTORE} = &$store_rtn($self->datastore(),
                                                  $self->providers(),
-                                                 '',
-                                                 @args);
+                                                 '');
             }
             if ($options{'output'})
             {
                 $self->{DATASTORE} = &$store_rtn($self->datastore(),
                                                  $self->providers(),
-                                                 $options{'output'},
-                                                 @args);
+                                                 $options{'output'});
             }
 
         }

@@ -121,10 +121,10 @@ sub about
     }
 
     silent_q("Types:\n");
-    #print STDERR "TypeMap: ", Dumper($typemap);
+    print STDERR "TypeMap: ", Dumper($typemap);
     foreach my $filetype ($typemap->get_all_filetypes()) {
         silent_q("\tType $filetype files have extensions: ",
-                       join(', ', map {lc $_} $typemap->get_exts_from_filetype($filetype), "\n");
+                       join(', ', map {lc $_} $typemap->get_exts_from_filetype($filetype), "\n"));
     }
     silent_q("\n");
     foreach my $class ($typemap->get_all_classes()) {

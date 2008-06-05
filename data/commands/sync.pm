@@ -81,7 +81,6 @@ sub sync
     my $dotmap = $typemap->get_dot_map();
     Idval::DoDots::init();
 
-    print "args are: ", join(":", @args), "\n";
     my ($syncfile, $should_delete_syncfile) = _parse_args(@args);
 
     #my $syncfile = defined($args[0]) ? $args[0] : '';
@@ -99,7 +98,6 @@ sub sync
         my $tag_record = $datastore->{RECORDS}->{$key};
         #my $sync_dest = $config->get_single_value('sync_dest', $tag_record);
         my $do_sync = $config->get_single_value('sync', $tag_record);
-        print "do_sync for <$key> is: $do_sync\n";
         if ($do_sync)
         {
             $total_number_to_process++;
@@ -140,13 +138,13 @@ sub ok_to_convert
 
     if (not -e $remote_pathname) {
         $convert_file = 1;
-        #$log->verbose("Remote file \"$remote_pathname\" does not exist. Will create.\n");
+        verbose("Remote file \"$remote_pathname\" does not exist. Will create.\n");
     } elsif ($r_st->mtime < $l_st->mtime) {
         $convert_file = 1;
-        #$log->verbose("Remote file \"$remote_pathname\" is older than local file \"$local_pathname\". Will convert.\n");
+        verbose("Remote file \"$remote_pathname\" is older than local file \"$local_pathname\". Will convert.\n");
     } else {
         $convert_file = 0;
-        #$log->verbose("Remote file \"$remote_pathname\" is newer than local file \"$local_pathname\". Will not convert.\n");
+        verbose("Remote file \"$remote_pathname\" is newer than local file \"$local_pathname\". Will not convert.\n");
     }
 
     return $convert_file;
@@ -196,10 +194,10 @@ sub each_item
 
     my $sync_dest = Idval::Common::mung_to_unix($config->get_single_value('sync_dest', $tag_record));
     my $do_sync = $config->get_single_value('sync', $tag_record);
-    if ($sync_dest or $do_sync)
-    {
-        print STDERR "sync_dest = \"$sync_dest\", do_sync = \"$do_sync\"\n";
-    }
+#     if ($sync_dest or $do_sync)
+#     {
+#         print STDERR "sync_dest = \"$sync_dest\", do_sync = \"$do_sync\"\n";
+#     }
 
     $number_of_seen_records++;
 
@@ -208,11 +206,7 @@ sub each_item
         return $retval;
     }
 
-    #print STDERR "Record is: ", Dumper($tag_record);
-    #$Idval::Config::DEBUG=1;
-    print STDERR "GETTING src_type\n";
     my $src_type = $tag_record->get_value('TYPE');
-    print STDERR "src type is: <$src_type>\n";
     my $dest_type = $config->get_single_value('convert', $tag_record);
     my $prov = get_converter($src_type, $dest_type);
 
@@ -279,7 +273,7 @@ sub each_item
     }
     else
     {
-        print STDERR "Did not convert \"$src_path\" to \"$dest_path\"\n";
+        #print STDERR "Did not convert \"$src_path\" to \"$dest_path\"\n";
         $retval = 0;
     }
 
@@ -315,7 +309,7 @@ sub get_converter
 
     my $src_type = shift;
     my $dest_type = shift;
-    print "Getting provider for src:$src_type dest:$dest_type\n";
+    #print "Getting provider for src:$src_type dest:$dest_type\n";
     return $providers->get_provider('converts', $src_type, $dest_type);
 }
 
@@ -341,7 +335,7 @@ sub _parse_args
         @args = (@ARGV);
     }
 
-    if ((scalar @args == 0) && !@blocks)
+    if ((scalar @args == 0) && (scalar @blocks == 0))
     {
         Idval::Common::get_logger()->fatal("Sync: Need at least one argument to sync\n");
         # Should print out Synopsis here
@@ -354,7 +348,7 @@ sub _parse_args
     {
         $blocks[0] = $args[0] . ':' . $args[1];
     }
-    else
+    elsif (scalar @blocks == 0)
     {
         # We're going to need a Help module...
         Idval::Common::get_logger()->fatal("Sync: Need at least one argument to sync\n");
@@ -399,7 +393,6 @@ sub _parse_args
     }
 
     # Write it to temp file...
-    print "syncfile is: <$syncfile>\n";
     my ($fh, $filename) = tempfile();
 
     print $fh $syncfile;

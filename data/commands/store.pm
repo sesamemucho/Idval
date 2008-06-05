@@ -22,7 +22,6 @@ use warnings;
 
 use Data::Dumper;
 use Getopt::Long;
-use Storable;
 use English '-no_match_vars';;
 use Carp;
 

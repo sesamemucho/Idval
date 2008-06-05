@@ -341,7 +341,7 @@ sub make_custom_logger
     my $self = shift;
     my $argref = shift;
 
-    print "Making custom logger with: ", Dumper($argref);
+    #print "Making custom logger with: ", Dumper($argref);
     return sub {
         return $self->_log($argref, @_)
     }
