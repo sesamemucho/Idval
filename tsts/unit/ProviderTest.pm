@@ -10,6 +10,7 @@ use File::Glob ':glob';
 use FindBin;
 
 use TestUtils;
+use Idval::Constants;
 use Idval::Providers;
 use Idval::Common;
 use Idval::Config;
@@ -112,6 +113,8 @@ sub test_get_a_provider_2
     my $self = shift;
     my $item;
 
+    #my $old_level = Idval::Common::get_logger()->accessor('LOGLEVEL', $CHATTY);
+    #my $old_debug = Idval::Common::get_logger()->accessor('DEBUGMASK', $DBG_GRAPH + $DBG_PROVIDERS);
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nplugin_dir = /testdir/Idval\n\n");
     add_UserPlugin3_up1();
     add_UserPlugin3_up2();
@@ -119,10 +122,10 @@ sub test_get_a_provider_2
     add_UserPlugin3_up4();
     my $fc = Idval::Config->new("/testdir/gt1.txt");
     $provs = Idval::Providers->new($fc);
-    eval {$item = $provs->get_provider('converts', 'FLAC', 'WAV')};
-    my $str = $@;
+    $item = $provs->get_provider('converts', 'FLAC', 'WAV');
+    #Idval::Common::get_logger()->accessor('DEBUGMASK', $old_debug);
+    #Idval::Common::get_logger()->accessor('LOGLEVEL', $old_level);
     $self->assert_null($item);
-    $self->assert_matches(qr/^No "converts" provider found for "FLAC,WAV"/, $str);
 
     return;
 }

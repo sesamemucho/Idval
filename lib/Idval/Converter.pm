@@ -52,27 +52,31 @@ memoize('get_typemap');
 sub new
 {
     my $class = shift;
+    my $from = shift;
+    my $to = shift;
     my @cnv_list = @_;
     my $name = join('/', map{$_->query('name')} @cnv_list);
     my $config = $cnv_list[0]->{CONFIG}; # They all have the same CONFIG object.
     my $self = $class->SUPER::new($config, $name);
     bless($self, ref($class) || $class);
-    $self->init(@cnv_list);
+    $self->init($from, $to, @cnv_list);
     return $self;
 }
 
 sub init
 {
     my $self = shift;
+    my $from = shift;
+    my $to = shift;
 
     $self->{CONVERTERS} = [@_];
     $self->{LASTCONVERTER} = ${$self->{CONVERTERS}}[-1];
 
     $self->{LOG}->verbose($DBG_PROCESS, 
                           "Smooshing: ", join(" -> ", map { $_->query('name') } @{$self->{CONVERTERS}}), "\n");
+    $self->{TO} = $to;
+    $self->add_endpoint($from, $to);
     $self->set_param('name', $self->{NAME});
-    $self->set_param('from', ${$self->{CONVERTERS}}[0]->query('from'));
-    $self->set_param('to', ${$self->{CONVERTERS}}[-1]->query('to'));
 
     my $is_ok = 1;
     map { $is_ok &&= $_->query('is_ok') } @{$self->{CONVERTERS}};
@@ -112,7 +116,7 @@ sub convert
         }
         else
         {
-            $to_type = $conv->query('to');
+            $to_type = $self->{TO};
             $to_file = File::Temp::tmpnam() . '.' . $self->get_typemap()->get_output_ext_from_filetype($to_type);
             push(@temporary_files, $to_file);
         }

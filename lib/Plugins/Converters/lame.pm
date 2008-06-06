@@ -54,13 +54,11 @@ sub init
 
     if ($name eq 'lame_dec')
     {
-        $self->set_param('from', 'MP3');
-        $self->set_param('to', 'WAV');
+        $self->add_endpoint('MP3', 'WAV');
     }
     else
     {
-        $self->set_param('from', 'WAV');
-        $self->set_param('to', 'MP3');
+        $self->add_endpoint('WAV', 'MP3');
     }
 
     $self->find_and_set_exe_path('lame');

@@ -56,18 +56,15 @@ sub init
 
     if ($name eq 'flac_dec')
     {
-        $self->set_param('from', 'FLAC');
-        $self->set_param('to', 'WAV');
+        $self->add_endpoint('FLAC', 'WAV');
     }
     elsif ($name eq 'flac_enc')
     {
-        $self->set_param('from', 'WAV');
-        $self->set_param('to', 'FLAC');
+        $self->add_endpoint('WAV', 'FLAC');
     }
     else
     {
-        $self->set_param('from', 'OGG');
-        $self->set_param('to', 'FLAC');
+        $self->add_endpoint('OGG', 'FLAC');
     }
 
     $self->find_and_set_exe_path('flac');

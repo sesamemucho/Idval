@@ -62,16 +62,16 @@ sub _init
     $self->{PROVIDERS} = {};
     $self->{LOG} = Idval::Common::get_logger();
     *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
-                                                  debugmask => $DBG_STARTUP,
+                                                  debugmask => $DBG_PROVIDERS,
                                                   decorate => 1}) unless defined(*verbose{CODE});
     *chatty = Idval::Common::make_custom_logger({level => $CHATTY,
-                                                 debugmask => $DBG_STARTUP,
+                                                 debugmask => $DBG_PROVIDERS,
                                                  decorate => 1}) unless defined(*chatty{CODE});
     *chatty_graph = Idval::Common::make_custom_logger({level => $CHATTY,
                                                  debugmask => $DBG_GRAPH,
                                                  decorate => 1}) unless defined(*chatty_graph{CODE});
     *info    = Idval::Common::make_custom_logger({level => $INFO,
-                                                  debugmask => $DBG_STARTUP,
+                                                  debugmask => $DBG_PROVIDERS,
                                                   decorate => 1}) unless defined(*info{CODE});
 
     map{$self->{GRAPH}->{$_} = Idval::Graph->new()} @provider_types;
@@ -151,7 +151,8 @@ sub get_provider
 
     if (scalar(@cnv_list) < 1)
     {
-        croak "No \"$prov_type\" provider found for \"$src,$dest\"";
+        $self->{LOG}->idv_warn("No \"$prov_type\" provider found for \"$src,$dest\"");
+        $converter = undef;
     }
     elsif (scalar(@cnv_list) == 1)
     {
@@ -160,7 +161,7 @@ sub get_provider
     else
     {
         # This will die if we smoosh something other than converters
-        $converter = Idval::Converter::Smoosh->new(@cnv_list);
+        $converter = Idval::Converter::Smoosh->new($src, $dest, @cnv_list);
     }
 
     return $converter;
@@ -191,7 +192,7 @@ sub _get_providers
         foreach my $conversion (keys %{$self->{GRAPH}->{$provider_id}->{EXTRACTED_PATHS}})
         {
             my ($from, $to) = ($conversion =~ m/^([^.]+)\.([^.]+)$/x);
-            next if $from eq $to;
+            #next if $from eq $to;
 
             push(@prov_list, $self->get_provider($prov_type, $from, $to));
         }
@@ -519,7 +520,8 @@ sub _add_provider
     $self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name} = $cnv;
     if ($cnv->query('is_ok'))
     {
-        #print STDERR "Adding \"$prov_type\" provider \"$name\" from package \"$package\". src: \"$src\", dest: \"$dest\", weight: \"$weight\"\n";
+        #chatty("Adding \"$prov_type\" provider \"$name\" from package \"$package\". src: \"$src\", dest: \"$dest\", weight: \"$weight\"\n");
+        chatty("Adding \"$prov_type\" provider: From \"$src\", via \"${package}::$name\" to \"$dest\", weight: \"$weight\"\n");
         $self->{GRAPH}->{$prov_type}->add_edge($src, $package . '::' . $name, $dest, $weight);
     }
     else
@@ -560,8 +562,7 @@ sub register_provider
         # otherwise, use what the provider says... otherwise, use 100
         my $weight   = $config_weight || $self->_get_arg($argref, 'weight', 100);
 
-        $self->{LOG}->chatty($DBG_PROCESS, "reading $package\n");
-        #print STDERR "Adding \"$provides\" $package\n";
+        chatty("Adding \"$provides\" $package\n");
         $self->{LOADED_PACKAGES}->{$package}++;
 
         $provides eq 'reads_tags' and do {
@@ -729,61 +730,6 @@ sub get_plugins
 
 #     # Each plugin should self-register
 # }
-
-# The following routines are for displaying information about the system configuration.
-
-# Returns a list of all conversions that the system can perform.
-# Does not include identity conversions.
-# If there is more than one way to convert X to Y, returns info
-# on the best way.
-sub info_get_converters
-{
-    my $self = shift;
-    my $result = [];
-    my $from;
-    my $to;
-
-    foreach my $converter ($self->_get_providers('converts'))
-    {
-        push(@{$result}, [$converter->query('from'),
-                          $converter->query('to'),
-                          $converter->query('name')]);
-    }
-
-    return $result;
-}
-
-sub info_get_readers
-{
-    my $self = shift;
-    my $result = [];
-    my $from;
-    my $to;
-
-    foreach my $converter ($self->_get_providers('reads_tags', 'writes_tags'))
-    {
-        push(@{$result}, [$converter->query('type'),
-                          $converter->query('name')]);
-    }
-
-    return $result;
-}
-
-sub info_get_commands
-{
-    my $self = shift;
-    my $result = [];
-    my $from;
-    my $to;
-
-    foreach my $converter ($self->_get_providers('command'))
-    {
-        #print "Got name: ", $converter->query('name'), "\n";
-        push(@{$result}, [$converter->query('name')]);
-    }
-
-    return $result;
-}
 
 #memoize('get_plugins');
 

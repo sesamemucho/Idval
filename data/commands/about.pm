@@ -68,6 +68,7 @@ sub about
     # Find converters
     foreach my $item ($providers->_get_providers('converts'))
     {
+CONVERT TO USE ENDPOINTS
         $converters_by_type{$item->query('from')}->{$item->query('to')} = $item;
         $providers_by_name{$item->query('name')}{'PROV'} = $item;
         $providers_by_name{$item->query('name')}{'TYPE'} = 'Converter';
@@ -121,7 +122,7 @@ sub about
     }
 
     silent_q("Types:\n");
-    print STDERR "TypeMap: ", Dumper($typemap);
+    #print STDERR "TypeMap: ", Dumper($typemap);
     foreach my $filetype ($typemap->get_all_filetypes()) {
         silent_q("\tType $filetype files have extensions: ",
                        join(', ', map {lc $_} $typemap->get_exts_from_filetype($filetype), "\n"));

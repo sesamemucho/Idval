@@ -51,7 +51,10 @@ sub init
                                       'MP3' => [qw{ mp3 }]});
     $self->set_param('classtype_map', {'MUSIC' => [qw( WAV MP3 )]});
 
+    $self->add_endpoint('WAV', 'WAV');
     $self->set_param('is_ok', 1);
+    $self->set_param('status', 'ok');
+
     return;
 }
 

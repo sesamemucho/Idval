@@ -22,7 +22,7 @@ use warnings;
 
 use Config;
 use File::Spec;
-
+use List::Util;
 use Data::Dumper;
 use Carp;
 
@@ -42,6 +42,7 @@ sub new
     $self->{PARAMS} = {};
     $self->{CONFIG} = $config;
     $self->{NAME} = $name;
+    $self->{ENDPOINTS} = [];
     return $self;
 }
 
@@ -90,6 +91,39 @@ sub create_records
     $srclist->add($rec);
 
     return;
+}
+
+sub has_endpoint
+{
+    my $self = shift;
+    my $from = uc shift;
+    my $to = uc shift;
+    my $endpoint = $from . ':' . $to;
+
+    # Add the endpoint if it's not already there
+    return defined(List::Util::first {$_ eq $endpoint} @{$self->{ENDPOINTS}});
+}
+
+sub add_endpoint
+{
+    my $self = shift;
+    my $from = uc shift;
+    my $to = uc shift;
+
+    # Add the endpoint if it's not already there
+    if (!$self->has_endpoint($from, $to))
+    {
+        push(@{$self->{ENDPOINTS}}, $from . ':' . $to);
+    }
+
+    return;
+}
+
+sub get_endpoints
+{
+    my $self = shift;
+
+    return @{$self->{ENDPOINTS}};
 }
 
 sub get_source_filepath

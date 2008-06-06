@@ -17,14 +17,22 @@ package Idval::Graph;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
+# TODO:
+#  process_graph should probably just go ahead and extract the best paths right there.
+
 use strict;
 use warnings;
 use Data::Dumper;
 use List::Util;
 use Carp;
 
+use Idval::Constants;
+use Idval::Common;
+
 my @path_list;
 my $extracted_paths = {};
+
+my $leader = '  ';
 
 sub new
 {
@@ -53,6 +61,10 @@ sub _init
 #     $self->add_edge('O', 'moo', 'W', 100);
 #     $self->add_edge('M', 'noo', 'W', 100);
 
+    *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
+                                                  debugmask => $DBG_GRAPH,
+                                                  decorate => 1}) unless defined(*verbose{CODE});
+    #*verbose = sub{ print @_; };
     return;
 }
 
@@ -75,6 +87,22 @@ sub add_edge
     return;
 }
 
+sub is_major_node
+{
+    my $self = shift;
+    my $node = shift;
+
+    return exists($self->{START_NODES}->{$node});
+}
+
+sub is_minor_node
+{
+    my $self = shift;
+    my $node = shift;
+
+    return !exists($self->{START_NODES}->{$node});
+}
+
 sub get_paths
 {
     my $self = shift;
@@ -88,7 +116,7 @@ sub get_paths
     foreach my $list (@{$self->{PATH_LIST}})
     {
         my %path_info;
-        #print "Inspecting (", join(',', @{$list}), "); length is: ", scalar(@{$list}), "\n";
+        verbose("Inspecting (", join(',', @{$list}), "); length is: ", scalar(@{$list}), "\n");
         # We don't want just a NODEX->NODEX loop (it must be at least NODEX->converter->NODEX).
         next if scalar(@{$list}) <= 1;
         #%path_info = ();
@@ -104,14 +132,14 @@ sub get_paths
             push(@{$path_info{PATHS}}, [$start, $type, $end]);
             $path_weight += $self->{GRAPH}->{$start}->{$type}->{WEIGHT};
             $path_weight += $self->{GRAPH}->{$type}->{$end}->{WEIGHT};
-            #print "Got: ($start, $type, $end)\n";
+            verbose("Got: ($start, $type, $end)\n");
             $path_index += 2;
         }
 
         $path_info{WEIGHT} = $path_weight;
         push(@{$self->{EXTRACTED_PATHS}->{$path_info{START} . '.' . $path_info{END}}}, \%path_info);
     }
-    #print Dumper($self);
+    #verbose(Dumper($self));
 
     return;
 }
@@ -124,14 +152,14 @@ sub do_walk
 
     foreach my $item (keys %{$self->{START_NODES}})
     {
-        #print "Starting with node \"$item\"\n";
-        $self->walkit($item, $self->{GRAPH});
+        verbose("Starting with node \"$item\"\n");
+        $self->walkit($item, $self->{GRAPH}, 1);
     }
 
-    #print Dumper($self);
+    #verbose(Dumper($self));
 #     foreach my $list (@{$self->{PATH_LIST}})
 #     {
-#         #print "(", join(',', @{$list}), ")\n";
+#         #verbose("(", join(',', @{$list}), ")\n");
 #     }
 
     return;
@@ -156,40 +184,59 @@ sub walkit
 
     my $item = shift;
     my $gakker = shift;
+    my $level = shift;
 
     my @saved_path = (@{$self->{CURRENT_PATH}});
     
-    #print "Checking \"$item\" against (", join(',', @{$self->{CURRENT_PATH}}), ")\n";
+    verbose($leader x $level, "Checking \"$item\" against ", $self->current_path_as_str("\n"));
     if (defined(${$self->{CURRENT_PATH}}[0]) and ($item eq ${$self->{CURRENT_PATH}}[0]))
     {
         # Let's allow loops back to the start
         # But make sure it really is to the start
-        #print "Found a loop: ", Dumper($self->{CURRENT_PATH});
-        croak("Beginning of current path \($item\) is not a START_NODE\n") unless exists($self->{START_NODES}->{$item});
+        verbose($leader x $level, "Found a loop: ", Dumper($self->{CURRENT_PATH}));
+        croak("Beginning of current path \($item\) is not a START_NODE\n") unless $self->is_major_node($item);
     }
     elsif (List::Util::first { $item eq $_ } @{$self->{CURRENT_PATH}})
     {
-        #print "returning\n";
+        verbose($leader x $level, "Found an internal loop. Returning.\n");
         return;
     }
 
     push(@{$self->{CURRENT_PATH}}, $item);
 
     #if (List::Util::first { $item eq $_ } keys %{$self->{START_NODES}})
-    if (exists($self->{START_NODES}->{$item}))
+    # If there is is more than one node in the path, and
+    # the path begins and ends on a major node, then consider saving it
+    if ($self->is_major_node($item))
     {
-        #print "Matched \"$item\" as a major node. Current path is: ", join(',', @{$self->{CURRENT_PATH}}),"\n";
-        push(@{$self->{PATH_LIST}}, [@{$self->{CURRENT_PATH}}]);
+        if (scalar(@{$self->{CURRENT_PATH}}) > 1)
+        {
+            # Should we bother saving this?
+            if ($self->is_lighter_than_max($self->{CURRENT_PATH}))
+            {
+                verbose($leader x $level, "Saving current path ", $self->current_path_as_str("\n"));
+                push(@{$self->{PATH_LIST}}, [@{$self->{CURRENT_PATH}}]);
+            }
+            else
+            {
+                verbose($leader x $level, "Current path is too heavy to save: ", $self->current_path_as_str("\n"));
+                return;
+            }
+        }
+        else
+        {
+            verbose($leader x $level, "Current path is too short to save: ", $self->current_path_as_str("\n"));
+        }
     }
 
-    #print "Will travel from \"$item\" to: (", join(',', keys %{$gakker->{$item}}), ")\n";
+    verbose($leader x $level, "Will travel from \"$item\" to: (", join(',', keys %{$gakker->{$item}}), ")\n");
     foreach my $next (keys %{$gakker->{$item}})
     {
-        #print "Going to \"$next\"\n";
-        $self->walkit($next, $gakker);
+        verbose($leader x $level, "Going from \"$item\" to \"$next\"\n");
+        $self->walkit($next, $gakker, ($level + 1));
     }
 
-    #print "Restoring (", join(',', @{$self->{CURRENT_PATH}}), ') to (', join(',', @saved_path), ")\n";
+    verbose($leader x $level, 'Restoring ', $self->current_path_as_str(), ' to (', join(',', @saved_path), ")\n");
     @{$self->{CURRENT_PATH}} = (@saved_path);
 
     return;
@@ -208,6 +255,54 @@ sub process_graph
     return;
 }
 
+# Return the total weight for all the edges in the path
+# A path is expected to be: Major node, {action, Major node}*
+sub get_path_weight
+{
+    my $self = shift;
+    my $path = shift;
+    my $weight = 0;
+    my @tpath = (@{$path});
+
+    my $node = shift @tpath;
+    my $action;
+
+    while(@tpath)
+    {
+        $action = shift @tpath;
+        $weight += $self->{GRAPH}->{$node}->{$action}->{WEIGHT};
+
+        $node = shift @tpath;
+        $weight += $self->{GRAPH}->{$action}->{$node}->{WEIGHT};
+    }
+
+    return $weight;
+}
+
+sub is_lighter_than_max
+{
+    my $self = shift;
+    my $path = shift;
+
+    my $weight = $self->get_path_weight($path);
+    my $first = ${$path}[0];
+    my $last = ${$path}[-1];
+
+    if (exists($self->{GREATEST_PATH_WEIGHTS}->{$first}) && exists($self->{GREATEST_PATH_WEIGHTS}->{$first}->{$last}))
+    {
+        my $max_weight = $self->{GREATEST_PATH_WEIGHTS}->{$first}->{$last};
+        if ($max_weight < $weight)
+        {
+            return 0;
+        }
+    }
+
+    $self->{GREATEST_PATH_WEIGHTS}->{$first}->{$last} = $weight;
+
+    return 1;
+}
+
+
 sub get_best_path
 {
     my $self = shift;
@@ -216,7 +311,7 @@ sub get_best_path
 
     $self->process_graph();
 
-    #print "Looking for path: \"", $from . '.' . $to, "\"\n";
+    verbose("Looking for path: \"", $from . '.' . $to, "\"\n");
     if(!exists($self->{EXTRACTED_PATHS}->{$from . '.' . $to}))
     {
         return;
@@ -224,13 +319,6 @@ sub get_best_path
 
     # Sort in order of weight
     # Less weight is better (means a shorter path)
-
-    #print STDERR "1 paths for ", $from . '.' . $to, " are: ", Dumper($self->{EXTRACTED_PATHS}->{$from . '.' . $to});
-
-    #print STDERR "2 paths for ", $from . '.' . $to, " are: ", Dumper($paths);
-    #print STDERR "3 paths for ", $from . '.' . $to, " are: ", Dumper($self->{EXTRACTED_PATHS}->{'A.W'});
-
-    #print STDERR "4 size is: ", scalar(@{$paths}), "\n";
 
     my @sorted = 
     map  { $_->[1] }
@@ -242,5 +330,12 @@ sub get_best_path
     return $result[0];
 }
 
+sub current_path_as_str
+{
+    my $self = shift;
+    my $trailer = shift || '';
+
+    return '(', join(',', @{$self->{CURRENT_PATH}}), ')' . $trailer;
+}
 
 1;
