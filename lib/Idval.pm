@@ -394,7 +394,7 @@ sub AUTOLOAD  ## no critic (RequireFinalReturn)
     return if $name =~ m/^[[:upper:]]+$/;
 
     #print STDERR "Checking \"$name\"\n";
-    $log->chatty($DBG_PROVIDERS, "Checking \"$name\"\n");
+    $log->chatty($DBG_PROVIDERS, "In autoload, checking \"$name\"\n");
     my $providers = Idval::Common::get_common_object('providers');
     croak "ERROR: Command \"$rtn\" called too early\n" unless defined $providers;
 

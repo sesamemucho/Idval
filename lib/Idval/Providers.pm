@@ -23,6 +23,7 @@ use warnings;
 use Data::Dumper;
 use Text::Abbrev;
 use File::Basename;
+use File::Spec;
 use Memoize;
 use Carp;
 
@@ -324,13 +325,14 @@ sub _get_command
 
     my $full_name = $pkg . '::' . $name;
 
-    my $insert = $pkg eq "Idval::Scripts" ? 'package Idval::Scripts;' : '';
+    my $insert = "\n# line 1 \"$filename\"\n";
+    $insert .= $pkg eq "Idval::Scripts" ? 'package Idval::Scripts;' : '';
     $insert .= "\n$plugin";
     #my $status = do {eval "$insert\n$plugin" };
 #    my $status = do {eval {$insert} };
 
-    {
-        local $SIG{__WARN__} = sub { print "evaluating plugin \"$name\": $_[0]"; };
+    #{
+     #   local $SIG{__WARN__} = sub { print "evaluating plugin \"$full_name\": $_[0]"; };
         no warnings 'redefine';
         my $status = do {eval "$insert" };
 
@@ -351,7 +353,7 @@ sub _get_command
             croak "Error reading \"$full_name\":($!) ($@)" unless $status;
         }
 
-    }
+    #}
     # The first time a command is encountered, if it has an "init" routine, call it
     if ((!exists $self->{COMMAND_LIST}->{$name}) && $found_an_init)
     {
@@ -625,41 +627,47 @@ sub register_provider
 
 sub get_plugin_cb
 {
-    return unless $_ =~ m/\.pm$/x;
-    my $fh = Idval::FileIO->new($_, "r");
-    confess "Bad filehandle: $! for item \"$_\"" unless defined $fh;
+    my $plugin_name = $_;
+
+    return unless $plugin_name =~ m/\.pm$/x;
+    my $fh = Idval::FileIO->new($plugin_name, "r");
+    confess "Bad filehandle: $! for item \"$plugin_name\"" unless defined $fh;
 
     # Doing it this way instead of just "do ..." to allow for use
     # of in-core files for testing (see FileString.pm)
-    my $plugin = do { local $/ = undef; <$fh> };
+    my $plugin = "\n# line 1 \"" . File::Spec->canonpath($plugin_name) . "\"\n";
+    $plugin .= do { local $/ = undef; <$fh> };
     $fh->close();
 
-    #print "Plugin is \"$plugin\"\n" if $_ eq "id3v2";
-#     croak "Could not read plugin \"$_\"\n" unless $plugin;
+    #print "Plugin is \"$plugin\"\n" if $plugin_name eq "id3v2";
+#     croak "Could not read plugin \"$plugin_name\"\n" unless $plugin;
 
-    #print STDERR "Plugin $_\n";
+    #print STDERR "Plugin $plugin_name\n";
     #my $status = do {eval "$plugin" };
-    ##my $status = do "$_";
-    no warnings 'redefine';
-    my $status = eval "$plugin";
-    ###my $status = eval {$plugin};
-    #print STDERR "eval result is: $@\n" if $@;
-    if (defined $status)
-    {
-        chatty($DBG_STARTUP, "Status is <$status>\n");
-    }
-    else
-    {
-        info($DBG_STARTUP, "Error return from \"$_\"\n");
-    }
-    if (not ($status or $! or $@))
-    {
-        croak "Error reading \"$_\": Does it return a true value at the end of the file?\n";
-    }
-    else
-    {
-        croak "Error reading \"$_\":($!) ($@)" unless $status;
-    }
+    ##my $status = do "$plugin_name";
+    #{
+      #  local $SIG{__WARN__} = sub { print "evaluating plugin \"$plugin_name\": $_[0]"; };
+        no warnings 'redefine';
+        my $status = eval "$plugin";
+        ###my $status = eval {$plugin};
+        #print STDERR "eval result is: $@\n" if $@;
+        if (defined $status)
+        {
+            chatty($DBG_STARTUP, "Status is <$status>\n");
+        }
+        else
+        {
+            info($DBG_STARTUP, "Error return from \"$plugin_name\"\n");
+        }
+        if (not ($status or $! or $@))
+        {
+            croak "Error reading \"$plugin_name\": Does it return a true value at the end of the file?\n";
+        }
+        else
+        {
+            croak "Error reading \"$plugin_name\":($!) ($@)" unless $status;
+        }
+    #}
 
     return;
 }

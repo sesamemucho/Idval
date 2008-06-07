@@ -33,7 +33,7 @@ sub init
                                                    debugmask => $DBG_PROCESS,
                                                    decorate => 0});
     set_pod_input();
-
+    
     return;
 }
 
@@ -47,10 +47,6 @@ sub about
     my $result = GetOptions("verbose" => \$verbose);
 
     my $typemap = Idval::TypeMap->new($providers);
-
-    print "About idval\n";
-
-    print "About: Got args: ", join(",", @ARGV), "\n";
 
     my %converters_by_type;
     my %writers_by_type;
@@ -68,8 +64,11 @@ sub about
     # Find converters
     foreach my $item ($providers->_get_providers('converts'))
     {
-CONVERT TO USE ENDPOINTS
-        $converters_by_type{$item->query('from')}->{$item->query('to')} = $item;
+        foreach my $endpoint ($item->get_endpoints())
+        {
+            my ($from, $to) = split(':', $endpoint);
+            $converters_by_type{$from}->{$to} = $item;
+        }
         $providers_by_name{$item->query('name')}{'PROV'} = $item;
         $providers_by_name{$item->query('name')}{'TYPE'} = 'Converter';
     }

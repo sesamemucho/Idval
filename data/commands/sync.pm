@@ -25,6 +25,7 @@ use File::Spec;
 use File::stat;
 use File::Basename;
 use File::Temp qw/ tempfile /;
+use Time::HiRes qw(gettimeofday tv_interval);
 use Getopt::Long;
 use English '-no_match_vars';;
 use Carp;
@@ -37,10 +38,8 @@ use Idval::FileIO;
 use Idval::DoDots;
 
 my $first = 1;
-my $total_number_of_records;
-my $total_number_to_process;
-my $number_of_seen_records;
-my $number_of_processed_records;
+
+my $progress_data = {};
 
 memoize('get_file_ext');
 memoize('get_all_extensions_regexp');
@@ -88,10 +87,7 @@ sub sync
     # Now, make a new config object that incorporates the sync file info.
     $config->add_file($syncfile);
 
-    $total_number_to_process = 0;
-    $number_of_seen_records = 0;
-    $number_of_processed_records = 0;
-    $total_number_of_records = scalar(keys %{$datastore->{RECORDS}});
+    progress_init($progress_data, $datastore);
 
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
@@ -100,15 +96,11 @@ sub sync
         my $do_sync = $config->get_single_value('sync', $tag_record);
         if ($do_sync)
         {
-            $total_number_to_process++;
+            progress_inc_number_to_process($progress_data);
         }
     }
 
-    progress(sprintf("%6d %6d %6d %2.0f%%\n",
-                     0,
-                     $total_number_to_process,
-                     $total_number_to_process,
-                     0.0));
+    progress_print_title($progress_data);
 
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
@@ -199,7 +191,7 @@ sub each_item
 #         print STDERR "sync_dest = \"$sync_dest\", do_sync = \"$do_sync\"\n";
 #     }
 
-    $number_of_seen_records++;
+    progress_inc_seen($progress_data);
 
     if (! $do_sync)
     {
@@ -208,8 +200,20 @@ sub each_item
 
     my $src_type = $tag_record->get_value('TYPE');
     my $dest_type = $config->get_single_value('convert', $tag_record);
-    my $prov = get_converter($src_type, $dest_type);
+    my $prov;
 
+    if ($src_type eq $dest_type)
+    {
+        # Once we allow transcoding between files of the same type,
+        # this will need to get a little sophisticated.
+        #
+        # Don't get excited. The '*' is just a label. No globbing is involved.
+        $prov = get_converter('*', '*');
+    }
+    else
+    {
+        $prov = get_converter($src_type, $dest_type);
+    }
 
     my $src_path = $prov->get_source_filepath($tag_record);
     my ($volume, $src_dir, $src_name) = File::Spec->splitpath($src_path);
@@ -235,7 +239,7 @@ sub each_item
     my $extre = get_all_extensions_regexp();
     if ($sync_dest !~ m/$extre/)
     {
-        #print STDERR "sync_dest is a directory\n";
+        chatty("sync_dest is a directory\n");
         # sync_dest is a directory, so to get the destination name just append dest_name
         $sync_dest = File::Spec->catfile($sync_dest, $dest_name);
     }
@@ -253,9 +257,8 @@ sub each_item
 
     if (ok_to_convert($src_path, $dest_path))
     {
-        $number_of_processed_records++;
 
-        #print STDERR "Converting \"$src_path\" to \"$dest_path\"\n";
+        chatty("Converting \"$src_path\" to \"$dest_path\"\n");
         my $dest_dir = dirname($dest_path);
         if (!Idval::FileIO::idv_test_isdir($dest_dir))
         {
@@ -265,15 +268,11 @@ sub each_item
         $retval = $prov->convert($tag_record, $dest_path);
         $retval = 0;
 
-        progress(sprintf("%6d %6d %6d %2.0f%%\n",
-                         $number_of_processed_records,
-                         $total_number_to_process - $number_of_processed_records,
-                         $total_number_to_process,
-                         ($number_of_processed_records / $total_number_to_process) * 100.0));
+        progress_print_line($progress_data);
     }
     else
     {
-        #print STDERR "Did not convert \"$src_path\" to \"$dest_path\"\n";
+        chatty("Did not convert \"$src_path\" to \"$dest_path\"\n");
         $retval = 0;
     }
 
@@ -399,6 +398,106 @@ sub _parse_args
     $fh->close();
 
     return $filename;
+}
+
+sub progress_init
+{
+    my $this = shift;
+    my $datastore = shift;
+
+    $this->{total_number_to_process} = 0;
+    $this->{number_of_seen_records} = 0;
+    $this->{number_of_processed_records} = 0;
+    $this->{total_number_of_records} = scalar(keys %{$datastore->{RECORDS}});
+
+    $this->{start_time} = [gettimeofday];
+    return;
+}
+
+sub progress_inc_seen
+{
+    my $this = shift;
+
+    $this->{number_of_seen_records}++;
+    return;
+}
+
+sub progress_inc_number_to_process
+{
+    my $this = shift;
+
+    $this->{total_number_to_process}++;
+    return;
+}
+
+sub progress_print_title
+{
+    my $this = shift;
+
+    progress("processed remaining  total  percent  elapsed  remaining   total\n");
+    progress(sprintf("%5d %9d %9d %5.0f%%     %8s  %8s  %8s\n",
+                     0,
+                     $this->{total_number_to_process},
+                     $this->{total_number_to_process},
+                     0.0,
+                     '00:00:00',
+                     '00:00:00',
+                     '',
+             ));
+    return;
+}
+
+sub progress_print_line
+{
+    my $this = shift;
+
+    $this->{number_of_processed_records}++;
+    my $fraction = ($this->{number_of_processed_records} / $this->{total_number_to_process});
+
+    my $safe_frac = $fraction < 0.001 ? 0.001 : $fraction;
+
+    my $elapsed_time = tv_interval($this->{start_time});
+
+    my $est_time = $elapsed_time / $safe_frac;
+    my $est_time_remaining = $est_time - $elapsed_time;
+
+    progress(sprintf("%5d %9d %9d %5.0f%%     %8s %8s %8s\n",
+                     $this->{number_of_processed_records},
+                     $this->{total_number_to_process} - $this->{number_of_processed_records},
+                     $this->{total_number_to_process},
+                     $fraction  * 100.0,
+                     progress_format_time($elapsed_time),
+                     progress_format_time($est_time_remaining),
+                     progress_format_time($est_time),
+             ));
+    return;
+}
+
+sub progress_format_time
+{
+    my $fsec = shift;
+
+    my $sec = int($fsec);
+    $sec = 0 if $sec < 0;
+
+    my $hrs = int($sec / 3600);
+    my $mins = int(int ($sec - int ($hrs * 3600)) / 60);
+    my $secs = $sec % 60;
+    my $minspec;
+
+    if ($hrs != 0)
+    {
+        $hrs = sprintf("%2d:", $hrs);
+        $mins = ($mins != 0) ? sprintf("%02d", $mins) : '   ';
+    }
+    else
+    {
+        $hrs = '   ';
+        $mins = ($mins != 0) ? sprintf("%2d", $mins) : '   ';
+    }
+    $secs = sprintf(":%02d", $secs);
+
+    return $hrs . $mins . $secs;
 }
 
 sub set_pod_input
