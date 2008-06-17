@@ -21,7 +21,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 use IO::Handle;
-use Carp qw(croak cluck);
+use Carp qw(croak cluck confess);
 use POSIX qw(strftime);
 
 use Idval::Constants;
@@ -144,7 +144,7 @@ sub is_chatty
     my $self = shift;
     my $level = shift;
 
-    return $self->ok($level);
+    return $self->ok($CHATTY);
 }
 
 sub log_level_is_over

@@ -131,7 +131,7 @@ sub get_provider
     my $graph = $self->{GRAPH}->{$prov_type};
     my @cnv_list;
 
-    #print "Looking for provider type \"$prov_type\" src \"$src\" dest \"$dest\"\n";
+    print "Looking for provider type \"$prov_type\" src \"$src\" dest \"$dest\"\n";
     my $path = $graph->get_best_path($src, $dest);
     #print STDERR "Converter graph is: ", Dumper($graph);
     #print STDERR "From $src to $dest. Path is: ", Dumper($path);
@@ -152,7 +152,7 @@ sub get_provider
 
     if (scalar(@cnv_list) < 1)
     {
-        $self->{LOG}->idv_warn("No \"$prov_type\" provider found for \"$src,$dest\"");
+        $self->{LOG}->idv_warn("No \"$prov_type\" provider found for \"$src,$dest\"\n");
         $converter = undef;
     }
     elsif (scalar(@cnv_list) == 1)
@@ -467,7 +467,7 @@ sub _get_arg
     my $self = shift;
     my $argref = shift;
     my $keyword = shift;
-    my $default = shift || undef;
+    my $default = shift;
     my $retval = '';
 
     if (defined($argref->{$keyword}))
@@ -507,12 +507,13 @@ sub _add_provider
     my $self = shift;
     my $argref = shift;
 
-    my $prov_type = $argref->{prov_type};
-    my $package   = $argref->{package};
-    my $name      = $argref->{name};
-    my $src       = $argref->{src};
-    my $dest      = $argref->{dest};
-    my $weight    = $argref->{weight};
+    my $prov_type  = $argref->{prov_type};
+    my $package    = $argref->{package};
+    my $name       = $argref->{name};
+    my $src        = $argref->{src};
+    my $dest       = $argref->{dest};
+    my $weight     = $argref->{weight};
+    my @attributes = split(',', $argref->{attributes});
 
     my $config = $self->{CONFIG};
     my $cnv;
@@ -522,9 +523,11 @@ sub _add_provider
     $self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name} = $cnv;
     if ($cnv->query('is_ok'))
     {
+        $cnv->set_param('attributes', $argref->{attributes});
         #chatty("Adding \"$prov_type\" provider \"$name\" from package \"$package\". src: \"$src\", dest: \"$dest\", weight: \"$weight\"\n");
-        chatty("Adding \"$prov_type\" provider: From \"$src\", via \"${package}::$name\" to \"$dest\", weight: \"$weight\"\n");
-        $self->{GRAPH}->{$prov_type}->add_edge($src, $package . '::' . $name, $dest, $weight);
+        chatty("Adding \"$prov_type\" provider: From \"$src\", via \"${package}::$name\" to \"$dest\", weight: \"$weight\" ",
+               "attributes: \"", $argref->{attributes}, "\"\n");
+        $self->{GRAPH}->{$prov_type}->add_edge($src, $package . '::' . $name, $dest, $weight, @attributes);
     }
     else
     {
@@ -563,6 +566,7 @@ sub register_provider
         my $config_weight = $self->{CONFIG}->get_single_value('weight', {'command_name'=>$name});
         # otherwise, use what the provider says... otherwise, use 100
         my $weight   = $config_weight || $self->_get_arg($argref, 'weight', 100);
+        my $attributes = $self->_get_arg($argref, 'attributes', '');
 
         chatty("Adding \"$provides\" $package\n");
         $self->{LOADED_PACKAGES}->{$package}++;
@@ -573,7 +577,8 @@ sub register_provider
                                   name => $name,
                                   src => uc($self->_get_arg($argref, 'type')),
                                   dest => 'NULL',
-                                  weight => $weight});
+                                  weight => $weight,
+                                  attributes => $attributes,});
             next;
         };
         $provides eq 'writes_tags' and do {
@@ -582,7 +587,8 @@ sub register_provider
                                   name => $name,
                                   src => uc($self->_get_arg($argref, 'type')),
                                   dest => 'NULL',
-                                  weight => $weight});
+                                  weight => $weight,
+                                  attributes => $attributes,});
             next;
         };
         $provides eq 'converts' and do {
@@ -592,7 +598,8 @@ sub register_provider
                                   name => $name,
                                   src => uc($self->_get_arg($argref, 'from')),
                                   dest => uc($self->_get_arg($argref, 'to')),
-                                  weight => $weight});
+                                  weight => $weight,
+                                  attributes => $attributes,});
             next;
         };
         $provides eq 'command' and do {
@@ -602,7 +609,8 @@ sub register_provider
                                   name => $name,
                                   src => $name,
                                   dest => 'NULL',
-                                  weight => $weight});
+                                  weight => $weight,
+                                  attributes => $attributes,});
             next;
         };
 

@@ -93,6 +93,8 @@ sub create_records
     return;
 }
 
+# endpoints are for use by the 'about' command
+
 sub has_endpoint
 {
     my $self = shift;
@@ -144,69 +146,6 @@ sub get_dest_filename
     $dest_name =~ s{\.[^.]+$}{.$dest_ext}x;
 
     return $dest_name;
-}
-
-sub _call_pod2usage
-{
-    my $self = shift;
-    # If the next argument starts with a '-', that's an argument to pod2usage.
-    # Otherwise, it's a string that we should use as an input to pod2usage.
-    my $input = $_[0] =~ m/^-/x ? $self->query('pod_input') : shift;
-    my $usage = '';
-
-    return "no information available" unless $input;
-
-    open(my $INPUT, '<', $input) || die "Can't open in-core filehandle for pod_input: $!\n";
-    open(my $FILE, '>', \$usage) || die "Can't open in-core filehandle: $!\n";
-    my %args = (@_, -input => $INPUT, -exitval => "NOEXIT", -output => $FILE);
-    my $retval = pod2usage(\%args);
-    close $FILE;
-    close $INPUT;
-
-    return $usage;
-}
-
-sub get_short_description
-{
-    my $self = shift;
-    my $usage = $self->_call_pod2usage(-verbose => 99, -sections => "NAME");
-
-    # Now trim it
-    $usage =~ s/Name:\s*//sx;
-    $usage =~ s/\n\n*/\n/gsx;
-    $usage =~ s/\n*$//x;
-    return $usage;
-}
-
-# sub get_synopsis
-# {
-#     my $self = shift;
-#     my $usage = $self->_call_pod2usage(-verbose => 99, -sections => "SYNOPSIS");
-
-#     # Now trim it
-#     $usage =~ s/Name:\s*//s;
-#     $usage =~ s/\n\n*/\n/gs;
-#     return $usage;
-# }
-
-sub get_full_description
-{
-    my $self = shift;
-    my $pod_input = shift || '';
-    my $usage = $pod_input ? $self->_call_pod2usage($pod_input, -verbose => 2) :
-        $self->_call_pod2usage(-verbose => 2);
-
-    return $usage;
-}
-
-sub get_synopsis
-{
-    my $self = shift;
-    my $pod_input = shift || '';
-    my $usage = $pod_input ? $self->_call_pod2usage($pod_input, -verbose => 0) :
-        $self->_call_pod2usage(-verbose => 0);
-
-    return $usage;
 }
 
 sub find_exe_path

@@ -68,15 +68,17 @@ sub init
     my $self = shift;
     my $from = shift;
     my $to = shift;
+    my @converters = @_;
 
-    $self->{CONVERTERS} = [@_];
-    $self->{LASTCONVERTER} = ${$self->{CONVERTERS}}[-1];
+    $self->{CONVERTERS} = [@converters];
+    $self->{LASTCONVERTER} = $converters[-1];
 
     $self->{LOG}->verbose($DBG_PROCESS, 
                           "Smooshing: ", join(" -> ", map { $_->query('name') } @{$self->{CONVERTERS}}), "\n");
     $self->{TO} = $to;
     $self->add_endpoint($from, $to);
     $self->set_param('name', $self->{NAME});
+    $self->set_param('attributes', $self->{LASTCONVERTER}->query('attributes'));
 
     my $is_ok = 1;
     map { $is_ok &&= $_->query('is_ok') } @{$self->{CONVERTERS}};

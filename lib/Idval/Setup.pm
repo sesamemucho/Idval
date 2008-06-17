@@ -27,7 +27,6 @@ use Filter::Util::Call;
 sub import
 {
     my($type) = @_ ;
-    print STDERR "IMPORT\n";
     filter_add(bless []) ;
 }
 

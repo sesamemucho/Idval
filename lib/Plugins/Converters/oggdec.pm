@@ -30,7 +30,7 @@ my $name = 'oggdec';
 my $from = 'OGG';
 my $to = 'WAV';
 
-Idval::Common::register_provider({provides=>'converts', name=>$name, from=>$from, to=>$to});
+Idval::Common::register_provider({provides=>'converts', name=>$name, from=>$from, to=>$to, attributes=>'transcode'});
 
 sub new
 {

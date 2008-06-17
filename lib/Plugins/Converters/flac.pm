@@ -28,9 +28,9 @@ use base qw(Idval::Converter);
 
 my $name = 'flac';
 
-Idval::Common::register_provider({provides=>'converts', name=>'flac_enc', from=>'WAV', to=>'FLAC'});
-Idval::Common::register_provider({provides=>'converts', name=>'flac_encogg', from=>'OGG', to=>'FLAC'});
-Idval::Common::register_provider({provides=>'converts', name=>'flac_dec', from=>'FLAC', to=>'WAV'});
+Idval::Common::register_provider({provides=>'converts', name=>'flac_enc', from=>'WAV', to=>'FLAC', attributes=>'transcode'});
+Idval::Common::register_provider({provides=>'converts', name=>'flac_encogg', from=>'OGG', to=>'FLAC', attributes=>'transcode'});
+Idval::Common::register_provider({provides=>'converts', name=>'flac_dec', from=>'FLAC', to=>'WAV', attributes=>'transcode'});
 
 sub new
 {

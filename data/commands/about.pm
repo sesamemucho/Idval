@@ -97,9 +97,10 @@ sub about
         {
             $provider = $converters_by_type{$converter_from_type}->{$converter_to_type};
             $provider_paths{$provider->query('name')} = $provider->query('path');
-            push(@msgs, "\tConverts from: $converter_from_type to $converter_to_type using " .
-                 $provider->query('name') .
-                 ($provider->query('is_ok') ? "" : "   (NOT ACTIVE)"));
+            my $infoline = "\tConverts from: $converter_from_type to $converter_to_type using " .
+                $provider->query('name');
+            $infoline .= $provider->query('is_ok') ? "" : "   (NOT ACTIVE)";
+            push(@msgs, $infoline);
         }
     }
     silent_q(join("\n", @msgs), "\n");
@@ -151,8 +152,14 @@ sub about
         {
             my $cnv = $pinfo->{converter};
             my $status = $cnv->query('status');
-
-            silent_q(sprintf("\tProvider %-15s status for %-15s is: %s\n", $pinfo->{'name'}, $pinfo->{'type'}, $status));
+            my $infoline = sprintf("\tProvider %-15s status for %-15s is: %s",
+                                   $pinfo->{'name'}, $pinfo->{'type'}, $status);
+            if ($pinfo->{type} eq 'converts' && $status eq 'ok')
+            {
+                $infoline .= $verbose ? '    attributes: ' . $cnv->query('attributes') : '';
+            }
+            $infoline .= "\n";
+            silent_q($infoline);
         }
     }
 

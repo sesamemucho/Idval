@@ -10,7 +10,7 @@ use lib ("$FindBin::Bin/../lib");
 
 use Idval::Graph;
 
-my $scenario = 5;
+my $scenario = 6;
 
 my $graph = Idval::Graph->new();
 
@@ -59,6 +59,16 @@ if ($scenario == 5)
     $graph->add_edge('FLAC', 'Idval::UserPlugins::Up3::tag_write3', 'NULL', 100);
     $graph->add_edge('OGG', 'Idval::UserPlugins::Up2::tag_write2', 'NULL', 100);
     $graph->add_edge('MP3', 'Idval::UserPlugins::Up1::goober', 'NULL', 100);
+}
+
+if ($scenario == 6)
+{
+    # Fool with attributes (all but A->moo->A has the 'transcode' attr)
+    $graph->add_edge('A', 'foo', 'B', 100, 'transcode');
+    $graph->add_edge('B', 'goo', 'W', 100, 'transcode');
+    $graph->add_edge('B', 'hoo', 'A', 200, 'transcode');
+    $graph->add_edge('A', 'moo', 'A', 200);
+    $graph->add_edge('A', 'big-moo', 'A', 250, 'transcode');
 }
 
 print "Starting out: ", Dumper($graph);

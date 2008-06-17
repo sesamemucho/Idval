@@ -166,4 +166,40 @@ sub test_graph2
     return;
 }
 
+sub test_return_copy_loop
+{
+    my $self = shift;
+
+    my $graph = Idval::Graph->new();
+
+    $graph->add_edge('A', 'foo', 'B', 100, 'transcode');
+    $graph->add_edge('B', 'goo', 'W', 100, 'transcode');
+    $graph->add_edge('B', 'hoo', 'A', 200, 'transcode');
+    $graph->add_edge('A', 'copy', 'A', 200);
+    $graph->add_edge('A', 'big-moo', 'A', 250, 'transcode');
+
+    my $result = $graph->get_best_path('A', 'A');
+    $self->assert_deep_equals([['A','copy','A']], $result);
+
+    return;
+}
+
+sub test_return_short_transcode_loop
+{
+    my $self = shift;
+
+    my $graph = Idval::Graph->new();
+
+    $graph->add_edge('A', 'foo', 'B', 100, 'transcode');
+    $graph->add_edge('B', 'goo', 'W', 100, 'transcode');
+    $graph->add_edge('B', 'hoo', 'A', 200, 'transcode');
+    $graph->add_edge('A', 'copy', 'A', 200);
+    $graph->add_edge('A', 'big-moo', 'A', 250, 'transcode');
+
+    my $result = $graph->get_best_path('A', 'A', 'transcode');
+    $self->assert_deep_equals([['A','big-moo','A']], $result);
+
+    return;
+}
+
 1;

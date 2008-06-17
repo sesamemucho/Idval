@@ -28,6 +28,7 @@ use Pod::Select;
 use Text::Abbrev;
 
 use Idval::Constants;
+use Idval::Help;
 
 sub init
 {
@@ -69,18 +70,18 @@ sub help
     
         if ($verbose)
         {
-            silent_q(get_full_description($cmd_name));
+            silent_q(Idval::Help::get_full_description($cmd_name));
         }
         else
         {
-            silent_q(get_synopsis($cmd_name));
+            silent_q(Idval::Help::get_synopsis($cmd_name));
             silent_q("\nUse \"help -v $cmd_name\" for more information.\n");
         }
     }
     else
     {
         # Just a bare 'help' command => print help for the main program
-        silent_q(get_full_description('main'));
+        silent_q(Idval::Help::get_full_description('main'));
     }
 
     if ($cmd_name eq 'help')
@@ -89,65 +90,12 @@ sub help
        silent_q("\nAvailable commands:\n");
        my @cmd_list = $providers->find_all_commands();
        foreach my $cmd_name (@cmd_list) {
-           my $gsd = get_short_description($cmd_name);
-           silent_q("  ", get_short_description($cmd_name), "\n");
+           my $gsd = Idval::Help::get_short_description($cmd_name);
+           silent_q("  ", Idval::Help::get_short_description($cmd_name), "\n");
        }
     }
 
     return 0;
-}
-
-sub _call_pod2usage
-{
-    my $name = shift;
-    my @sections = @_;
-
-    my $usage = '';
-
-    my $help_file = Idval::Common::get_common_object('help_file');
-
-    return "$name: no information available" unless exists $help_file->{$name};
-
-    my $input = $help_file->{$name};
-    open(my $INPUT, '<', \$input) || die "Can't open in-core filehandle for pod_input: $!\n";
-    open(my $FILE, '>', \$usage) || die "Can't open in-core filehandle: $!\n";
-    my $parser = new Pod::Text();
-    $parser->select(@sections);
-    $parser->parse_from_filehandle($INPUT, $FILE);
-    close $FILE;
-    close $INPUT;
-
-    return $usage;
-}
-
-sub get_short_description
-{
-    my $name = shift;
-    my $usage = _call_pod2usage($name, "NAME");
-
-    # Now trim it
-    $usage =~ s/Name\s*//si;
-    $usage =~ s/\n\n*/\n/gs;
-    $usage =~ s/\n*$//;
-    return $usage;
-}
-
-sub get_full_description
-{
-    my $name = shift;
-
-    my $usage = _call_pod2usage($name, '');
-
-    return $usage;
-}
-
-sub get_synopsis
-{
-    my $name = shift;
-
-    my $usage = _call_pod2usage($name, 'SYNOPSIS', 'OPTIONS');
-
-    return $usage;
 }
 
 sub set_pod_input

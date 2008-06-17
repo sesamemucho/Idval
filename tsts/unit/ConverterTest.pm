@@ -89,7 +89,6 @@ sub add_UserPlugin3_up1
 {
     my $plugin =<<'EOF';
 package Idval::UserPlugins::Up1;
-use Idval::Setup;
 use Idval::Common;
 use base qw(Idval::Converter);
 no warnings qw(redefine);

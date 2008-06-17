@@ -204,7 +204,6 @@ sub add_UserPlugin3_up1
 {
     my $plugin =<<'EOF';
 package Idval::UserPlugins::Up1;
-use Idval::Setup;
 use Idval::Common;
 use base qw(Idval::Plugin);
 no warnings qw(redefine);
@@ -243,7 +242,6 @@ sub add_UserPlugin3_up2
 {
     my $plugin =<<'EOF';
 package Idval::UserPlugins::Up2;
-use Idval::Setup;
 use Idval::Common;
 use base qw(Idval::Plugin);
 no warnings qw(redefine);
@@ -282,7 +280,6 @@ sub add_UserPlugin3_up3
 {
     my $plugin =<<'EOF';
 package Idval::UserPlugins::Up3;
-use Idval::Setup;
 use Idval::Common;
 use base qw(Idval::Plugin);
 no warnings qw(redefine);
@@ -321,7 +318,6 @@ sub add_UserPlugin3_up4
 {
     my $plugin =<<'EOF';
 package Idval::UserPlugins::Up4;
-use Idval::Setup;
 use Idval::Common;
 use base qw(Idval::Plugin);
 no warnings qw(redefine);

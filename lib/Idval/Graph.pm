@@ -65,6 +65,11 @@ sub _init
                                                   debugmask => $DBG_GRAPH,
                                                   decorate => 1}) unless defined(*verbose{CODE});
     #*verbose = sub{ print @_; };
+    *chatty = Idval::Common::make_custom_logger({level => $CHATTY,
+                                                 debugmask => $DBG_GRAPH,
+                                                 decorate => 1}) unless defined(*chatty{CODE});
+
+    $self->{IS_CHATTY} = Idval::Common::get_logger()->is_chatty();
     return;
 }
 
@@ -76,6 +81,7 @@ sub add_edge
     my $type = shift;
     my $to = shift;
     my $weight = shift;
+    my @attrs = ('weight', @_);
 
     $self->{START_NODES}->{$from} = 1;
     $self->{START_NODES}->{$to} = 1;
@@ -83,6 +89,12 @@ sub add_edge
     $self->{GRAPH}->{$from}->{$type}->{WEIGHT} = $weight;
     $self->{GRAPH}->{$type}->{$to}->{LINK} = 1;
     $self->{GRAPH}->{$type}->{$to}->{WEIGHT} = $weight;
+
+    foreach my $attr (@attrs)
+    {
+        $self->{GRAPH}->{$from}->{$type}->{ATTRS}->{$attr} = 1;
+        $self->{GRAPH}->{$type}->{$to}->{ATTRS}->{$attr} = 1;
+    }
 
     return;
 }
@@ -103,6 +115,8 @@ sub is_minor_node
     return !exists($self->{START_NODES}->{$node});
 }
 
+#
+# Also get a list of attributes that are in all members of a path
 sub get_paths
 {
     my $self = shift;
@@ -112,6 +126,12 @@ sub get_paths
     my $path_weight;
     my @list;
     my ($start, $type, $end);
+    my %attrs;
+
+    # A PATH_LIST is a list of nodes. Each PATH_LIST starts and ends
+    # with a major node, and alternates major nodes (end types) with
+    # minor nodes (converters). So: WAV->flac->FLAC->ogg->OGG, or
+    # WAV->copy->WAV.
 
     foreach my $list (@{$self->{PATH_LIST}})
     {
@@ -123,8 +143,14 @@ sub get_paths
         $num_paths = (scalar(@{$list}) - 1) / 2;
         $path_index = 0;
         $path_weight = 0;
-        $path_info{START} = ${$list}[0];
-        $path_info{END} = ${$list}[-1];
+        $start = ${$list}[0];
+        $type = ${$list}[1];
+        $end = ${$list}[-1];
+        $path_info{START} = $start;
+        $path_info{END} = $end;
+        
+        %attrs = (%{$self->{GRAPH}->{$start}->{$type}->{ATTRS}});
+        verbose("Initial attributes are: ", join(':', sort keys %attrs), "\n");
 
         for (my $i = 0; $i < $num_paths; $i++)
         {
@@ -133,10 +159,25 @@ sub get_paths
             $path_weight += $self->{GRAPH}->{$start}->{$type}->{WEIGHT};
             $path_weight += $self->{GRAPH}->{$type}->{$end}->{WEIGHT};
             verbose("Got: ($start, $type, $end)\n");
+            # Find shared attributes
+            foreach my $attr (keys %attrs)
+            {
+                delete $attrs{$attr} if !exists($self->{GRAPH}->{$start}->{$type}->{ATTRS}->{$attr});
+            }
+            foreach my $attr (keys %attrs)
+            {
+                delete $attrs{$attr} if !exists($self->{GRAPH}->{$type}->{$end}->{ATTRS}->{$attr});
+            }
+
+            verbose("In loop: attributes are: ", join(':', sort keys %attrs), "\n");
             $path_index += 2;
         }
 
         $path_info{WEIGHT} = $path_weight;
+        # $path_info{ATTRS} is a hash of the attributes shared by all members of the list.
+        # There will always be a 'weight' attribute; there may or may not be any others.
+        $path_info{ATTRS} = {%attrs}; # be sure to make a copy
+
         push(@{$self->{EXTRACTED_PATHS}->{$path_info{START} . '.' . $path_info{END}}}, \%path_info);
     }
     #verbose(Dumper($self));
@@ -212,14 +253,15 @@ sub walkit
         if (scalar(@{$self->{CURRENT_PATH}}) > 1)
         {
             # Should we bother saving this?
-            if ($self->is_lighter_than_max($self->{CURRENT_PATH}))
+            if(!$self->has_duplicate_nodes($self->{CURRENT_PATH}))
+            ##if ($self->is_lighter_than_max($self->{CURRENT_PATH}))
             {
                 verbose($leader x $level, "Saving current path ", $self->current_path_as_str("\n"));
                 push(@{$self->{PATH_LIST}}, [@{$self->{CURRENT_PATH}}]);
             }
             else
             {
-                verbose($leader x $level, "Current path is too heavy to save: ", $self->current_path_as_str("\n"));
+                verbose($leader x $level, "Current path has illegal duplicate nodes: ", $self->current_path_as_str("\n"));
                 return;
             }
         }
@@ -279,6 +321,38 @@ sub get_path_weight
     return $weight;
 }
 
+# Generally, a path may not have duplicate major nodes, with one (big)
+# exception: MN->type->[->X->]*->MN is ok. For instance, A->foo->A is
+# OK, A->foo->A->garf->B is not. A->garf->B->harf->A is OK, but
+# A->garf->B->larf->B->carf->A is not.
+
+sub has_duplicate_nodes
+{
+    my $self = shift;
+    my $path = shift;
+
+    my @pl = @{$path};
+    my %phash = ();
+
+    my $first = $pl[0];
+    my $last = $pl[-1];
+
+    if ($first eq $last)
+    {
+        # Fake out the next loop by removing the last element, which
+        # is a licit duplicate.
+        pop @pl;
+    }
+
+    foreach my $node (@pl)
+    {
+        $phash{$node}++ if $self->is_major_node($node);
+        return 1 if (exists $phash{$node} && ($phash{$node} > 1)); # We have a duplicate!
+    }
+
+    return 0;
+}
+
 sub is_lighter_than_max
 {
     my $self = shift;
@@ -308,15 +382,44 @@ sub get_best_path
     my $self = shift;
     my $from = shift;
     my $to   = shift;
+    my @attrs = sort ('weight', defined (@_) ? @_ : ());
+    my $arc = $from . '.' . $to;
+    my @goodpaths = ();
 
     $self->process_graph();
 
-    verbose("Looking for path: \"", $from . '.' . $to, "\"\n");
-    if(!exists($self->{EXTRACTED_PATHS}->{$from . '.' . $to}))
+    verbose("Looking for path: \"", $arc, "\"\n");
+    if(!exists($self->{EXTRACTED_PATHS}->{$arc}))
     {
+        chatty("Path: \"", $arc, "\" does not exist in EXTRACTED_PATHS\n");
         return;
     }
 
+    # Get a list of all the paths that have all the required attributes
+    chatty("Need attributes: ", join(',', @attrs), "\n");
+  CHECK_PATHS:
+    foreach my $pathinfo (@{$self->{EXTRACTED_PATHS}->{$arc}})
+    {
+        if ($self->{IS_CHATTY})
+        {
+            chatty("Path \"", $pathinfo->{START} . '.' . $pathinfo->{END}, 
+                   " has attributes: ", join(',', sort keys %{$pathinfo->{ATTRS}}), "\n");
+        }
+
+        foreach my $attr (@attrs)
+        {
+            next CHECK_PATHS if !exists($pathinfo->{ATTRS}->{$attr});
+        }
+
+        push(@goodpaths, $pathinfo);
+    }
+
+    if ($self->{IS_CHATTY})
+    {
+        chatty("Resulting path list is: ", join(':', @goodpaths), "\n");
+    }
+    
+    #
     # Sort in order of weight
     # Less weight is better (means a shorter path)
 
@@ -324,7 +427,7 @@ sub get_best_path
     map  { $_->[1] }
     sort { $a->[0] <=> $b->[0] }
     map  { [ $_->{WEIGHT}, $_ ] }
-    @{$self->{EXTRACTED_PATHS}->{$from . '.' . $to}};
+    @goodpaths;
 
     my @result = map { $_->{PATHS} } @sorted;
     return $result[0];
