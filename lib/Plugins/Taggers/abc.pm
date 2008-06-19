@@ -91,16 +91,35 @@ sub read_tags
     print "Checking block $id\n";
 
     my $text = $self->{TEXT}->{$fname}->{BLOCK}->{$id};
+    #$text =~ s/\r//g;
+    print "\nFile $fileid:\n";
+    my $field;
+    my $data;
+    my %tags;
+    print "Block: <$text>\n" if $id eq '0001';
   LOOP2:
     {
-        if ($text =~ m/\G(([ABCDFGHIKLMmNOPQRrSTUVWXZ]):.*?)(?=[ABCDFGHIKLMmNOPQRrSTUVWZ]:|\z)/gsc)
+        if ($text =~ m/\G([ABCDFGHIKLMmNOPQRrSTUVWXZ]):(.*?)[\n\r]+(?=[ABCDFGHIKLMmNOPQRrSTUVWZ]:|\z)/gsc)
         {
-            print("Got $2 field\n");
+            $field = $1;
+            $data = $2;
+            if ($field eq 'K')
+            {
+                $data =~ s/[\n\r].*//s;
+            }
+            if ($field =~ m/[FKLMmPQUV]/)
+            {
+                $tags{$field} = [$data];
+            }
+            else
+            {
+                push(@{$tags{$field}}, $data);
+            }
             redo LOOP2 ;
         }
     }
 
-
+    print "Got", Dumper(\%tags);
     return $retval;
     
 #     my $path = $self->query('path');
