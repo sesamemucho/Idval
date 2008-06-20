@@ -1,254 +1,257 @@
 package FileParseTest;
-use strict;
-use warnings;
 
-use base qw(Test::Unit::TestCase);
+# FileParse unused?
 
-use Benchmark qw(:all);
-use Data::Dumper;
+# use strict;
+# use warnings;
 
-use Idval::FileIO;
-use Idval::ServiceLocator;
-use Idval::FileParse;
+# use base qw(Test::Unit::TestCase);
 
-my $tree1 = {'testdir' => {}};
+# use Benchmark qw(:all);
+# use Data::Dumper;
 
-sub new {
-    my $self = shift()->SUPER::new(@_);
-    # your state for fixture here
-    # Tell the system to use the string-based filesystem services (i.e., the unit-testing version)
-    Idval::ServiceLocator::provide('io_type', 'FileString');
-    return $self;
-}
+# use Idval::FileIO;
+# use Idval::ServiceLocator;
+# use Idval::FileParse;
 
-sub set_up {
-    # provide fixture
-    Idval::FileString::idv_set_tree($tree1);
+# my $tree1 = {'testdir' => {}};
 
-    return;
-}
+# sub new {
+#     my $self = shift()->SUPER::new(@_);
+#     # your state for fixture here
+#     # Tell the system to use the string-based filesystem services (i.e., the unit-testing version)
+#     Idval::ServiceLocator::provide('io_type', 'FileString');
+#     return $self;
+# }
 
-sub tear_down {
-    # clean up after test
-    Idval::FileString::idv_clear_tree();
+# sub set_up {
+#     # provide fixture
+#     Idval::FileString::idv_set_tree($tree1);
 
-    return;
-}
+#     return;
+# }
 
-sub test_create {
-    my $self = shift;
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\n\n");
-    my $reader = FakeReader_FPT->new();
-    my $obj = Idval::FileParse->new($reader, '/testdir/gt1.txt');
-    $self->assert_not_null($obj);
+# sub tear_down {
+#     # clean up after test
+#     Idval::FileString::idv_clear_tree();
 
-    return;
-}
+#     return;
+# }
 
-sub test_basic
-{
-    my $self = shift;
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "a = 4\nboo = hoo\n");
-    #my $data = "a = 4\nboo = hoo\n";
-    my $reader = FakeReader_FPT->new();
-    my $obj = Idval::FileParse->new($reader, '/testdir/gt1.txt');
+# sub test_create {
+#     my $self = shift;
+#     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\n\n");
+#     my $reader = FakeReader_FPT->new();
+#     my $obj = Idval::FileParse->new($reader, '/testdir/gt1.txt');
+#     $self->assert_not_null($obj);
 
-    my $result = $obj->parse();
+#     return;
+# }
 
-    $self->assert_deep_equals([{'a' => '4','boo' => 'hoo',}], $result);
+# sub test_basic
+# {
+#     my $self = shift;
+#     Idval::FileString::idv_add_file('/testdir/gt1.txt', "a = 4\nboo = hoo\n");
+#     #my $data = "a = 4\nboo = hoo\n";
+#     my $reader = FakeReader_FPT->new();
+#     my $obj = Idval::FileParse->new($reader, '/testdir/gt1.txt');
 
-    return;
-}
+#     my $result = $obj->parse();
 
-sub test_no_comments
-{
-    my $self = shift;
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "a = 4\n#comment\nboo = hoo\n");
-    my $reader = FakeReader_FPT->new();
-    my $obj = Idval::FileParse->new($reader, '/testdir/gt1.txt');
+#     $self->assert_deep_equals([{'a' => '4','boo' => 'hoo',}], $result);
 
-    my $result = $obj->parse();
+#     return;
+# }
 
-    $self->assert_deep_equals([{'a' => '4'},{'boo' => 'hoo',}], $result);
+# sub test_no_comments
+# {
+#     my $self = shift;
+#     Idval::FileString::idv_add_file('/testdir/gt1.txt', "a = 4\n#comment\nboo = hoo\n");
+#     my $reader = FakeReader_FPT->new();
+#     my $obj = Idval::FileParse->new($reader, '/testdir/gt1.txt');
 
-    return;
-}
+#     my $result = $obj->parse();
 
-sub test_plusequals
-{
-    my $self = shift;
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "a = 4\nboo = hoo\na += 3");
-    my $reader = FakeReader_FPT->new();
-    my $obj = Idval::FileParse->new($reader, '/testdir/gt1.txt');
+#     $self->assert_deep_equals([{'a' => '4'},{'boo' => 'hoo',}], $result);
 
-    my $result = $obj->parse();
+#     return;
+# }
 
-    $self->assert_deep_equals([{'a' => '4 3','boo' => 'hoo',}], $result);
+# sub test_plusequals
+# {
+#     my $self = shift;
+#     Idval::FileString::idv_add_file('/testdir/gt1.txt', "a = 4\nboo = hoo\na += 3");
+#     my $reader = FakeReader_FPT->new();
+#     my $obj = Idval::FileParse->new($reader, '/testdir/gt1.txt');
 
-    return;
-}
+#     my $result = $obj->parse();
 
-sub test_append
-{
-    my $self = shift;
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "a = 4\nboo = hoo\n  3");
-    my $reader = FakeReader_FPT->new();
-    my $obj = Idval::FileParse->new($reader, '/testdir/gt1.txt');
+#     $self->assert_deep_equals([{'a' => '4 3','boo' => 'hoo',}], $result);
 
-    my $result = $obj->parse();
+#     return;
+# }
 
-    $self->assert_deep_equals([{'a' => '4','boo' => 'hoo 3',}], $result);
+# sub test_append
+# {
+#     my $self = shift;
+#     Idval::FileString::idv_add_file('/testdir/gt1.txt', "a = 4\nboo = hoo\n  3");
+#     my $reader = FakeReader_FPT->new();
+#     my $obj = Idval::FileParse->new($reader, '/testdir/gt1.txt');
 
-    return;
-}
+#     my $result = $obj->parse();
 
-sub test_two_blocks
-{
-    my $self = shift;
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "a = 4\nboo = hoo\n\n\ngak = bak\nhuf = fuf\n");
-    my $reader = FakeReader_FPT->new();
-    my $obj = Idval::FileParse->new($reader, '/testdir/gt1.txt');
+#     $self->assert_deep_equals([{'a' => '4','boo' => 'hoo 3',}], $result);
 
-    my $result = $obj->parse();
+#     return;
+# }
 
-    $self->assert_deep_equals([{'a' => '4','boo' => 'hoo',},
-                              {'gak' => 'bak','huf' => 'fuf'}], $result);
+# sub test_two_blocks
+# {
+#     my $self = shift;
+#     Idval::FileString::idv_add_file('/testdir/gt1.txt', "a = 4\nboo = hoo\n\n\ngak = bak\nhuf = fuf\n");
+#     my $reader = FakeReader_FPT->new();
+#     my $obj = Idval::FileParse->new($reader, '/testdir/gt1.txt');
 
-    return;
-}
+#     my $result = $obj->parse();
 
-sub test_two_inputs
-{
-    my $self = shift;
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "a = 4\nboo = hoo\n");
-    Idval::FileString::idv_add_file('/testdir/gt2.txt', "gak = bak\nhuf = fuf\n");
-    my $reader = FakeReader_FPT->new();
-    my $obj = Idval::FileParse->new($reader, '/testdir/gt1.txt', '/testdir/gt2.txt');
+#     $self->assert_deep_equals([{'a' => '4','boo' => 'hoo',},
+#                               {'gak' => 'bak','huf' => 'fuf'}], $result);
 
-    my $result = $obj->parse();
+#     return;
+# }
 
-    $self->assert_deep_equals([{'a' => '4','boo' => 'hoo',},
-                              {'gak' => 'bak','huf' => 'fuf'}], $result);
+# sub test_two_inputs
+# {
+#     my $self = shift;
+#     Idval::FileString::idv_add_file('/testdir/gt1.txt', "a = 4\nboo = hoo\n");
+#     Idval::FileString::idv_add_file('/testdir/gt2.txt', "gak = bak\nhuf = fuf\n");
+#     my $reader = FakeReader_FPT->new();
+#     my $obj = Idval::FileParse->new($reader, '/testdir/gt1.txt', '/testdir/gt2.txt');
 
-    return;
-}
+#     my $result = $obj->parse();
 
-package FakeReader_FPT;
-use Data::Dumper;
-sub new
-{
-    my $class = shift;
-    my $self = {};
-    bless($self, ref($class) || $class);
-    $self->_init(@_);
-    return $self;
-}
+#     $self->assert_deep_equals([{'a' => '4','boo' => 'hoo',},
+#                               {'gak' => 'bak','huf' => 'fuf'}], $result);
 
-sub _init
-{
-    my $self = shift;
-    my @args = @_;
-    $self->{DATA} = {};
+#     return;
+# }
 
-    return;
-}
+# package FakeReader_FPT;
+# use Data::Dumper;
+# sub new
+# {
+#     my $class = shift;
+#     my $self = {};
+#     bless($self, ref($class) || $class);
+#     $self->_init(@_);
+#     return $self;
+# }
 
-sub get_keyword_set
-{
-    my $self = shift;
+# sub _init
+# {
+#     my $self = shift;
+#     my @args = @_;
+#     $self->{DATA} = {};
 
-    return 'SELECT|TAGNAME|VALUE|GUBBER';
-}
+#     return;
+# }
 
-sub store_value
-{
-    my $self = shift;
-    my $op = shift;
-    my $tag = shift;
-    my $value = shift;
+# sub get_keyword_set
+# {
+#     my $self = shift;
 
-    if ($op eq '=')
-    {
-        if (exists($self->{DATA}->{$tag}))
-        {
-            $self->{DATA}->{$tag} .= ' ' . $value;
-        }
-        else
-        {
-            $self->{DATA}->{$tag} = $value;
-        }
-    }
-    else
-    {
-        $self->{DATA}->{$tag} .= ' ' . $value;
-    }
+#     return 'SELECT|TAGNAME|VALUE|GUBBER';
+# }
 
-    return;
-}
+# sub store_value
+# {
+#     my $self = shift;
+#     my $op = shift;
+#     my $tag = shift;
+#     my $value = shift;
 
-sub store_keyword_value
-{
-    my $self = shift;
-    my $kw = shift;
-    my $tag = shift;
-    my $op = shift;
-    my $value = shift;
+#     if ($op eq '=')
+#     {
+#         if (exists($self->{DATA}->{$tag}))
+#         {
+#             $self->{DATA}->{$tag} .= ' ' . $value;
+#         }
+#         else
+#         {
+#             $self->{DATA}->{$tag} = $value;
+#         }
+#     }
+#     else
+#     {
+#         $self->{DATA}->{$tag} .= ' ' . $value;
+#     }
 
-    $self->{DATA}->{$tag} = "$kw $tag $op $value";
+#     return;
+# }
 
-    return;
-}
+# sub store_keyword_value
+# {
+#     my $self = shift;
+#     my $kw = shift;
+#     my $tag = shift;
+#     my $op = shift;
+#     my $value = shift;
 
-# Split the input text into blocks and return a list
-sub get_blocks
-{
-    my $self = shift;
-    my $text = shift;
+#     $self->{DATA}->{$tag} = "$kw $tag $op $value";
+
+#     return;
+# }
+
+# # Split the input text into blocks and return a list
+# sub get_blocks
+# {
+#     my $self = shift;
+#     my $text = shift;
 
 
-   return split(/\n\n+/, $text);
-}
+#    return split(/\n\n+/, $text);
+# }
 
-sub start_block
-{
-    my $self = shift;
+# sub start_block
+# {
+#     my $self = shift;
 
-    return;
-}
+#     return;
+# }
 
-# Make a copy and return that
-sub get_block
-{
-    my $self = shift;
-    my %block;
+# # Make a copy and return that
+# sub get_block
+# {
+#     my $self = shift;
+#     my %block;
 
-    foreach my $key (keys %{$self->{DATA}})
-    {
-        $block{$key} = $self->{DATA}->{$key};
-    }
+#     foreach my $key (keys %{$self->{DATA}})
+#     {
+#         $block{$key} = $self->{DATA}->{$key};
+#     }
 
-    delete $self->{DATA};
+#     delete $self->{DATA};
 
-    return \%block;
-}
+#     return \%block;
+# }
 
-sub add_block
-{
-    my $self = shift;
-    my $collection = shift;
-    my $block = shift;
+# sub add_block
+# {
+#     my $self = shift;
+#     my $collection = shift;
+#     my $block = shift;
 
-    confess ("Not an ARRAY reference (", ref $collection, ")\n") if ref $collection eq 'HASH';
-    push(@{$collection}, $block);
+#     confess ("Not an ARRAY reference (", ref $collection, ")\n") if ref $collection eq 'HASH';
+#     push(@{$collection}, $block);
 
-    return;
-}
+#     return;
+# }
 
-sub collection_type
-{
-    my $self = shift;
+# sub collection_type
+# {
+#     my $self = shift;
 
-    return 'ARRAY';
-}
+#     return 'ARRAY';
+# }
 
 1;

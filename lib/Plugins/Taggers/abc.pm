@@ -91,32 +91,64 @@ sub read_tags
     print "Checking block $id\n";
 
     my $text = $self->{TEXT}->{$fname}->{BLOCK}->{$id};
-    #$text =~ s/\r//g;
+    $text =~ s/\r//g;
     print "\nFile $fileid:\n";
     my $field;
     my $data;
     my %tags;
+    # We don't need to keep track of the order of fields here. If this
+    # information is used to update an existing abc file, get the
+    # order from that. Otherwise, just do what seems right and
+    # syntactically correct.
+
     print "Block: <$text>\n" if $id eq '0001';
   LOOP2:
     {
-        if ($text =~ m/\G([ABCDFGHIKLMmNOPQRrSTUVWXZ]):(.*?)[\n\r]+(?=[ABCDFGHIKLMmNOPQRrSTUVWZ]:|\z)/gsc)
+        if ($text =~ m/\G^([ABCDFGHIKLMmNOPQRrSTUVWXZ]):(.*)$/gmc)
         {
-            $field = $1;
-            $data = $2;
-            if ($field eq 'K')
-            {
-                $data =~ s/[\n\r].*//s;
-            }
-            if ($field =~ m/[FKLMmPQUV]/)
-            {
-                $tags{$field} = [$data];
-            }
-            else
-            {
-                push(@{$tags{$field}}, $data);
-            }
-            redo LOOP2 ;
+            #print "Field $1, text <$2>\n";
+            push(@{$tags{$1}}, $2);
+            redo LOOP2;
         }
+
+        if ($text =~ m/\G[\r\n]+/gsc)
+        {
+            #print "Got new line\n";
+            redo LOOP2;
+        }
+
+        if ($text =~ m/\G(.+)/gsc)
+        {
+            # The tune (most likely)
+            redo LOOP2;
+        }
+
+
+#         if ($text =~ m/\G([IKLMmPQ]):(.*?)[\n\r]+(?=[ABCDFGHIKLMmNOPQRrSTUVWZ]:|\z)/gsc)
+#         {
+#             redo LOOP2;
+#         }
+
+#         if ($text =~ m/\G([ABCDFGHNO]):(.*?)[\n\r]+(?=[ABCDFGHIKLMmNOPQRrSTUVWZ]:|\z)/gsc)
+#         {
+#             $field = $1;
+#             $data = $2;
+#             if ($field eq 'K')
+#             {
+#                 $data =~ s/[\n\r].*//s;
+#             }
+
+#              push(@{$tags{$field}}, $data);
+# #             if ($field =~ m/[FKLMmPQUV]/)
+# #             {
+# #                 $tags{$field} = [$data];
+# #             }
+# #             else
+# #             {
+# #                 push(@{$tags{$field}}, $data);
+# #             }
+#             redo LOOP2 ;
+#         }
     }
 
     print "Got", Dumper(\%tags);
