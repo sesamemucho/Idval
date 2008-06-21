@@ -40,6 +40,7 @@ use Idval::DoDots;
 my $first = 1;
 
 my $progress_data = {};
+my %prov_list;
 
 memoize('get_file_ext');
 memoize('get_all_extensions_regexp');
@@ -60,6 +61,7 @@ sub init
                                                   decorate => 0});
 
     set_pod_input();
+    %prov_list = ();
 
     return;
 }
@@ -114,6 +116,7 @@ sub sync
 
     unlink $syncfile if $should_delete_syncfile;
 
+    map { $_->close() } values %prov_list;
     return $datastore;
 }
 
@@ -215,6 +218,7 @@ sub each_item
         $prov = get_converter($src_type, $dest_type);
     }
 
+    $prov_list{$prov} = $prov;
     my $src_path = $prov->get_source_filepath($tag_record);
     my ($volume, $src_dir, $src_name) = File::Spec->splitpath($src_path);
     chatty("For $src_path\n");

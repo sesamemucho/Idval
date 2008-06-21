@@ -29,6 +29,8 @@ use Idval::FileIO;
 use Idval::DoDots;
 use Idval::Ui;
 
+my $first = 1;
+
 sub init
 {
     set_pod_input();
@@ -55,12 +57,15 @@ sub gettags
     my $tag_record;
     my $type;
     my $prov;
+    my %prov_list;
+
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
         #print "Checking \"$key\"\n";
         $tag_record = $datastore->{RECORDS}->{$key};
         $type = $tag_record->get_value('TYPE');
         $prov = $providers->get_provider('reads_tags', $type, 'NULL');
+        $prov_list{$prov} = $prov;
 
         $status = $prov->read_tags($tag_record);
         Idval::DoDots::dodots($dotmap->{$type});
@@ -69,6 +74,9 @@ sub gettags
     }
 
     Idval::DoDots::finish();
+
+    map { $_->close() } values %prov_list;
+    #print STDERR Dumper($datastore);
     return $datastore;
 }
 

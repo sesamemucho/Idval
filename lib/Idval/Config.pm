@@ -53,7 +53,7 @@ our $DEBUG = 0;
 sub make_flat_list
 {
     my @result = map {ref $_ eq 'ARRAY' ? @{$_} : $_ } grep {defined($_)} @_;
-    harfo ("make_flat list: result is: ", Dumper(\@result));
+    #harfo ("make_flat list: result is: ", Dumper(\@result));
     return \@result;
 }
 
@@ -179,7 +179,6 @@ sub extract_blocks
     while(1)
     {
         ($extracted, $remainder, $skipped) = Text::Balanced::extract_codeblock($text, '{}', '[^{}]*');
-        chatty ("extracted: \"$extracted\", remainder is: \"$remainder\", skipped: \"$skipped\"\n") if $self->{DEBUG};
         chatty ("extracted: \"$extracted\", remainder is: \"$remainder\", skipped: \"$skipped\"\n") if $self->{DEBUG};
 
         last unless $extracted;
@@ -596,7 +595,7 @@ sub evaluate
     print Dumper($self) unless $self->myname();
     foreach my $key (keys %selectors)
     {
-        chatty ("Checking select key \"$key\" with a value of \"$selectors{$key}\"\n") if $self->{DEBUG};
+        chatty ("Checking select key \"$key\" with a value of \"", Dumper($selectors{$key}), "\"\n") if $self->{DEBUG};
         if (!exists($self->{SELECT_DATA}->{$key}))
         {
             chatty ("Got null key \"$key\". USK_OK is: $self->{USK_OK}\n") if $self->{DEBUG};
@@ -613,14 +612,24 @@ sub evaluate
                 last;
             }
         }
+        else
+        {
+            chatty ("For select key of \"$key\", got value(s) of \"", Dumper($selectors{$key}), "\"\n") if $self->{DEBUG};
+        }
 
-        my $sel_value = $selectors{$key};
+        my $sel_value = ref $selectors{$key} eq 'ARRAY' ? $selectors{$key} : [$selectors{$key}];
         my $cmp_op = $self->get_select_op($key);
         my $cmp_value = $self->get_select_value($key);
         my $cmpfunc = Idval::Select::get_compare_function($cmp_op, 'STR');
-        chatty ("Comparing \"$cmp_value\" \"$cmp_op\" \"$sel_value\" resulted in ",
-                &$cmpfunc($sel_value, $cmp_value) ? "True\n" : "False\n") if $self->{DEBUG};
-        my $cmp_result = &$cmpfunc($sel_value, $cmp_value);
+        my $cmp_result = 0;
+        foreach my $value (@{$sel_value})
+        {
+            chatty ("Comparing \"$cmp_value\" \"$cmp_op\" \"$value\" resulted in ",
+                    &$cmpfunc($value, $cmp_value) ? "True\n" : "False\n") if $self->{DEBUG};
+
+            $cmp_result ||= &$cmpfunc($value, $cmp_value);
+            last if $cmp_result;
+        }
 
         if (!$cmp_result)
         {

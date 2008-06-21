@@ -56,17 +56,20 @@ sub update
     my $tag_record;
     my $type;
     my $prov;
+    my %prov_list;
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
         $tag_record = $datastore->{RECORDS}->{$key};
 
         $type = $tag_record->get_value('TYPE');
         $prov = $providers->get_provider('writes_tags', $type, 'NULL');
+        $prov_list{$prov} = $prov;
 
         $retval = $prov->write_tags($tag_record);
         Idval::DoDots::dodots($dotmap->{$type});
     }
 
+    map { $_->close() } values %prov_list;
     Idval::DoDots::finish();
     return $datastore;
 }

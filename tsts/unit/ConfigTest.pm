@@ -37,7 +37,7 @@ sub tear_down {
     return;
 }
 
-sub barf_test_get
+sub test_get
 {
     my $self = shift;
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\ngubber = 3\nhubber=4\n\n");
@@ -48,7 +48,7 @@ sub barf_test_get
     return;
 }
 
-sub barf_test_get_with_strange_chars
+sub test_get_with_extra_CR
 {
     my $self = shift;
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\ngubber = pachoo\r\n\rhubber=4\n\n");
@@ -60,7 +60,7 @@ sub barf_test_get_with_strange_chars
 }
 
 # Test that we get the default default
-sub barf_test_get_with_default1
+sub test_no_matching_keys_and_no_default_should_return_nothing
 {
     my $self = shift;
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\ngubber = 3\nhubber=4\n\n");
@@ -70,7 +70,7 @@ sub barf_test_get_with_default1
     return;
 }
 
-sub barf_test_get_with_default2
+sub test_no_matching_keys_and_a_default_should_return_default
 {
     my $self = shift;
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\ngubber = 3\nhubber=4\n\n");
@@ -80,14 +80,96 @@ sub barf_test_get_with_default2
     return;
 }
 
-sub barf_test_get_list_1
+sub test_get_value_with_embedded_quotes
 {
     my $self = shift;
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\ngubber = pachoo wachoo\n\n");
+    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\ngubber = pachoo nachoo \"huggery muggery\" hoofah\n\n");
     my $obj = Idval::Config->new('/testdir/gt1.txt');
-    $self->assert_equals('pachoo wachoo', $obj->get_value('gubber'));
+    $self->assert_equals('pachoo nachoo "huggery muggery" hoofah', $obj->get_value('gubber'));
 
     return;
+}
+
+sub test_get_list
+{
+    my $self = shift;
+    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\ngubber = 3\nhubber = 2\nhubber += 4\nhubber += 5\n\n");
+    my $obj = Idval::Config->new('/testdir/gt1.txt');
+    $self->assert_equals(3, $obj->get_single_value('gubber'));
+    $self->assert_deep_equals([2, 4, 5], $obj->get_value('hubber'));
+
+    return;
+}
+
+sub test_block_get
+{
+    my $self = shift;
+    Idval::FileString::idv_add_file('/testdir/gt1.txt',
+                                    "{\ntype == foo\ngubber = pachoo wachoo\n}\n{\ntype == boo\ngubber = bouncy}\n");
+    my $cfg_dbg = 0;
+    my $obj = Idval::Config->new('/testdir/gt1.txt', 1, $cfg_dbg);
+
+    $self->assert_equals('pachoo wachoo', $obj->get_value('gubber', {'type' => 'foo'}));
+
+    return;
+
+}
+
+sub test_block_get_from_second_block
+{
+    my $self = shift;
+    Idval::FileString::idv_add_file('/testdir/gt1.txt',
+                                    "{\ntype == foo\ngubber = pachoo wachoo\n}\n{\ntype == boo\ngubber = bouncy}\n");
+    my $cfg_dbg = 0;
+    my $obj = Idval::Config->new('/testdir/gt1.txt', 1, $cfg_dbg);
+
+    $self->assert_equals('bouncy', $obj->get_value('gubber', {'type' => 'boo'}));
+
+    return;
+
+}
+
+sub test_block_get_no_matches_should_return_default
+{
+    my $self = shift;
+    Idval::FileString::idv_add_file('/testdir/gt1.txt',
+                                    "{\ntype == foo\ngubber = pachoo wachoo\n}\n{\ntype == boo\ngubber = bouncy}\n");
+    my $cfg_dbg = 0;
+    my $obj = Idval::Config->new('/testdir/gt1.txt', 1, $cfg_dbg);
+
+    $self->assert_equals('hubba', $obj->get_value('gubber', {'type' => 'blargle'}, 'hubba'));
+
+    return;
+
+}
+
+sub test_block_get_two_matches_should_return_last
+{
+    my $self = shift;
+    Idval::FileString::idv_add_file('/testdir/gt1.txt',
+                                    "{\ntype == foo\ngubber = pachoo wachoo\n}\n{\ntype == foo\ngubber = bouncy}\n");
+    my $cfg_dbg = 0;
+    my $obj = Idval::Config->new('/testdir/gt1.txt', 1, $cfg_dbg);
+
+    $self->assert_equals('bouncy', $obj->get_value('gubber', {'type' => 'foo'}, 'hubba'));
+
+    return;
+
+}
+
+sub test_block_get_with_two_selects
+{
+    my $self = shift;
+    Idval::FileString::idv_add_file('/testdir/gt1.txt',
+                                    "{\ntype == foo\nmarley == tuff\ngubber = pachoo wachoo\n}\n{\ntype == boo\nmarley == tuff\ngubber = bouncy}\n");
+    my $cfg_dbg = 0;
+    my $obj = Idval::Config->new('/testdir/gt1.txt', 1, $cfg_dbg);
+
+    $self->assert_equals('pachoo wachoo', $obj->get_value('gubber', {'type' => 'foo',
+                                                                     'marley' => 'tuff'}));
+
+    return;
+
 }
 
 # # An append should replace an assignment in the same block
@@ -116,16 +198,6 @@ sub barf_test_get_list_1
 #     my $obj = Idval::Config->new('/testdir/gt1.txt');
 #     $self->assert_deep_equals(['wachoo'], $obj->get_value('gubber'));
 # }
-
-sub barf_test_get_list_3
-{
-    my $self = shift;
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\ngubber = pachoo nachoo \"huggery muggery\" hoofah\n\n");
-    my $obj = Idval::Config->new('/testdir/gt1.txt');
-    $self->assert_equals('pachoo nachoo "huggery muggery" hoofah', $obj->get_value('gubber'));
-
-    return;
-}
 
 sub barf_test_get_list_4
 {
@@ -325,8 +397,8 @@ sub test_block_two_blocks_select_1
     my $self = shift;
     Idval::FileString::idv_add_file('/testdir/gt1.txt',
                                     "{\ntype == foo\ngubber = pachoo wachoo\n}\n{\ntype == boo\ngubber = bouncy}\n");
-    #$Idval::Config::cfg_dbg = 1;
-    my $obj = Idval::Config->new('/testdir/gt1.txt');
+    my $cfg_dbg = 0;
+    my $obj = Idval::Config->new('/testdir/gt1.txt', 1, $cfg_dbg);
 
     $self->assert_equals('pachoo wachoo', $obj->get_value('gubber', {'type' => 'foo'}));
 
@@ -411,6 +483,36 @@ sub barf_test_block_two_blocks_select_2b
                                          {selects=>{'type' => 'foo',
                                                     'hubber' => 'gobble'},
                                           default=>'scooby doo'}));
+
+    return;
+}
+
+sub test_multiple_select_key_when_one_key_should_match
+{
+    my $self = shift;
+    Idval::FileString::idv_add_file('/testdir/gt1.txt',
+                                    "{\ntype == foo\ngubber = pachoo wachoo}\n{\ntype == boo\ngubber = bouncy}\n");
+    my $obj = Idval::Config->new('/testdir/gt1.txt', 1, 1);
+
+    $self->assert_equals('pachoo wachoo',
+                         $obj->get_value('gubber',
+                                         {'type' => ['awfu', 'big', 'foo']},
+                                         'scooby doo'));
+
+    return;
+}
+
+sub test_multiple_select_key_when_no_keys_should_match
+{
+    my $self = shift;
+    Idval::FileString::idv_add_file('/testdir/gt1.txt',
+                                    "{\ntype == foo\ngubber = pachoo wachoo}\n{\ntype == boo\ngubber = bouncy}\n");
+    my $obj = Idval::Config->new('/testdir/gt1.txt', 1, 1);
+
+    $self->assert_equals('scooby doo',
+                         $obj->get_value('gubber',
+                                         {'type' => ['awfu', 'big', 'mess']},
+                                         'scooby doo'));
 
     return;
 }

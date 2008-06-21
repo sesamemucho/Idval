@@ -38,6 +38,7 @@ sub new
 {
     my $class = shift;
     my $self = $class->SUPER::new(@_);
+    print "****** ref self: ", ref $self, "\n";
     bless($self, ref($class) || $class);
     $self->init();
     return $self;
@@ -67,9 +68,107 @@ sub read_tags
     my $tag_record = shift;
     my $line;
     my $current_tag;
-    my $retval = 0;
+    #my $retval = 0;
 
     my $fileid = $tag_record->get_value('FILE');
+
+    my ($tags) = $self->parse_file($fileid);
+    my $taginfo;
+    #print "read_tags: ", Dumper($tags);
+    foreach my $key (keys %{$tags})
+    {
+        my @tag_value_list = map {${$_}[0]} @{$tags->{$key}};
+        #$taginfo = scalar(@{$tags->{$key}}) == 1 ? ${$tags->{$key}}[0] : $tags->{$key};
+        $taginfo = scalar(@tag_value_list) == 1 ? $tag_value_list[0] : \@tag_value_list;
+
+        #print "key \"$key\" taginfo: ", Dumper($taginfo);
+        $tag_record->add_tag($key, $taginfo);
+    }
+
+    $tag_record->commit_tags();
+
+    return 0;
+}
+
+sub write_tags
+{
+    my $self = shift;
+    my $tag_record = shift;
+
+    return 0 if !$self->query('is_ok');
+
+    my $fileid = $tag_record->get_value('FILE');
+
+    my ($tags, $fname, $id) = $self->parse_file($fileid);
+
+
+    # For each field found in the file,
+    # check it against the tag_record. If the field is not in the tag record, 
+    # delete it from the file. If the field is in the tag record, replace it.
+    my $text = $self->{TEXT}->{$fname}->{BLOCK}->{$id};
+    my $ft_index;
+    my $ft_len;
+    my $file_tag;
+    foreach my $file_tag_id (keys %{$tags})
+    {
+        if(!$tag_record->key_exists($file_tag_id))
+        {
+            # Delete all instances
+        }
+        else
+        {
+            my $tag_field = $tag_record->get_value($file_tag_id);
+            $tag_field = [$tag_field] if ref $tag_field ne 'ARRAY';
+
+            # Number of items of this field id
+            $ft_len = scalar(@{$tags->{$file_tag_id}});
+            
+            for($ft_index = 0; $ft_index < $ft_len; $ft_index++)
+            {
+                my ($fieldid, $startpos, $len) = @{${$tags->{$file_tag_id}}[$ft_index]};
+                print "field $file_tag_id; index $ft_index; info is: ($fieldid, $startpos, $len)\n";
+                #print "tag field: ", Dumper($tag_field);
+                if ($ft_index <= $#{$tag_field})
+                {
+                }
+                else
+                {
+                    # We have run out of tag fields in the record; start deleting from the file
+                }
+            }
+        }
+
+
+    }
+
+
+
+    #my $filename = $tag_record->get_value('FILE');
+    my $status = 1;
+
+    #print "For $filename, ", Dumper($tag_record);
+
+#     my $path = $self->query('path');
+
+#     Idval::Common::run($path, '--remove-all-tags', $filename);
+#     my @taglist;
+#     foreach my $tagname ($tag_record->get_all_keys())
+#     {
+#         push(@taglist, $tag_record->get_value_as_arg('--set-tag=' . $tagname . '=', $tagname));
+#     }
+
+#     my $status = Idval::Common::run($path,
+#                                     @taglist,
+#                                     $filename);
+
+    return $status;
+}
+
+sub parse_file
+{
+    my $self = shift;
+    my $fileid = shift;
+
     my ($fname, $id) = ($fileid =~ m/^(.*)%%(\d+)/);
 
     if (!exists($self->{TEXT}->{$fname}))
@@ -81,6 +180,7 @@ sub read_tags
 
       LOOP:
         {
+            $self->{TEXT}->{$fname}->{DIRTY} = 0;
             $self->{TEXT}->{$fname}->{PREFACE} = $1, redo LOOP if $text =~ m/\G(^.*?\n\s*)(?=X:)/gsc;
             $self->{TEXT}->{$fname}->{BLOCK}->{sprintf("%04d", $2)} = $1, redo LOOP if $text =~ m/\G(X:\s*(\d+).*?)(?=X:|\z)/gsc;
         }
@@ -88,14 +188,16 @@ sub read_tags
         #print Dumper($self->{TEXT});
     }
     
-    print "Checking block $id\n";
+    #print "Checking block $id\n";
 
     my $text = $self->{TEXT}->{$fname}->{BLOCK}->{$id};
     $text =~ s/\r//g;
-    print "\nFile $fileid:\n";
+    #print "\nFile $fileid:\n";
     my $field;
     my $data;
     my %tags;
+    my $lastpos = 0;
+
     # We don't need to keep track of the order of fields here. If this
     # information is used to update an existing abc file, get the
     # order from that. Otherwise, just do what seems right and
@@ -107,7 +209,9 @@ sub read_tags
         if ($text =~ m/\G^([ABCDFGHIKLMmNOPQRrSTUVWXZ]):(.*)$/gmc)
         {
             #print "Field $1, text <$2>\n";
-            push(@{$tags{$1}}, $2);
+            push(@{$tags{$1}}, [$2, $lastpos, pos($text) - $lastpos]);
+            $lastpos = pos($text);
+
             redo LOOP2;
         }
 
@@ -122,95 +226,11 @@ sub read_tags
             # The tune (most likely)
             redo LOOP2;
         }
-
-
-#         if ($text =~ m/\G([IKLMmPQ]):(.*?)[\n\r]+(?=[ABCDFGHIKLMmNOPQRrSTUVWZ]:|\z)/gsc)
-#         {
-#             redo LOOP2;
-#         }
-
-#         if ($text =~ m/\G([ABCDFGHNO]):(.*?)[\n\r]+(?=[ABCDFGHIKLMmNOPQRrSTUVWZ]:|\z)/gsc)
-#         {
-#             $field = $1;
-#             $data = $2;
-#             if ($field eq 'K')
-#             {
-#                 $data =~ s/[\n\r].*//s;
-#             }
-
-#              push(@{$tags{$field}}, $data);
-# #             if ($field =~ m/[FKLMmPQUV]/)
-# #             {
-# #                 $tags{$field} = [$data];
-# #             }
-# #             else
-# #             {
-# #                 push(@{$tags{$field}}, $data);
-# #             }
-#             redo LOOP2 ;
-#         }
     }
 
-    print "Got", Dumper(\%tags);
-    return $retval;
-    
-#     my $path = $self->query('path');
+    #print "Got", Dumper(\%tags);
 
-#     #$filename =~ s{/cygdrive/(.)}{$1:}; # Tag doesn't deal well with cygdrive pathnames
-#     foreach $line (`$path --export-tags-to=- "$filename" 2>&1`) {
-#         chomp $line;
-#         $line =~ s/\r//;
-#         #print "<$line>\n";
-
-#         next if $line =~ /^\s*$/;
-
-#         $line =~ m/ERROR: reading metadata/ and do {
-#             print 'Getters::BadFlac', $line, $filename, "\n";
-#             print "ref record: ", ref $tag_record, "\n";
-#             #delete $tag_record;
-#             $retval = 1;
-#             last;
-#         };
-
-#         $line =~ m/^(\S+)\s*=\s*(.*)/ and do {
-#             $current_tag = uc($1);
-#             $tag_record->add_tag($current_tag, $2);
-#             next;
-#         };
-
-#         $tag_record->add_to_tag($current_tag, "\n$line");
-#     }
-
-#     #print "\nGot tag:\n";
-#     #print join("\n", $tag_record->format_record());
-
-#     $tag_record->commit_tags();
-
-#     return $retval;
-}
-
-sub write_tags
-{
-    my $self = shift;
-    my $tag_record = shift;
-
-    return 0 if !$self->query('is_ok');
-
-    my $filename = $tag_record->get_value('FILE');
-    my $path = $self->query('path');
-
-    Idval::Common::run($path, '--remove-all-tags', $filename);
-    my @taglist;
-    foreach my $tagname ($tag_record->get_all_keys())
-    {
-        push(@taglist, $tag_record->get_value_as_arg('--set-tag=' . $tagname . '=', $tagname));
-    }
-
-    my $status = Idval::Common::run($path,
-                                    @taglist,
-                                    $filename);
-
-    return $status;
+    return (\%tags, $fname, $id);
 }
 
 sub create_records
@@ -245,6 +265,21 @@ sub create_records
 
 
     return;
+}
+
+sub close
+{
+    my $self = shift;
+
+    # Remove all cached file info
+    $self->{TEXT} = {};
+}
+
+sub glabber
+{
+    my $self = shift;
+
+    print "Hello from glabber\n";
 }
 
 1;

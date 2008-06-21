@@ -66,14 +66,14 @@ sub _init
 sub get_selectors
 {
     my $self = shift;
-    my %sels;
+    my $sels;
 
     foreach my $tag (keys %{$self})
     {
         next if $tag eq '__LINE';
         next if $tag eq '__NEXT_LINE';
 
-        $sels{$tag} = $self->{$tag};
+        $sels->{$tag} = $self->{$tag};
     }
 
 #     $sels{CLASS} = $self->{CLASS} if exists $self->{CLASS};
@@ -84,7 +84,7 @@ sub get_selectors
 #     #$sels{} = $self->{} if exists $self->{};
 #     #$sels{} = $self->{} if exists $self->{};
 
-    return \%sels;
+    return $sels;
 }
 
 sub add_tag
@@ -239,6 +239,7 @@ sub format_record
 
     my @output = ('FILE = ' . $self->get_name());
     my %lines;
+    my $tag_value;
 
     $lines{'FILE'} = $start_line++ if defined $start_line;
 
@@ -254,7 +255,22 @@ sub format_record
         }
 
         confess "Uninitialized value for tag \"$tag\"\n" if !defined($self->get_value($tag));
-        push(@output, "$tag = " . $self->get_value($tag));
+        
+        $tag_value = $self->get_value($tag);
+        if (ref $tag_value eq 'ARRAY')
+        {
+            my @values = (@{$tag_value}); # Make a copy
+            my $value = pop @values;
+            push(@output, "$tag = $value");
+            foreach my $value (@values)
+            {
+                push(@output, "$tag += $value");
+            }
+        }
+        else
+        {
+            push(@output, "$tag = $tag_value");
+        }
         $lines{$tag} = $start_line++ if defined $start_line;
     }
 

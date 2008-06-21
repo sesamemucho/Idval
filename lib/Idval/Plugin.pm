@@ -43,6 +43,8 @@ sub new
     $self->{CONFIG} = $config;
     $self->{NAME} = $name;
     $self->{ENDPOINTS} = [];
+
+    print "*** Hello from Plugin: ref self: ", ref $self, "\n";
     return $self;
 }
 
@@ -212,5 +214,12 @@ sub find_and_set_exe_path
     return $path;
 }
 
-1;
+# For any plugin that needs to clean up
+sub close
+{
+    my $self = shift;
 
+    return 0;
+}
+
+1;
