@@ -104,7 +104,22 @@ sub parse_block
 
     foreach my $line (@{$blockref})
     {
-        if ($line =~ m/\A([^=\s]+)\s*=\s*(.*)\z/msx)
+        if ($line =~ m/\A([^=\s]+)\s*\+=\s*(.*)\z/msx)
+        {
+            if (!exists ($hash{$1}))
+            {
+                croak "\"Append\" line too early in tag data file (no previous value): \"$line\"\n";
+            }
+            elsif (ref $hash{$1} ne 'ARRAY')
+            {
+                $hash{$1} = [$hash{$1}, $2];
+            }
+            else
+            {
+                push(@{$hash{$1}}, $2);
+            }
+        }
+        elsif ($line =~ m/\A([^=\s]+)\s*=\s*(.*)\z/msx)
         {
             $hash{$1} = $2;
         }
@@ -124,7 +139,7 @@ sub parse_block
     {
         # The key already exists, so don't add it
         next if ($key eq 'FILE');
-        print STDERR "Adding key \"$key\", value \"$hash{$key}\"\n";
+        #print STDERR "Adding key \"$key\", value \"$hash{$key}\"\n";
         $rec->add_tag($key, $hash{$key});
     }
 

@@ -129,6 +129,22 @@ sub test_get_one_block_ok
     return;
 }
 
+sub test_plus_equals_yields_array
+{
+    my $self = shift;
+    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nFILE=hartford+vassar1974-10-13t04.ogg\nGARBLE=Foo Har Har\nGARBLE+=Hoo Lar Lar\n\n");
+
+    my $obj = Idval::DataFile->new('/testdir/gt1.txt');
+    my $coll = $obj->get_reclist();
+    $self->assert_equals('Idval::Collection', ref $coll);
+    my $rec = $coll->get_value('hartford+vassar1974-10-13t04.ogg');
+    print STDERR Dumper($rec);
+    $self->assert_deep_equals(['Foo Har Har', 'Hoo Lar Lar'],
+                              $rec->get_value('GARBLE'));
+
+    return;
+}
+
 # sub test_get_one_block
 # {
 #     my $self = shift;

@@ -180,6 +180,7 @@ sub get_source_from_file
     {
         $reclist = eval {retrieve(Idval::Common::expand_tilde($data_store))};
         croak "Tag info cache is corrupted; you will need to regenerate it (with 'gettags'):\n$@\n" if $@;
+        #print Dumper($reclist);
         return Idval::Collection->new({contents => $reclist});
     }
 

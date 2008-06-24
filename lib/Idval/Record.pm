@@ -39,13 +39,22 @@ sub _init
 {
     my $self = shift;
     my $arg = shift;
-
+    my $tag_value;
     if (ref $arg eq "Idval::Record")
     {
         $self->add_tag('FILE', $arg->get_name());
         foreach my $tag ($arg->get_all_keys())
         {
-            $self->add_tag($tag, $arg->get_value($tag));
+            $tag_value = $arg->get_value($tag);
+            if (ref $tag_value eq 'ARRAY')
+            {
+                # Make a copy so shift_value() will work correctly
+                $self->add_tag($tag, [(@{$tag_value})]);
+            }
+            else
+            {
+                $self->add_tag($tag, $tag_value);
+            }
         }
     }
     else
@@ -188,6 +197,32 @@ sub get_name
     my $self = shift;
 
     return $self->{FILE};
+}
+
+# Returns a tag value and deletes it from the record.
+# This routine, I would think, should only be used on a copy of a Record
+sub shift_value
+{
+    my $self = shift;
+    my $tagname = shift;
+    my $retval = '';
+
+    if ($self->key_exists($tagname))
+    {
+        if (ref $self->{$tagname} eq 'ARRAY')
+        {
+            $retval = shift @{$self->{$tagname}};
+            #print "\nFor $tagname, returning \"$retval\" Remaining: ", join(':', @{$self->{$tagname}}), "\n";
+            delete $self->{$tagname} if scalar @{$self->{$tagname}} == 0;
+        }
+        else
+        {
+            $retval = $self->{$tagname};
+            delete $self->{$tagname};
+        }
+    }
+
+    return $retval;
 }
 
 sub set_name
