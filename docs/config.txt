@@ -1,0 +1,168 @@
+Configuration settings in idv take the form of key=>value pairs. These
+settings are contained in blocks. There may be one or more settings
+per block, and the blocks are organized in a hierarchial tree. For
+each query, the settings in a block may be switched in or out based on
+selectors that are also contained in the block. The set of settings,
+from which the query is answered, is the result of accumulating all
+the blocks that were selected for in the query.
+
+For example, given the configuration file
+
+{
+    command_name == lame
+    command_path = ~/local/bin/lame.exe
+}
+
+{
+    command_name == tag
+    command_path = ~/local/bin/Tag.exe
+}
+
+For a query for which the selection was "command_name => lame", the
+result would be "command_path => ~/local/bin/lame.exe", and for
+"command_name => tag", the result would be "command_path =>
+~/local/bin/Tag.exe". 
+
+Given the configuration file
+
+{
+   # Set up default conversions (any MUSIC file should be converted to .mp3)
+   class        == MUSIC
+   convert      = MP3
+   {
+      type        == ABC
+      convert      = MIDI
+   }
+}
+
+For a query selecting {class => MUSIC and type => FLAC}, the result
+would be {convert => MP3}. For a query selecting {class => MUSIC and
+type => ABC}, the result would be {convert => MIDI}.
+
+If the selections result in more than one value for a key, the last
+value is used. This is what happened in the previous config
+example. The 'convert = MP3' was selected in the enclosing block
+because of the match 'class == MUSIC', and 'convert = MIDI' was
+selected because of the matches 'class == MUSIC and type == MIDI' in
+the inner block. 'convert = MIDI' was last, so that was returned.
+
+There are exactly eight kinds of lines allowed in a configuration
+file. Leading and trailing whitespace on a line is ignored.
+
+* Blank lines
+  Ignored.
+
+* Comment lines
+
+  Lines that start with a '#', or with white space and a '#' are
+  ignored.
+
+* Block openers
+
+  A '{' indicates the beginning of a block.
+
+* Block closers
+
+  A '}' indicates the end of a block.
+
+* Selectors
+
+  Selector lines compare a passed-in value (associated with KEY) to
+  VALUE. These values should be either both strings or both
+  numbers. Any whitespace between the operator and the VALUE is
+  removed, as well as whitespace between VALUE and the end of the
+  line. Note that '#' is not a comment character unless there is only
+  whitespace between it and the beginning of the line, so '#' may be
+  used in VALUE.
+
+** KEY == VALUE or KEY eq VALUE
+
+   Selects if KEY=>value equals VALUE.
+
+** KEY != VALUE or KEY ne VALUE
+
+   Selects if KEY=>value does not equal VALUE
+
+** KEY < VALUE or KEY lt VALUE
+
+   Selects if KEY=>value is less than VALUE
+
+** KEY > VALUE or KEY gt VALUE
+
+   Selects if KEY=>value is greater than VALUE
+
+** KEY <= VALUE or KEY le VALUE
+
+   Selects if KEY=>value is less than or equal to VALUE
+
+** KEY >= VALUE or KEY ge VALUE
+
+   Selects if KEY=>value is greater than or equal to VALUE
+
+** KEY has VALUE
+
+   Selects if KEY=>value is contained within VALUE. Both values
+   should be strings.
+
+** KEY =~ VALUE
+
+   VALUE is used as a Perl regular expression. This line selects if
+   KEY=>value matches VALUE.
+
+** KEY !~ VALUE
+
+   VALUE is used as a Perl regular expression. This line selects if
+   KEY=>value does not match VALUE.
+
+** KEY passes VALUE
+
+   VALUE is used as the name of a function. This line selects if
+   VALUE(KEY=>value) returns true. Only certain function names are
+   allowed. See Select.pm for the allowed names.
+
+
+* Assignments
+
+  Assignment lines assign values to keys.  Any whitespace between the
+  operator and the VALUE is removed, as well as whitespace between
+  VALUE and the end of the line. Note that '#' is not a comment
+  character unless there is only whitespace between it and the
+  beginning of the line, so '#' may be used in VALUE.
+
+  There are only two kinds of assignments; scalar and array.
+
+** KEY = VALUE
+
+   Assigns VALUE to KEY. KEY is a scalar variable.
+
+** KEY += VALUE
+
+   KEY becomes an array variable, and VALUE is appended.
+
+* Continuation lines
+
+  A continuation line may follow immediately after an assignment. A
+  continuation line must have at least two spaces at the beginning of
+  the line, and not otherwise look like one of the other allowed
+  lines. A newline is appended to the previous VALUE, two spaces at
+  the beginning of the continuation line are removed, and the result
+  is appended to VALUE.
+
+
+---------
+
+Rules:
+
+If a block has no selectors, it will match any query.
+
+Otherwise, there will only be a match if the block's selectors and the
+query's selectors share at least one key, and, for all shared keys,
+each query selector must match the corresponding block selector.
+
+  If a block has selectors, and the query has no selectors, it will not
+  match.
+
+  If a block's selectors and the query's selectors have no keys in
+  common, it will not match.
+
+  The first match that fails causes the selection to fail.

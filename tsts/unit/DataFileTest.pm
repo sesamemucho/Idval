@@ -7,9 +7,14 @@ use base qw(Test::Unit::TestCase);
 use Benchmark qw(:all);
 use Data::Dumper;
 
+use TestUtils;
+
 use Idval::DataFile;
+
+use Idval::Common;
 use Idval::FileIO;
 use Idval::ServiceLocator;
+use Idval::TypeMap;
 
 my $tree1 = {'testdir' => {}};
 my $testresult;
@@ -19,6 +24,9 @@ sub new {
     # your state for fixture here
     # Tell the system to use the string-based filesystem services (i.e., the unit-testing version)
     Idval::ServiceLocator::provide('io_type', 'FileString');
+    my $prov = TestUtils::FakeProvider->new();
+    my $bm = Idval::TypeMap->new($prov);
+    Idval::Common::register_common_object('typemap', $bm);
     return $self;
 }
 

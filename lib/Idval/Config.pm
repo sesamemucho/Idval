@@ -37,13 +37,22 @@ use constant STRICT_MATCH => 0;
 use constant LOOSE_MATCH  => 1;
 
 our $DEBUG = 0;
+our $USE_LOGGER = 1;
 
-*verbose = Idval::Common::make_custom_logger({level => $VERBOSE, 
-                                              debugmask => $DBG_CONFIG,
-                                              decorate => 1}) unless defined(*verbose{CODE});
-*chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
-                                              debugmask => $DBG_CONFIG,
-                                              decorate => 1}) unless defined(*chatty{CODE});
+if ($USE_LOGGER)
+{
+    *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
+                                                  debugmask => $DBG_CONFIG,
+                                                  decorate => 1}) unless defined(*verbose{CODE});
+    *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
+                                                  debugmask => $DBG_CONFIG,
+                                                  decorate => 1}) unless defined(*chatty{CODE});
+}
+else
+{
+    *verbose = sub{ print @_; };
+    *chatty = sub{ print @_; };
+}
 #*harfo  = Idval::Common::make_custom_logger({level => $CHATTY,
 #                                              debugmask => $DBG_CONFIG,
 #                                              decorate => 1}) unless defined(*harfo{CODE});
@@ -84,18 +93,19 @@ sub _init
     my $unmatched_selector_keys_ok = shift;
     my $init_debug = shift || 0;
 
-    $unmatched_selector_keys_ok = LOOSE_MATCH unless defined($unmatched_selector_keys_ok);
-    *verbose = Idval::Common::make_custom_logger({level => $VERBOSE, 
-                                                  debugmask => $DBG_CONFIG,
-                                                  decorate => 1}) unless defined(*verbose{CODE});
-    *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
-                                                  debugmask => $DBG_CONFIG,
-                                                  decorate => 1}) unless defined(*chatty{CODE});
-
+    #$unmatched_selector_keys_ok = STRICT_MATCH unless defined($unmatched_selector_keys_ok);
+    $unmatched_selector_keys_ok = 0;
+#     *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
+#                                                   debugmask => $DBG_CONFIG,
+#                                                   decorate => 1}) unless defined(*verbose{CODE});
 #     *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
 #                                                   debugmask => $DBG_CONFIG,
-#                                                   decorate => 1,
-#                                                 from=>'CHATTY'}) unless defined(*chatty{CODE});
+#                                                   decorate => 1}) unless defined(*chatty{CODE});
+
+#      *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
+#                                                    debugmask => $DBG_CONFIG,
+#                                                    decorate => 1,
+#                                                  from=>'CHATTY'}) unless defined(*chatty{CODE});
 
     $self->{OP_REGEX} = Idval::Select::get_op_regex();
     $self->{ASSIGN_OP_REGEX} = Idval::Select::get_assign_regex();
@@ -103,10 +113,11 @@ sub _init
     $self->{INITFILES} = [];
     $self->{TREE} = {};
     $self->{DEBUG} = $init_debug;
+    $self->{USK_OK} = $unmatched_selector_keys_ok;
 
     if ($initfile)
     {
-        $self->add_file($initfile, $unmatched_selector_keys_ok);
+        $self->add_file($initfile);
     }
 
     return;
@@ -126,8 +137,6 @@ sub add_file
 {
     my $self = shift;
     my $initfile = shift;
-    my $unmatched_selector_keys_ok = shift;
-    $unmatched_selector_keys_ok = LOOSE_MATCH unless defined($unmatched_selector_keys_ok);
 
     #print "Adding file \"$initfile\"\n";
     return unless $initfile;      # Blank input file names are OK...
@@ -146,7 +155,7 @@ sub add_file
 
     croak "Need a file" unless $text; # We do need at least one config file
 
-    $text =~ s/\#.*$//mgx;      # Remove comments
+    $text =~ s/^\s*#.*$//mgx;      # Remove comments
     $text =~ s/^\n+//sx;         # Trim off newline(s) at start
     $text =~ s/\n+$//sx;         # Trim off newline(s) at end
 
@@ -248,8 +257,8 @@ sub parse_blocks
 {
     my $self = shift;
     my $text = shift;
-    
-    my $tree = Idval::Config::Block->new($self->{DEBUG});
+
+    my $tree = Idval::Config::Block->new($self->{DEBUG}, $self->{USK_OK});
     my ($kidsref, $data) = $self->extract_blocks($text);
     my $child_name;
     my $op_regex = $self->{OP_REGEX};
@@ -281,10 +290,12 @@ sub visit
     my $top = shift;
     my $subr = shift;
 
+    chatty("visiting ", $top->myname(), "\n");
     my $retval = &$subr($top);
 
     # If retval is undef, this node is not for us
     # and therefore, none of its children are, either
+    chatty("return from subr on ", $top->myname(), " is undef\n") if not defined($retval);
     return if not defined($retval);
 
     # get_children returns a list of child nodes, sorted
@@ -318,7 +329,6 @@ sub merge_blocks
 
     my $visitor = sub {
         my $node = shift;
-
         return if $node->evaluate($selects) == 0;
 
         foreach my $name (@{$node->get_assignment_data_names()})
@@ -407,12 +417,20 @@ use Carp;
 use Idval::Common;
 use Idval::Constants;
 
-*verbose = Idval::Common::make_custom_logger({level => $VERBOSE, 
-                                              debugmask => $DBG_CONFIG,
-                                              decorate => 1}) unless defined(*verbose{CODE});
-*chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
-                                              debugmask => $DBG_CONFIG,
-                                              decorate => 1}) unless defined(*chatty{CODE});
+if ($USE_LOGGER)
+{
+    *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
+                                                  debugmask => $DBG_CONFIG,
+                                                  decorate => 1}) unless defined(*verbose{CODE});
+    *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
+                                                  debugmask => $DBG_CONFIG,
+                                                  decorate => 1}) unless defined(*chatty{CODE});
+}
+else
+{
+    *verbose = sub{ print @_; };
+    *chatty = sub{ print @_; };
+}
 
 sub new
 {
@@ -427,12 +445,13 @@ sub _init
 {
     my $self = shift;
     my $debug = shift;
+    my $unmatched_selector_keys_ok = shift;
 
     $self->{ASSIGN_OP_REGEX} = Idval::Select::get_assign_regex();
     $self->{datadir} = Idval::Common::get_top_dir('data');
     $self->{libdir} = Idval::Common::get_top_dir('lib');
 
-    $self->{USK_OK} = 1;        # for now
+    $self->{USK_OK} = $unmatched_selector_keys_ok;
     $self->{DEBUG} = $debug;
 
     return;
@@ -582,14 +601,16 @@ sub evaluate
         confess "Selector list must be a HASH\n";
     }
 
-   my  %selectors = %{$select_list};
-
-    # Special case
-    if ((!%selectors) && $self->{USK_OK})
+    # If the block has no selector keys itself, then all matches should succeed
+    if (!exists($self->{SELECT_DATA}))
     {
-        verbose("Eval: returning 1 since no selectors\n") if $self->{DEBUG};
+        verbose("Eval: returning 1 since no SELECT_DATA\n") if $self->{DEBUG};
         return 1;
     }
+
+    my  %selectors = %{$select_list};
+
+    return 0 unless %selectors;
 
     chatty ("In node \"", $self->myname(), "\"\n") if $self->{DEBUG};
     print Dumper($self) unless $self->myname();
@@ -598,19 +619,7 @@ sub evaluate
         chatty ("Checking select key \"$key\" with a value of \"", Dumper($selectors{$key}), "\"\n") if $self->{DEBUG};
         if (!exists($self->{SELECT_DATA}->{$key}))
         {
-            chatty ("Got null key \"$key\". USK_OK is: $self->{USK_OK}\n") if $self->{DEBUG};
-            if ($self->{USK_OK})
-            {
-                # One vote for this being OK
-                $retval = 1;
-                next;
-            }
-            else
-            {
-                # Veto
-                $retval = 0;
-                last;
-            }
+            next;
         }
         else
         {
@@ -631,11 +640,8 @@ sub evaluate
             last if $cmp_result;
         }
 
-        if (!$cmp_result)
-        {
-            $retval = 0;
-            last;
-        }
+        $retval &&= $cmp_result;
+        last if !$retval;
     }
 
     chatty ("evaluate returning $retval\n") if $self->{DEBUG};

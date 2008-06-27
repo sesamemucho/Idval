@@ -106,7 +106,7 @@ sub test_block_get
     my $self = shift;
     Idval::FileString::idv_add_file('/testdir/gt1.txt',
                                     "{\ntype == foo\ngubber = pachoo wachoo\n}\n{\ntype == boo\ngubber = bouncy}\n");
-    my $cfg_dbg = 0;
+    my $cfg_dbg = 1;
     my $obj = Idval::Config->new('/testdir/gt1.txt', 1, $cfg_dbg);
 
     $self->assert_equals('pachoo wachoo', $obj->get_value('gubber', {'type' => 'foo'}));

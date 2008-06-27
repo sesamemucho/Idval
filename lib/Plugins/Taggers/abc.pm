@@ -85,8 +85,6 @@ sub read_tags
         $tag_record->add_tag($key, $taginfo);
     }
 
-    $tag_record->commit_tags();
-
     return 0;
 }
 
@@ -115,7 +113,7 @@ sub write_tags
     #($foo_text = $text) =~ tr/\r\n/^%/;
     #print "1 text  : <$foo_text>\n";
     my $output = '';
-    my $temp_rec = Idval::Record->new($tag_record);
+    my $temp_rec = Idval::Record->new({Record=>$tag_record});
     #print "Temp_tag: ", Dumper($tag_record);
     my $tag_value;
 
@@ -334,10 +332,8 @@ sub create_records
         $line =~ m/^X:(\d+)/x and do {
             $item = $1;
 
-            my $rec = Idval::Record->new(sprintf("%s%04d", $path . '%%', $item));
-            $rec->add_tag('CLASS', $class);
-            $rec->add_tag('TYPE', $type);
-
+            my $rec = Idval::Record->new({FILE=>sprintf("%s%04d", $path . '%%', $item),
+                                          CLASS=>$class, TYPE=>$type});
             $srclist->add($rec);
         };
     }

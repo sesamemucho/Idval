@@ -158,6 +158,7 @@ sub get_source_from_dirs
 
     Idval::FileIO::idv_find($wanted, @dirs);
 
+    #print "srclist: ", Dumper($srclist);
     return $srclist;
 }
 
@@ -176,14 +177,17 @@ sub get_source_from_file
         $reclist = $dat->get_reclist();
         return $reclist;
     }
-    else
+    elsif ($data_store)
     {
         $reclist = eval {retrieve(Idval::Common::expand_tilde($data_store))};
         croak "Tag info cache is corrupted; you will need to regenerate it (with 'gettags'):\n$@\n" if $@;
         #print Dumper($reclist);
         return Idval::Collection->new({contents => $reclist});
     }
-
+    else
+    {
+        croak "No data source specified.";
+    }
 }
 
 sub put_source_to_file

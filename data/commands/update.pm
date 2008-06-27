@@ -26,9 +26,10 @@ use Data::Dumper;
 use English '-no_match_vars';;
 use Carp;
 
-use Idval::Collection;
+use Idval::Common;
 use Idval::FileIO;
 use Idval::DoDots;
+use Idval::Ui;
 
 sub init
 {
@@ -41,13 +42,15 @@ sub update
 {
     my $datastore = shift;
     my $providers = shift;
-    local @ARGV = @_;
-    my $inputfile = '';
+    my $inputfile = shift;
     my $retval;
 
-    #my $retval = GetOptions('inputfile=s' => \$inputfile);
+    croak "Need an input file for update\n" unless (defined($inputfile) && $inputfile);
 
-    #croak "Need an input file for update\n" unless $inputfile;
+    my $new_datastore = eval {
+        Idval::Ui::get_source_from_file($inputfile);};
+
+    croak($@) if $@;
 
     my $typemap = Idval::Common::get_common_object('typemap');
     my $dotmap = $typemap->get_dot_map();
@@ -57,9 +60,9 @@ sub update
     my $type;
     my $prov;
     my %prov_list;
-    foreach my $key (sort keys %{$datastore->{RECORDS}})
+    foreach my $key (sort keys %{$new_datastore->{RECORDS}})
     {
-        $tag_record = $datastore->{RECORDS}->{$key};
+        $tag_record = $new_datastore->{RECORDS}->{$key};
 
         $type = $tag_record->get_value('TYPE');
         $prov = $providers->get_provider('writes_tags', $type, 'NULL');
@@ -71,7 +74,7 @@ sub update
 
     map { $_->close() } values %prov_list;
     Idval::DoDots::finish();
-    return $datastore;
+    return $new_datastore;
 }
 
 sub set_pod_input

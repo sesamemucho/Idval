@@ -24,9 +24,9 @@ sub test_diff_eq
 {
     my $self = shift;
 
-    my $rec1 = Idval::Record->new('foo');
+    my $rec1 = Idval::Record->new({FILE=>'foo'});
     $rec1->add_tag('GOBBLE', 'hobble');
-    my $rec2 = Idval::Record->new('foo');
+    my $rec2 = Idval::Record->new({FILE=>'foo'});
     $rec2->add_tag('GOBBLE', 'hobble');
 
     my $retval = $rec1->diff($rec2);
@@ -42,9 +42,9 @@ sub test_diff_ne_add_tag
 {
     my $self = shift;
 
-    my $rec1 = Idval::Record->new('foo');
+    my $rec1 = Idval::Record->new({FILE=>'foo'});
     $rec1->add_tag('GOBBLE', 'hobble');
-    my $rec2 = Idval::Record->new('foo');
+    my $rec2 = Idval::Record->new({FILE=>'foo'});
     $rec2->add_tag('GOBBLE', 'hobble');
     $rec2->add_tag('BOBBLE', 'bobble');
 
@@ -61,10 +61,10 @@ sub test_diff_ne_delete_tag
 {
     my $self = shift;
 
-    my $rec1 = Idval::Record->new('foo');
+    my $rec1 = Idval::Record->new({FILE=>'foo'});
     $rec1->add_tag('GOBBLE', 'hobble');
     $rec1->add_tag('BOBBLE', 'bobble');
-    my $rec2 = Idval::Record->new('foo');
+    my $rec2 = Idval::Record->new({FILE=>'foo'});
     $rec2->add_tag('GOBBLE', 'hobble');
 
     my $retval = $rec1->diff($rec2);
@@ -80,9 +80,9 @@ sub test_diff_ne_change_tag
 {
     my $self = shift;
 
-    my $rec1 = Idval::Record->new('foo');
+    my $rec1 = Idval::Record->new({FILE=>'foo'});
     $rec1->add_tag('GOBBLE', 'hobble');
-    my $rec2 = Idval::Record->new('foo');
+    my $rec2 = Idval::Record->new({FILE=>'foo'});
     $rec2->add_tag('GOBBLE', 'wobble');
 
     my $retval = $rec1->diff($rec2);

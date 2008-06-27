@@ -106,7 +106,7 @@ sub convert
     my @temporary_files;
     my $retval;
     # Make a copy of the input record so we can fool with it
-    my $tag_record = Idval::Record->new($rec);
+    my $tag_record = Idval::Record->new({Record=>$rec});
     #print "Dump of record is:", Dumper($tag_record);
 
     foreach my $conv (@{$self->{CONVERTERS}})

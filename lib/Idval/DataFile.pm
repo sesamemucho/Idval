@@ -44,8 +44,8 @@ sub _init
 {
     my $self = shift;
     $self->{DATAFILE} = shift;
+    $self->{TYPEMAP} = Idval::Common::get_common_object('typemap');
     $self->{BLOCKS} = $self->parse();
-
     return;
 }
 
@@ -134,7 +134,25 @@ sub parse_block
         croak "No FILE tag in tag data record \"", join("\n", @{$blockref}), "\"\n";
     }
 
-    my $rec = new Idval::Record($hash{FILE});
+    my $rec = Idval::Record->new({FILE=>$hash{FILE}});
+
+    if (!exists($hash{TYPE}))
+    {
+        # Make a guess
+        my $filetype = $self->{TYPEMAP}->get_filetype_from_file($hash{FILE});
+        if ($filetype)
+        {
+            $rec->add_tag('TYPE', $filetype);
+            $rec->add_tag('CLASS', $self->{TYPEMAP}->get_class_from_filetype($filetype));
+        }
+    }
+    elsif (!exists($hash{CLASS}))
+    {
+        # TYPE exists, but not CLASS, so fill it in
+        $rec->add_tag('CLASS', $self->{TYPEMAP}->get_class_from_filetype($hash{TYPE}));
+    }
+    # A CLASS tag without a TYPE tag is anomalous, but don't deal with it here.
+
     foreach my $key (keys %hash)
     {
         # The key already exists, so don't add it

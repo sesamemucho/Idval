@@ -19,6 +19,9 @@ sub _init
 {
     my $self = shift;
     my $prov = shift;
+    my $vs = shift || $prov->local_get_single_value('visible_separator');
+
+    $self->{VISIBLE_SEPARATOR} = $vs;
 
     $self->build_type_mapper($prov);
 
@@ -181,6 +184,15 @@ sub get_exts_from_class
     return map {lc $_} sort (keys %{$self->{MAPPING}->{CLASSEXT}->{FWD}->{$class}});
 }
 
+sub get_class_from_filetype
+{
+    my $self = shift;
+    my $filetype = uc(shift);
+
+    return $self->{MAPPING}->{CLASSTYPE}->{REV}->{$filetype};
+}
+
+# The extension is presumed to be a known extension
 sub get_class_and_type_from_ext
 {
     my $self = shift;
@@ -188,6 +200,19 @@ sub get_class_and_type_from_ext
 
     return ($self->{MAPPING}->{CLASSEXT}->{REV}->{$ext},
             $self->{MAPPING}->{FILETYPE}->{REV}->{$ext});
+}
+
+# The extension is not guaranteed to be known.
+sub get_filetype_from_file
+{
+    my $self = shift;
+    my $file = shift;
+
+    my $vis_sep = $self->{VISIBLE_SEPARATOR};
+    my ($ext) = ($file =~ m/\.([^.]+)(?:\Q${vis_sep}\E)?.*$/);
+    $ext = uc($ext);
+
+    return exists($self->{MAPPING}->{FILETYPE}->{REV}->{$ext}) ? $self->{MAPPING}->{FILETYPE}->{REV}->{$ext} : '';
 }
 
 1;

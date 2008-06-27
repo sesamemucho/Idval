@@ -44,7 +44,6 @@ sub new
     $self->{NAME} = $name;
     $self->{ENDPOINTS} = [];
 
-    print "*** Hello from Plugin: ref self: ", ref $self, "\n";
     return $self;
 }
 
@@ -85,10 +84,7 @@ sub create_records
     my $type    = $arglist->{type};
     my $srclist = $arglist->{srclist};
 
-    my $rec = Idval::Record->new($path);
-    $rec->add_tag('CLASS', $class);
-    $rec->add_tag('TYPE', $type);
-    $rec->commit_tags();
+    my $rec = Idval::Record->new({FILE=>$path, CLASS=>$class, TYPE=>$type});
 
     $srclist->add($rec);
 

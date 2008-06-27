@@ -38,31 +38,37 @@ sub new
 sub _init
 {
     my $self = shift;
-    my $arg = shift;
-    my $tag_value;
-    if (ref $arg eq "Idval::Record")
+    my $argref = shift;
+
+    if (exists($argref->{Record}))
     {
-        $self->add_tag('FILE', $arg->get_name());
-        foreach my $tag ($arg->get_all_keys())
+        my $rec = $argref->{Record};
+        my $tag_value;
+
+        $self->add_tag('FILE', $rec->get_name());
+        foreach my $tagname ($rec->get_all_keys())
         {
-            $tag_value = $arg->get_value($tag);
+            $tag_value = $rec->get_value($tagname);
             if (ref $tag_value eq 'ARRAY')
             {
                 # Make a copy so shift_value() will work correctly
-                $self->add_tag($tag, [(@{$tag_value})]);
+                $self->add_tag($tagname, [(@{$tag_value})]);
             }
             else
             {
-                $self->add_tag($tag, $tag_value);
+                $self->add_tag($tagname, $tag_value);
             }
         }
-    }
-    else
-    {
-        $self->add_tag('FILE', $arg);
+
+        delete $argref->{Record};
     }
 
-    $self->commit_tags();
+    croak "A new Record must have a filename." if !exists($argref->{FILE});
+
+    foreach my $tagname (keys %{$argref})
+    {
+        $self->add_tag($tagname, $argref->{$tagname});
+    }
 
     return;
 }
@@ -283,8 +289,8 @@ sub format_record
         next if $tag eq 'FILE'; # Already formatted
         if (!$full)
         {
-            next if $tag eq 'CLASS';
             next if $tag eq 'TYPE';
+            next if $tag eq 'CLASS';
             next if $tag eq '__LINES';
             next if $tag eq '__NEXT_LINE';
         }

@@ -131,7 +131,11 @@ sub get_provider
     my $graph = $self->{GRAPH}->{$prov_type};
     my @cnv_list;
 
-    print "Looking for provider type \"$prov_type\" src \"$src\" dest \"$dest\"\n";
+    if (!(defined($src) && defined($dest) && $src && $dest))
+    {
+        confess "Invalid src \"$src\" or dest \"$dest\".";
+    }
+    #print "Looking for provider type \"$prov_type\" src \"$src\" dest \"$dest\"\n";
     my $path = $graph->get_best_path($src, $dest);
     #print STDERR "Converter graph is: ", Dumper($graph);
     #print STDERR "From $src to $dest. Path is: ", Dumper($path);

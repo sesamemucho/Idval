@@ -29,11 +29,11 @@ use Idval::TypeMap;
 
 sub init
 {
-    *silent_q = Idval::Common::make_custom_logger({level => $SILENT, 
+    *silent_q = Idval::Common::make_custom_logger({level => $SILENT,
                                                    debugmask => $DBG_PROCESS,
                                                    decorate => 0});
     set_pod_input();
-    
+
     return;
 }
 
@@ -44,7 +44,11 @@ sub about
     local @ARGV = @_;
 
     my $verbose = 0;
-    my $result = GetOptions("verbose" => \$verbose);
+    my $show_config = 0;
+
+    my $result = GetOptions(
+        'verbose' => \$verbose,
+        'config'  => \$show_config);
 
     my $typemap = Idval::TypeMap->new($providers);
 
@@ -61,109 +65,122 @@ sub about
     #print "Pars:\n", Dumper($pars);
     # Find converters
 
-    # Find converters
-    foreach my $item ($providers->_get_providers('converts'))
+    if ($show_config)
     {
-        foreach my $endpoint ($item->get_endpoints())
+        my $config = Idval::Common::get_common_object('config');
+        my $vars = $config->merge_blocks({'config_group' => 'idval_settings'});
+
+        print "Overall configuration values:\n";
+        foreach my $key (sort keys %{$vars})
         {
-            my ($from, $to) = split(':', $endpoint);
-            $converters_by_type{$from}->{$to} = $item;
-        }
-        $providers_by_name{$item->query('name')}{'PROV'} = $item;
-        $providers_by_name{$item->query('name')}{'TYPE'} = 'Converter';
-    }
-
-    # Find readers
-    foreach my $item ($providers->_get_providers('reads_tags'))
-    {
-        $readers_by_type{$item->query('type')} = $item;
-        $providers_by_name{$item->query('name')}{'PROV'} = $item;
-        $providers_by_name{$item->query('name')}{'TYPE'} = 'Reader';
-    }
-
-    # Find writer
-    foreach my $item ($providers->_get_providers('writes_tags'))
-    {
-        $writers_by_type{$item->query('type')} = $item;
-        $providers_by_name{$item->query('name')}{'PROV'} = $item;
-        $providers_by_name{$item->query('name')}{'TYPE'} = 'Writer';
-    }
-
-    @msgs = ();
-    push(@msgs, "Converts:");
-    foreach my $converter_from_type (sort keys %converters_by_type)
-    {
-        foreach my $converter_to_type (sort keys %{$converters_by_type{$converter_from_type}})
-        {
-            $provider = $converters_by_type{$converter_from_type}->{$converter_to_type};
-            $provider_paths{$provider->query('name')} = $provider->query('path');
-            my $infoline = "\tConverts from: $converter_from_type to $converter_to_type using " .
-                $provider->query('name');
-            $infoline .= $provider->query('is_ok') ? "" : "   (NOT ACTIVE)";
-            push(@msgs, $infoline);
+            printf "%-20s:%s\n", $key, $vars->{$key};
         }
     }
-    silent_q(join("\n", @msgs), "\n");
-
-    silent_q("Reads:\n");
-    foreach my $reader_type (sort keys %readers_by_type)
+    else
     {
-        $provider = $readers_by_type{$reader_type};
-        $provider_paths{$provider->query('name')} = $provider->query('path');
-        silent_q("\tReads tags from: $reader_type using ", $provider->query('name'), "\n");
-    }
-
-    silent_q("Writes:\n");
-    foreach my $writer_type (sort keys %writers_by_type)
-    {
-        $provider = $writers_by_type{$writer_type};
-        $provider_paths{$provider->query('name')} = $provider->query('path');
-        silent_q("\tWrites tags to: $writer_type using ", $provider->query('name'), "\n");
-    }
-
-    silent_q("Types:\n");
-    #print STDERR "TypeMap: ", Dumper($typemap);
-    foreach my $filetype ($typemap->get_all_filetypes()) {
-        silent_q("\tType $filetype files have extensions: ",
-                       join(', ', map {lc $_} $typemap->get_exts_from_filetype($filetype), "\n"));
-    }
-    silent_q("\n");
-    foreach my $class ($typemap->get_all_classes()) {
-        silent_q("\tClass $class comprises types: ",
-                       join(', ', $typemap->get_filetypes_from_class($class)), "\n");
-    }
-
-    #if ((exists $options->{'all'}) and $options->{'all'})
-    {
-        silent_q("\nProvider paths:\n");
-        foreach my $provider (sort keys %provider_paths)
+        # Find converters
+        foreach my $item ($providers->_get_providers('converts'))
         {
-            next if $provider =~ m{/}; # This indicates a 'smooshed' combined converter,
-            # whose individual components will be displayed
-            # separately.
-            silent_q("\tProvider $provider uses ", $provider_paths{$provider}, "\n");
-        }
-    }
-
-    #if ((exists $options->{'all'}) and $options->{'all'})
-    {
-        silent_q("\nProvider info:\n");
-        foreach my $pinfo ($providers->direct_get_providers('converts', 'reads_tags', 'writes_tags'))
-        {
-            my $cnv = $pinfo->{converter};
-            my $status = $cnv->query('status');
-            my $infoline = sprintf("\tProvider %-15s status for %-15s is: %s",
-                                   $pinfo->{'name'}, $pinfo->{'type'}, $status);
-            if ($pinfo->{type} eq 'converts' && $status eq 'ok')
+            foreach my $endpoint ($item->get_endpoints())
             {
-                $infoline .= $verbose ? '    attributes: ' . $cnv->query('attributes') : '';
+                my ($from, $to) = split(':', $endpoint);
+                $converters_by_type{$from}->{$to} = $item;
             }
-            $infoline .= "\n";
-            silent_q($infoline);
+            $providers_by_name{$item->query('name')}{'PROV'} = $item;
+            $providers_by_name{$item->query('name')}{'TYPE'} = 'Converter';
         }
+
+        # Find readers
+        foreach my $item ($providers->_get_providers('reads_tags'))
+        {
+            $readers_by_type{$item->query('type')} = $item;
+            $providers_by_name{$item->query('name')}{'PROV'} = $item;
+            $providers_by_name{$item->query('name')}{'TYPE'} = 'Reader';
+        }
+
+        # Find writer
+        foreach my $item ($providers->_get_providers('writes_tags'))
+        {
+            $writers_by_type{$item->query('type')} = $item;
+            $providers_by_name{$item->query('name')}{'PROV'} = $item;
+            $providers_by_name{$item->query('name')}{'TYPE'} = 'Writer';
+        }
+
+        @msgs = ();
+        push(@msgs, "Converts:");
+        foreach my $converter_from_type (sort keys %converters_by_type)
+        {
+            foreach my $converter_to_type (sort keys %{$converters_by_type{$converter_from_type}})
+            {
+                $provider = $converters_by_type{$converter_from_type}->{$converter_to_type};
+                $provider_paths{$provider->query('name')} = $provider->query('path');
+                my $infoline = "\tConverts from: $converter_from_type to $converter_to_type using " .
+                    $provider->query('name');
+                $infoline .= $provider->query('is_ok') ? "" : "   (NOT ACTIVE)";
+                push(@msgs, $infoline);
+            }
+        }
+        silent_q(join("\n", @msgs), "\n");
+
+        silent_q("Reads:\n");
+        foreach my $reader_type (sort keys %readers_by_type)
+        {
+            $provider = $readers_by_type{$reader_type};
+            $provider_paths{$provider->query('name')} = $provider->query('path');
+            silent_q("\tReads tags from: $reader_type using ", $provider->query('name'), "\n");
+        }
+
+        silent_q("Writes:\n");
+        foreach my $writer_type (sort keys %writers_by_type)
+        {
+            $provider = $writers_by_type{$writer_type};
+            $provider_paths{$provider->query('name')} = $provider->query('path');
+            silent_q("\tWrites tags to: $writer_type using ", $provider->query('name'), "\n");
+        }
+
+        silent_q("Types:\n");
+        #print STDERR "TypeMap: ", Dumper($typemap);
+        foreach my $filetype ($typemap->get_all_filetypes()) {
+            silent_q("\tType $filetype files have extensions: ",
+                     join(', ', map {lc $_} $typemap->get_exts_from_filetype($filetype), "\n"));
+        }
+        silent_q("\n");
+        foreach my $class ($typemap->get_all_classes()) {
+            silent_q("\tClass $class comprises types: ",
+                     join(', ', $typemap->get_filetypes_from_class($class)), "\n");
+        }
+
+        #if ((exists $options->{'all'}) and $options->{'all'})
+        {
+            silent_q("\nProvider paths:\n");
+            foreach my $provider (sort keys %provider_paths)
+            {
+                next if $provider =~ m{/}; # This indicates a 'smooshed' combined converter,
+                # whose individual components will be displayed
+                # separately.
+                silent_q("\tProvider $provider uses ", $provider_paths{$provider}, "\n");
+            }
+        }
+
+        #if ((exists $options->{'all'}) and $options->{'all'})
+        {
+            silent_q("\nProvider info:\n");
+            foreach my $pinfo ($providers->direct_get_providers('converts', 'reads_tags', 'writes_tags'))
+            {
+                my $cnv = $pinfo->{converter};
+                my $status = $cnv->query('status');
+                my $infoline = sprintf("\tProvider %-15s status for %-15s is: %s",
+                                       $pinfo->{'name'}, $pinfo->{'type'}, $status);
+                if ($pinfo->{type} eq 'converts' && $status eq 'ok')
+                {
+                    $infoline .= $verbose ? '    attributes: ' . $cnv->query('attributes') : '';
+                }
+                $infoline .= "\n";
+                silent_q($infoline);
+            }
+        }
+
     }
-
-
     return 0;
 }
 
