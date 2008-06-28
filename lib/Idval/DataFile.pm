@@ -70,9 +70,10 @@ sub parse
     {
         chomp $line;
         next if $line =~ m/^\#/x;
-        if ($line =~ m/^\s*$/x)
+        if (($line =~ m/^\s*$/x) || eof)
         {
             push(@block, $accumulate_line) if $accumulate_line;
+            push(@block, $line) if (eof && $line);
             $collection->add($self->parse_block(\@block)) if @block;
             @block = ();
             $accumulate_line = '';

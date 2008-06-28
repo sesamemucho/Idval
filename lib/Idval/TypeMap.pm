@@ -209,7 +209,8 @@ sub get_filetype_from_file
     my $file = shift;
 
     my $vis_sep = $self->{VISIBLE_SEPARATOR};
-    my ($ext) = ($file =~ m/\.([^.]+)(?:\Q${vis_sep}\E)?.*$/);
+    my ($ext) = ($file =~ m/\.([^.]+)/);
+    $ext =~ s/\Q${vis_sep}\E.*$//;
     $ext = uc($ext);
 
     return exists($self->{MAPPING}->{FILETYPE}->{REV}->{$ext}) ? $self->{MAPPING}->{FILETYPE}->{REV}->{$ext} : '';

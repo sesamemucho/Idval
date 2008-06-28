@@ -50,6 +50,7 @@ sub update
     my $new_datastore = eval {
         Idval::Ui::get_source_from_file($inputfile);};
 
+    #print "new datastore:", Dumper($new_datastore);
     croak($@) if $@;
 
     my $typemap = Idval::Common::get_common_object('typemap');
@@ -63,7 +64,6 @@ sub update
     foreach my $key (sort keys %{$new_datastore->{RECORDS}})
     {
         $tag_record = $new_datastore->{RECORDS}->{$key};
-
         $type = $tag_record->get_value('TYPE');
         $prov = $providers->get_provider('writes_tags', $type, 'NULL');
         $prov_list{$prov} = $prov;

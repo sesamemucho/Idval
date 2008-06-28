@@ -62,8 +62,10 @@ sub _init
 
         delete $argref->{Record};
     }
-
-    croak "A new Record must have a filename." if !exists($argref->{FILE});
+    else
+    {
+        confess "A new Record must have a filename." if !exists($argref->{FILE});
+    }
 
     foreach my $tagname (keys %{$argref})
     {
@@ -301,7 +303,7 @@ sub format_record
         if (ref $tag_value eq 'ARRAY')
         {
             my @values = (@{$tag_value}); # Make a copy
-            my $value = pop @values;
+            my $value = shift @values;
             push(@output, "$tag = $value");
             foreach my $value (@values)
             {

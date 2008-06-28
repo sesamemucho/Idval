@@ -185,11 +185,10 @@ sub _init
 #     }
 
     $self->{CONFIG} = $config;
-    $self->{PROVIDERS} = Idval::Providers->new($config);
-    $self->{TYPEMAP} = Idval::TypeMap->new($self->providers());
-
     Idval::Common::register_common_object('config', $self->config());
+    $self->{PROVIDERS} = Idval::Providers->new($config);
     Idval::Common::register_common_object('providers', $self->providers());
+    $self->{TYPEMAP} = Idval::TypeMap->new($self->providers());
     Idval::Common::register_common_object('typemap', $self->typemap());
 
     $self->{DATASTORE} = Idval::Collection->new({contents => '', source => 'blank'});

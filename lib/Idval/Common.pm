@@ -35,7 +35,7 @@ use Idval::Logger;
 use Idval::Constants;
 
 my $log = Idval::Logger::get_logger();
-my %common_objs;
+our %common_objs;
 my @top_dir_path = ();
 
 memoize('mung_path_query');

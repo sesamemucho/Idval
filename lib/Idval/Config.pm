@@ -314,6 +314,7 @@ sub merge_blocks
     my $selects = shift;
     my %vars;
 
+    confess "selects argument required for config call" unless (defined($selects) && $selects);
     verbose ("Start of _merge_blocks, selects: ", Dumper($selects)) if $self->{DEBUG};
 
     if ($Idval::Config::DEBUG)
@@ -362,7 +363,7 @@ sub get_single_value
 {
     my $self = shift;
     my $key = shift;
-    my $selects = shift || {};
+    my $selects = shift;
     my $default = shift || '';
 
     my $value = $self->get_value($key, $selects, $default);
@@ -374,7 +375,7 @@ sub get_list_value
 {
     my $self = shift;
     my $key = shift;
-    my $selects = shift || {};
+    my $selects = shift;
     my $default = shift || '';
 
     my $value = $self->get_value($key, $selects, $default);
@@ -386,7 +387,7 @@ sub get_value
 {
     my $self = shift;
     my $key = shift;
-    my $selects = shift || {};
+    my $selects = shift;
     my $default = shift || '';
 
     #$cfg_dbg = ($key eq 'sync_dest');
@@ -400,7 +401,7 @@ sub value_exists
 {
     my $self = shift;
     my $key = shift;
-    my $selects = shift || {};
+    my $selects = shift;
 
     my $vars = $self->merge_blocks($selects);
     return defined($vars->{$key});

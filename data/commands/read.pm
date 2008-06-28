@@ -50,7 +50,8 @@ sub read ## no critic (ProhibitBuiltinHomonyms)
     my $loc = $inputfile ? $inputfile : 'Cached data store';
     mylog("Reading tag information from \"$loc\"\n");
     $datastore = eval {
-        Idval::Ui::get_source_from_file($inputfile, $config->get_single_value('data_store'));};
+        Idval::Ui::get_source_from_file($inputfile, $config->get_single_value('data_store',
+                                                                              {'config_group' => 'idval_settings'}));};
 
     croak($@) if $@;
 

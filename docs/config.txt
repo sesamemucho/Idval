@@ -166,3 +166,6 @@ each query selector must match the corresponding block selector.
   common, it will not match.
 
   The first match that fails causes the selection to fail.
+
+  If a query selector is an array, then the match will succeed if any
+  one of the items in the array match.

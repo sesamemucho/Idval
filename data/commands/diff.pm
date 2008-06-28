@@ -59,7 +59,8 @@ sub diff
     croak "Need an input file for diff\n" unless $inputfile;
 
     my $input_reclist = Idval::Ui::get_source_from_file($inputfile,
-                                                        $config->get_single_value('data_store'));
+                                                        $config->get_single_value('data_store',
+                                                                                  {'config_group' => 'idval_settings'}));
 
     my $out = Idval::FileIO->new($outputfile, '>') or croak "Can't open $outputfile for writing: $ERRNO\n";
 

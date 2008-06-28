@@ -146,11 +146,28 @@ sub test_plus_equals_yields_array
     my $coll = $obj->get_reclist();
     $self->assert_equals('Idval::Collection', ref $coll);
     my $rec = $coll->get_value('hartford+vassar1974-10-13t04.ogg');
-    print STDERR Dumper($rec);
+    #print STDERR Dumper($rec);
     $self->assert_deep_equals(['Foo Har Har', 'Hoo Lar Lar'],
                               $rec->get_value('GARBLE'));
 
     return;
+}
+
+sub test_no_blank_line_at_end
+{
+
+    my $self = shift;
+    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nFILE=a.ogg\nA = aaa\nB = bbb\nC = ccc\n\nFILE = b.ogg\nA = baa\nB=bbb\nC=bcc\n");
+
+    my $obj = Idval::DataFile->new('/testdir/gt1.txt');
+    my $coll = $obj->get_reclist();
+    $self->assert_equals('Idval::Collection', ref $coll);
+    my $rec = $coll->get_value('b.ogg');
+    #print STDERR Dumper($rec);
+    $self->assert_equals('bcc', $rec->get_value('C'));
+
+    return;
+
 }
 
 # sub test_get_one_block

@@ -56,7 +56,7 @@ sub store
     # Let's write out the data as required
     Idval::Ui::put_source_to_file({datastore => $datastore,
                                    outputfile => $outputfile,
-                                   datastore_file => $config->get_single_value('data_store'),
+                                   datastore_file => $config->get_single_value('data_store', {'config_group' => 'idval_settings'}),
                                   });
 
     return $datastore;

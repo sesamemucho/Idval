@@ -221,6 +221,13 @@ sub _init
     return;
 }
 
+sub local_get_single_value
+{
+    my $self = shift;
+
+    return '%%';
+}
+
 sub _get_providers
 {
     my $self = shift;

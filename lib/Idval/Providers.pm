@@ -51,7 +51,7 @@ sub _init
     $self->{CONFIG} = $config;
     $self->{DEFAULT_SELECTS} = {'config_group' => 'idval_settings'};
 
-    my $dirlist = $config->get_list_value('plugin_dir');
+    my $dirlist = $self->local_get_list_value('plugin_dir');
     #print "dirlist is: ", join(":", @{$dirlist}), "\n";
     #print Dumper($config);
     $self->{COMMAND_DIRS} = $self->local_get_list_value('command_dir');
