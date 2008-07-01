@@ -71,6 +71,7 @@ sub init
     my @converters = @_;
 
     $self->{CONVERTERS} = [@converters];
+    $self->{FIRSTCONVERTER} = $converters[0];
     $self->{LASTCONVERTER} = $converters[-1];
 
     $self->{LOG}->verbose($DBG_PROCESS, 
@@ -118,7 +119,7 @@ sub convert
         }
         else
         {
-            $to_type = $self->{TO};
+            $to_type = $conv->query('to');
             $to_file = File::Temp::tmpnam() . '.' . $self->get_typemap()->get_output_ext_from_filetype($to_type);
             push(@temporary_files, $to_file);
         }
@@ -134,6 +135,32 @@ sub convert
     unlink @temporary_files;
 
     return $retval;
+}
+
+sub get_source_filepath
+{
+    my $self = shift;
+    my $rec = shift;
+
+     
+    return $self->{FIRSTCONVERTER}->get_source_filepath($rec);
+}
+
+sub get_dest_filename
+{
+    my $self = shift;
+    my $rec = shift;
+    my $dest_name = shift;
+    my $dest_ext = shift;
+
+    foreach my $conv (@{$self->{CONVERTERS}})
+    {
+        $dest_name = $conv->get_dest_filename($rec, $dest_name, $dest_ext);
+        print "Smoosh: dest_name is: \"$dest_name\"\n";
+    }
+
+    return $dest_name;
+
 }
 
 sub get_typemap

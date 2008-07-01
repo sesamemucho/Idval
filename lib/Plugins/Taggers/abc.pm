@@ -78,7 +78,15 @@ sub read_tags
     {
         my @tag_value_list = @{$tags->{$key}};
         $taginfo = scalar(@tag_value_list) == 1 ? $tag_value_list[0] : \@tag_value_list;
-        $tag_record->add_tag($key, $taginfo);
+
+        if ($key eq 'T')
+        {
+            $tag_record->add_tag('TITLE', $taginfo);
+        }
+        else
+        {
+            $tag_record->add_tag($key, $taginfo);
+        }
     }
 
     return 0;
@@ -88,6 +96,7 @@ sub write_tags
 {
     my $self = shift;
     my $tag_record = shift;
+    my $eol;
 
     return 0 if !$self->query('is_ok');
 
@@ -105,24 +114,79 @@ sub write_tags
     # delete it from the file. If the field is in the tag record, replace it.
     my $text = $self->{TEXT}->{$fname}->{BLOCK}->{$id};
     my $field_id;
+    my $field_value;
     my $output = '';
+    my $tune = '';
     my $temp_rec = Idval::Record->new({Record=>$tag_record});
     my $tag_value;
 
+    if ($id eq '0002')
+    {
+        print "Looking at <$text>\n";
+        print Dumper($temp_rec);
+    }
+
   LOOP2:
     {
-        if ($text =~ m/\G([ABCDFGHIKLMmNOPQRrSTUVWXZ]):.*?([\r\n]+)/gsc)
+        if ($text =~ m/\G([ABCDFGHIKLMmNOPQRrSTUVWXZ]):(.*?)([\r\n]+)/gsc)
         {
             $field_id = $1;
-            $tag_value = $temp_rec->shift_value($field_id);
+            $field_value = $2;
+            $eol = $3;
+
+            if ($field_id eq 'T')
+            {
+                $tag_value = $temp_rec->shift_value('TITLE');
+            }
+            else
+            {
+                $tag_value = $temp_rec->shift_value($field_id);
+            }
+
+            if (($field_id eq 'X') && ($field_value ne $tag_value))
+            {
+                carp("\nIn \"$fname\", attempt to change write-only tag \"$field_id\" from \"$field_value\" to \"$tag_value\" in section \"$fileid\"\n");
+                return 1;
+            }
+                
             if ($tag_value)
             {
-                $output .= $field_id . ':' . $tag_value . $2;
+                $output .= $field_id . ':' . $tag_value . $eol;
             }
             redo LOOP2;
         }
 
-        if ($text =~ m/\G[\r\n]+/gsc)
+        if ($text =~ m/\G^\%\%idv-(\S+)\s+(.*?)([\r\n]+)/gsc)
+        {
+            print "Checking 1 \"$text\"\n";
+            # Transform these from ID3V2 tags, someday. TODO
+            $field_id = uc $1;
+            $field_value = $2;
+            $eol = $3;
+            $tag_value = $temp_rec->shift_value($field_id);
+            if ($tag_value)
+            {
+                $output .= '%% idv-' . lc $field_id . ':' . $tag_value . $eol;
+            }
+            redo LOOP2;
+        }
+
+        if ($text =~ m/\G^\%\%([^-]+-\S+)\s+(.*?)([\r\n]+)/gsc)
+        {
+            print "Checking 2 \"$text\"\n";
+            # Transform these from ID3V2 tags, someday. TODO
+            $field_id = $1;
+            $field_value = $2;
+            $eol = $3;
+            $tag_value = $temp_rec->shift_value($field_id);
+            if ($tag_value)
+            {
+                $output .= '%%' . $field_id . ':' . $tag_value . $eol;
+            }
+            redo LOOP2;
+        }
+
+       if ($text =~ m/\G[\r\n]+/gsc)
         {
             #print "Got new line\n";
             redo LOOP2;
@@ -131,14 +195,38 @@ sub write_tags
         if ($text =~ m/\G(.+)/gsc)
         {
             # The tune (most likely)
-            $output .= $1;
+            $tune = $1;
             redo LOOP2;
         }
     }
 
-    $self->{OUTPUT}->{$fname} .= $output;
+    # Are there any new '%%*' tags to add?
+    foreach my $tag_id ($temp_rec->get_all_keys())
+    {
+        print "temp: checking key \"$tag_id\"\n";
+        if ($tag_id =~ m/^[^-]+-/)
+        {
+            print "Got \"$tag_id\", setting ", $temp_rec->get_value($tag_id), "\n";
+            # Let's hope an eol has been defined. TODO - make sure
+            $output .= '%% ' . $tag_id . ' '. $temp_rec->get_value($tag_id) . $eol;
+        }
+        elsif ($tag_id =~ m/^../) # At least two chars and not an %%foo- tag
+            # means it should be an idv- tag.
+        {
+            print "Got idv tag \"$tag_id\", setting ", $temp_rec->get_value($tag_id), "\n";
+            # Let's hope an eol has been defined. TODO - make sure
+            $output .= '%% idv-' . lc $tag_id . ' '. $temp_rec->get_value($tag_id) . $eol;
+        }
+    }
 
-    return 1;
+    if ($id eq '0002')
+    {
+        print "output is: \"$output\"\n";
+    }
+
+    $self->{OUTPUT}->{$fname} .= $output . $tune;
+
+    return 0;
 }
 
 sub parse_file
@@ -201,9 +289,33 @@ sub parse_file
                 #print "Parsing: Field $fieldid, text <$text1>\n";
             }
             push(@{$tags{$fieldid}}, $tagvalue);
-#             push(@{$tags{$1}}, [$2, $lastpos, pos($text) - $lastpos]);
-#             $lastpos = pos($text);
+            redo LOOP2;
+        }
 
+        if ($text =~ m/\G^\%\%idv-(\S+)\s+(.*)$/gmc)
+        {
+            # These should transform straight to IDV tags
+            my $fieldid = uc $1;
+            my $tagvalue = $2;
+            {
+                my $text1 = $tagvalue;
+                $text1 =~ s/\r//g;
+                print "Parsing: idv Field $fieldid, text <$text1>\n";
+            }
+            push(@{$tags{$fieldid}}, $tagvalue);
+            redo LOOP2;
+        }
+
+        if ($text =~ m/\G^\%\%([^-]+-\S+)\s+(.*)$/gmc)
+        {
+            my $fieldid = $1;
+            my $tagvalue = $2;
+            {
+                my $text1 = $tagvalue;
+                $text1 =~ s/\r//g;
+                print "Parsing: other Field $fieldid, text <$text1>\n";
+            }
+            push(@{$tags{$fieldid}}, $tagvalue);
             redo LOOP2;
         }
 
@@ -269,8 +381,8 @@ sub close
     {
         foreach my $fname (keys %{$self->{OUTPUT}})
         {
-            $fh = Idval::FileIO->new($fname . "-new", "w") || croak "Can't open \"$fname\" for writing: $!\n";
-            $fh->print($self->{OUTPUT}->{$fname});
+            $fh = Idval::FileIO->new($fname, "w") || croak "Can't open \"$fname\" for writing: $!\n";
+            $fh->printflush($self->{OUTPUT}->{$fname});
             $fh->close();
         }
 

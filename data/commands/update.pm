@@ -69,6 +69,7 @@ sub update
         $prov_list{$prov} = $prov;
 
         $retval = $prov->write_tags($tag_record);
+        last if $retval != 0;
         Idval::DoDots::dodots($dotmap->{$type});
     }
 

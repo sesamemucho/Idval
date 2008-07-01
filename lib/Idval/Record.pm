@@ -200,6 +200,28 @@ sub get_value
     return $self->{$tagname};
 }
 
+sub get_first_value
+{
+    my $self = shift;
+    my $tagname = shift;
+
+    my $retval = '';
+
+    if ($self->key_exists($tagname))
+    {
+        if (ref $self->{$tagname} eq 'ARRAY')
+        {
+            $retval = ${$self->{$tagname}}[0];
+        }
+        else
+        {
+            $retval = $self->{$tagname};
+        }
+    }
+
+    return $retval;
+}
+
 sub get_name
 {
     my $self = shift;

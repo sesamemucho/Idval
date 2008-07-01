@@ -528,6 +528,8 @@ sub _add_provider
     if ($cnv->query('is_ok'))
     {
         $cnv->set_param('attributes', $argref->{attributes});
+        $cnv->set_param('from', $src);
+        $cnv->set_param('to', $dest);
         #chatty("Adding \"$prov_type\" provider \"$name\" from package \"$package\". src: \"$src\", dest: \"$dest\", weight: \"$weight\"\n");
         chatty("Adding \"$prov_type\" provider: From \"$src\", via \"${package}::$name\" to \"$dest\", weight: \"$weight\" ",
                "attributes: \"", $argref->{attributes}, "\"\n");

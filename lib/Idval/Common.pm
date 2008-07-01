@@ -187,13 +187,13 @@ sub run
     #$name = exe_name($name);
     if ($no_run)
     {
-        $log->quiet($DBG_PROCESS, "$name $cmdargs\n");
+        $log->quiet($DBG_PROCESS, "$name XXX $cmdargs\n");
         return 0;
     }
     else
     {
-        $log->verbose($DBG_PROCESS, "$name $cmdargs\n");
-        $retval = qx{$name $cmdargs 2>&1};
+        $log->verbose($DBG_PROCESS, "\"$name\" XXX $cmdargs\n");
+        $retval = qx{"$name" $cmdargs 2>&1};
         $status = $?;
         if ($status)
         {

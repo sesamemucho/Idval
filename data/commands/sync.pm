@@ -216,6 +216,7 @@ sub each_item
     else
     {
         $prov = get_converter($src_type, $dest_type);
+        chatty("src: $src_type to dest: $dest_type yields converter $prov\n");
     }
 
     $prov_list{$prov} = $prov;
@@ -225,7 +226,7 @@ sub each_item
     my $remote_top = Idval::Common::mung_to_unix($config->get_single_value('remote_top', $tag_record));
     chatty("   remote top is \"$remote_top\"\n");
     my $dest_name = $prov->get_dest_filename($tag_record, $src_name, get_file_ext($dest_type));
-
+    chatty("   dest name is \"$dest_name\"\n");
 
 
 #     my $src_path =  $tag_record->get_name();
