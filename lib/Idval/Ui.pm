@@ -116,9 +116,9 @@ sub make_wanted
     {
         # This perly expression will create one entry in the hash %type_list for
         # each extension associated with the filetype handled by this tag reader.
-        @type_list{$typemap->get_exts_from_filetype($item->query('type'))} = undef;
-
-        $record_creators{$item->query('type')} = $item;
+        my $type = $item->get_source();
+        @type_list{$typemap->get_exts_from_filetype($type)} = undef;
+        $record_creators{$type} = $item;
     }
     
     my @exts = map { '\.' . lc($_) } keys %type_list;

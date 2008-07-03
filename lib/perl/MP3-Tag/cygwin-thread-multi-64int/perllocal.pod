@@ -1,0 +1,22 @@
+=head2 Wed Jul  2 13:58:35 2008: C<Module> L<MP3::Tag|MP3::Tag>
+
+=over 4
+
+=item *
+
+C<installed into: /cygdrive/h/xfer/idv/lib/perl/MP3-Tag>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.9710>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+

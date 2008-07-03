@@ -1,4 +1,4 @@
-package Idval::SysPlugins::Abc;
+package Idval::SysPlugins::Converters::Abc;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
@@ -48,7 +48,6 @@ sub init
     # output files to have a '.flac' extension
     $self->set_param('output_ext_map', {'FLAC' => [qw( flac )]});
 
-    $self->add_endpoint('ABC', 'FLAC');
     $self->set_param('path', 'not yet');
     #$self->set_param('is_ok', defined($path));
     $self->set_param('is_ok', 0);

@@ -1,0 +1,22 @@
+=head2 Wed Jul  2 13:31:02 2008: C<Module> L<MPEG::ID3v2Tag|MPEG::ID3v2Tag>
+
+=over 4
+
+=item *
+
+C<installed into: /cygdrive/h/xfer/idv/lib/perl/MPEG-ID3v2Tag>
+
+=item *
+
+C<LINKTYPE: dynamic>
+
+=item *
+
+C<VERSION: 0.39>
+
+=item *
+
+C<EXE_FILES: >
+
+=back
+

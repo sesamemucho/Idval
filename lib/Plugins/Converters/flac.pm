@@ -1,4 +1,4 @@
-package Idval::SysPlugins::Flac;
+package Idval::SysPlugins::Converters::Flac;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
@@ -53,19 +53,6 @@ sub init
     # Since we have a choice, tell the typemapper that we want our
     # output files to have a '.flac' extension
     $self->set_param('output_ext_map', {'FLAC' => [qw( flac )]});
-
-    if ($name eq 'flac_dec')
-    {
-        $self->add_endpoint('FLAC', 'WAV');
-    }
-    elsif ($name eq 'flac_enc')
-    {
-        $self->add_endpoint('WAV', 'FLAC');
-    }
-    else
-    {
-        $self->add_endpoint('OGG', 'FLAC');
-    }
 
     $self->find_and_set_exe_path('flac');
 

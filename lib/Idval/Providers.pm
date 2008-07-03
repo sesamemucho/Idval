@@ -145,15 +145,18 @@ sub get_provider
         {
 
             my ($converter, $name) = ($$cnvinfo[1] =~ m{^(.*)::([^:]+)}x);
+            my $from = $$cnvinfo[0];
+            my $to = $$cnvinfo[2];
             #print STDERR "cnvinfo is <", join(", ", @{$cnvinfo}), ">\n";
             #print STDERR "converter is <$converter>\n";
             #print STDERR "name is <$name>\n";
             #$cnv = $converter->new($config, $name);
-            $cnv = $self->{ALL_PROVIDERS}->{$prov_type}->{$converter}->{$name};
+            $cnv = $self->{ALL_PROVIDERS}->{$prov_type}->{$converter}->{$name}->{"${from}:${to}"};
             push(@cnv_list, $cnv);
         }
     }
 
+    #print "Found ", scalar(@cnv_list), " providers for $dest -> $src\n";
     if (scalar(@cnv_list) < 1)
     {
         $self->{LOG}->idv_warn("No \"$prov_type\" provider found for \"$src,$dest\"\n");
@@ -221,8 +224,11 @@ sub direct_get_providers
         {
             foreach my $provider_name (keys %{$self->{ALL_PROVIDERS}->{$prov_type}->{$provider_package}})
             {
-                my $cnv = $self->{ALL_PROVIDERS}->{$prov_type}->{$provider_package}->{$provider_name};
-                push(@prov_list, {converter=>$cnv, name=>$provider_name, package_name=>$provider_package, type=>$prov_type});
+                foreach my $endpoint (keys %{$self->{ALL_PROVIDERS}->{$prov_type}->{$provider_package}->{$provider_name}})
+                {
+                    my $cnv = $self->{ALL_PROVIDERS}->{$prov_type}->{$provider_package}->{$provider_name}->{$endpoint};
+                    push(@prov_list, {converter=>$cnv, name=>$provider_name, package_name=>$provider_package, type=>$prov_type, endpoint=>$endpoint});
+                }
             }
         }
     }
@@ -523,13 +529,15 @@ sub _add_provider
     my $cnv;
 
     $cnv = $package->new($config, $name);
+    $cnv->set_param('attributes', $argref->{attributes});
+    $cnv->set_param('from', $src);
+    $cnv->set_param('to', $dest);
+    my $endpoint = $cnv->add_endpoint($src, $dest);
+
     $self->{NUM_PROVIDERS}++;
-    $self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name} = $cnv;
+    $self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name}->{$endpoint} = $cnv;
     if ($cnv->query('is_ok'))
     {
-        $cnv->set_param('attributes', $argref->{attributes});
-        $cnv->set_param('from', $src);
-        $cnv->set_param('to', $dest);
         #chatty("Adding \"$prov_type\" provider \"$name\" from package \"$package\". src: \"$src\", dest: \"$dest\", weight: \"$weight\"\n");
         chatty("Adding \"$prov_type\" provider: From \"$src\", via \"${package}::$name\" to \"$dest\", weight: \"$weight\" ",
                "attributes: \"", $argref->{attributes}, "\"\n");

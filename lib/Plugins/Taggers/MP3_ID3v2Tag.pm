@@ -1,4 +1,4 @@
-package Idval::SysPlugins::MP3_Tag;
+package Idval::SysPlugins::Taggers::MP3_ID3v2Tag;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
@@ -26,24 +26,24 @@ use Carp;
 
 use base qw(Idval::Plugin);
 
-my $req_status = eval {require MP3::Tag};
+my $req_status = eval {require MPEG::ID3v2Tag};
 my $req_msg = !defined($req_status) ? "$!" : 
                    $req_status == 0 ? "$@" :
                                        "Load OK";
 
 if ($req_msg ne 'Load OK')
 {
-    print "Oops; let's try again for MP3::Tag\n";
-    use lib Idval::Common::get_top_dir('lib/perl/MP3-Tag');
+    print "Oops; let's try again for MPEG::ID3v2Tag\n";
+    use lib Idval::Common::get_top_dir('lib/perl/MPEG-ID3v2Tag');
 
-    $req_status = eval {require MP3::Tag};
+    $req_status = eval {require MPEG::ID3v2Tag};
     $req_msg = 'Load OK' if (defined($req_status) && ($req_status != 0));
 }
 
-my $name = 'MP3_Tag';
-my $type = 'MP3';
+my $name = 'MP3_ID3v2Tag';
 
-Idval::Common::register_provider({provides=>'reads_tags', name=>$name, type=>$type, weight=>50});
+Idval::Common::register_provider({provides=>'reads_tags', name=>$name, type=>'MP3', weight=>70});
+Idval::Common::register_provider({provides=>'writes_tags', name=>$name, type=>'MP3', weight=>70});
 
 sub new
 {
@@ -67,8 +67,9 @@ sub init
     $self->set_param('is_ok', $req_msg eq "Load OK");
     if ($req_msg eq "No such file or directory")
     {
-        $req_msg = "Perl module MP3::Tag not found";
+        $req_msg = "Perl module MPEG::ID3v2Tag not found";
     }
+
     $self->set_param('status', $req_msg);
 
     return;
@@ -78,51 +79,65 @@ sub read_tags
 {
     my $self = shift;
     my $tag_record = shift;
-    my $line;
     my $current_tag;
     my $retval = 0;
+    my $fh;
 
     return $retval if !$self->query('is_ok');
 
     my $filename = $tag_record->get_value('FILE');
 
-    my $mp3 = MP3::Tag->new($filename);
-    my ($title, $track, $artist, $album, $comment, $year, $genre) = $mp3->autoinfo();
+    undef $fh;
+    open($fh, "<", $filename) || croak "Cannot open mp3 file \"$filename\" for reading: $!\n";
+    binmode $fh;
 
-    $tag_record->add_tag('TITLE', $title);
-    $tag_record->add_tag('TRACKNUMBER', $track);
-    $tag_record->add_tag('ARTIST', $artist);
-    $tag_record->add_tag('ALBUM', $album);
-    $tag_record->add_tag('COMMENT', $comment);
-    $tag_record->add_tag('DATE', $year);
-    $tag_record->add_tag('GENRE', $genre);
+    my $tag = MPEG::ID3v2Tag->parse($fh);
 
-    #print join("\n", $tag_record->format_record());
-    if (exists $mp3->{ID3v2})
+    foreach my $frame ($tag->frames())
     {
-        my $h = $mp3->get_id3v2_frame_ids();
-        my $name;
-        my $info;
-        foreach my $key (keys %$h)
+        if ($frame->fully_parsed())
         {
-            ($info, $name) = $mp3->{ID3v2}->get_frame($key);
-
-            if (ref $info eq 'HASH')
-            {
-                print "$name:\n";
-                foreach my $infokey (keys %$info)
-                {
-                    print "   $infokey => ", substr($infokey, 0, 1) eq '_' ? 'Binary' : $info->{$infokey}, "\n";
-                }
-            }
-            else
-            {
-                print "$name, $info\n";
-            }
+            print "Got frame $frame->frameid\n";
+        }
+        else
+        {
+            print "Frame not fully parsed\n";
         }
     }
-
+    
     return $retval;
+}
+
+sub write_tags
+{
+    my $self = shift;
+    my $tag_record = shift;
+
+    return 0 if !$self->query('is_ok');
+
+#     my $fileid = $tag_record->get_value('FILE');
+#     my $exiftool = new Image::ExifTool;
+#     my $vs = $self->{VISIBLE_SEPARATOR};
+#     my $success;
+#     my $errStr;
+#     my $exif_tag;
+
+#     foreach my $tag ($tag_record->get_all_keys())
+#     {
+#         # set a new value and capture any error message
+#         ($exif_tag = $tag) =~ s/\Q$vs\E/ /g;
+#         ($success, $errStr) = $exiftool->SetNewValue($tag, $tag_record->get_value($tag));
+
+#         if ($errStr)
+#         {
+#             carp $errStr;
+#             return 1;
+#         }
+#     }
+
+#     $exiftool->WriteInfo($fileid);
+
+    return 0;
 }
 
 1;

@@ -81,7 +81,7 @@ sub about
         # Find converters
         foreach my $item ($providers->_get_providers('converts'))
         {
-            foreach my $endpoint ($item->get_endpoints())
+            foreach my $endpoint ($item->get_endpoint())
             {
                 my ($from, $to) = split(':', $endpoint);
                 $converters_by_type{$from}->{$to} = $item;
@@ -93,17 +93,23 @@ sub about
         # Find readers
         foreach my $item ($providers->_get_providers('reads_tags'))
         {
-            $readers_by_type{$item->query('type')} = $item;
             $providers_by_name{$item->query('name')}{'PROV'} = $item;
             $providers_by_name{$item->query('name')}{'TYPE'} = 'Reader';
+            foreach my $type ($item->get_source())
+            {
+                $readers_by_type{$type} = $item;
+            }
         }
 
         # Find writer
         foreach my $item ($providers->_get_providers('writes_tags'))
         {
-            $writers_by_type{$item->query('type')} = $item;
             $providers_by_name{$item->query('name')}{'PROV'} = $item;
             $providers_by_name{$item->query('name')}{'TYPE'} = 'Writer';
+            foreach my $type ($item->get_source())
+            {
+                $writers_by_type{$type} = $item;
+            }
         }
 
         @msgs = ();
@@ -164,20 +170,51 @@ sub about
 
         #if ((exists $options->{'all'}) and $options->{'all'})
         {
+            # Only display to the level of provider name and provider type.
+            # It is assumed that, for different endpoints, a given provider
+            # has the same characteristics
+
             silent_q("\nProvider info:\n");
+            my %provider_status_info;
             foreach my $pinfo ($providers->direct_get_providers('converts', 'reads_tags', 'writes_tags'))
             {
-                my $cnv = $pinfo->{converter};
-                my $status = $cnv->query('status');
-                my $infoline = sprintf("\tProvider %-15s status for %-15s is: %s",
-                                       $pinfo->{'name'}, $pinfo->{'type'}, $status);
-                if ($pinfo->{type} eq 'converts' && $status eq 'ok')
-                {
-                    $infoline .= $verbose ? '    attributes: ' . $cnv->query('attributes') : '';
-                }
-                $infoline .= "\n";
-                silent_q($infoline);
+                my $name = $pinfo->{'name'};
+                my $type = $pinfo->{'type'};
+
+                $provider_status_info{$name}->{$type}->{CNV} = $pinfo->{converter};
+
             }
+
+            foreach my $name (sort keys %provider_status_info)
+            {
+                foreach my $type (sort keys %{$provider_status_info{$name}})
+                {
+                    my $cnv = $provider_status_info{$name}->{$type}->{CNV};
+
+                    my $status = $cnv->query('status');
+                    my $infoline = sprintf("\tProvider %-15s status for %-15s is: %s",
+                                           $name, $type, $status);
+                    if ($type eq 'converts' && $status eq 'ok')
+                    {
+                        $infoline .= $verbose ? '    attributes: ' . $cnv->query('attributes') : '';
+                    }
+                    $infoline .= "\n";
+                    silent_q($infoline);
+                }
+            }
+#            foreach my $pinfo ($providers->direct_get_providers('converts', 'reads_tags', 'writes_tags'))
+#             {
+#                 my $cnv = $pinfo->{converter};
+#                 my $status = $cnv->query('status');
+#                 my $infoline = sprintf("\tProvider %-15s status for %-15s is: %s",
+#                                        $pinfo->{'name'}, $pinfo->{'type'}, $status);
+#                 if ($pinfo->{type} eq 'converts' && $status eq 'ok')
+#                 {
+#                     $infoline .= $verbose ? '    attributes: ' . $cnv->query('attributes') : '';
+#                 }
+#                 $infoline .= "\n";
+#                 silent_q($infoline);
+#             }
         }
 
     }

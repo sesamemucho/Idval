@@ -42,7 +42,9 @@ sub new
     $self->{PARAMS} = {};
     $self->{CONFIG} = $config;
     $self->{NAME} = $name;
-    $self->{ENDPOINTS} = [];
+    $self->{ENDPOINTS}->{PAIRS} = {};
+    $self->{ENDPOINTS}->{SRCS} = {};
+    $self->{ENDPOINTS}->{DESTS} = {};
 
     return $self;
 }
@@ -100,8 +102,7 @@ sub has_endpoint
     my $to = uc shift;
     my $endpoint = $from . ':' . $to;
 
-    # Add the endpoint if it's not already there
-    return defined(List::Util::first {$_ eq $endpoint} @{$self->{ENDPOINTS}});
+    return exists ($self->{ENDPOINTS}->{PAIRS}->{$endpoint});
 }
 
 sub add_endpoint
@@ -109,21 +110,34 @@ sub add_endpoint
     my $self = shift;
     my $from = uc shift;
     my $to = uc shift;
+    my $endpoint = $from . ':' . $to;
 
-    # Add the endpoint if it's not already there
-    if (!$self->has_endpoint($from, $to))
-    {
-        push(@{$self->{ENDPOINTS}}, $from . ':' . $to);
-    }
+    $self->{ENDPOINT}->{PAIR} = $endpoint;
+    $self->{ENDPOINT}->{SRC} = $from;
+    $self->{ENDPOINT}->{DEST} = $to;
 
-    return;
+    return $endpoint;
 }
 
-sub get_endpoints
+sub get_endpoint
 {
     my $self = shift;
 
-    return @{$self->{ENDPOINTS}};
+    return $self->{ENDPOINT}->{PAIR};
+}
+
+sub get_source
+{
+    my $self = shift;
+
+    return $self->{ENDPOINT}->{SRC};
+}
+
+sub get_destination
+{
+    my $self = shift;
+
+    return $self->{ENDPOINT}->{DEST};
 }
 
 sub get_source_filepath

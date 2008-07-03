@@ -49,11 +49,6 @@ sub init
     my $name = $self->{NAME};
 
     $self->set_param('name', $name);
-#     $self->set_param('filetype_map', {'WAV' => [qw{ wav }],
-#                                       'MP3' => [qw{ mp3 }]});
-#     $self->set_param('classtype_map', {'MUSIC' => [qw( WAV MP3 )]});
-
-    $self->add_endpoint('*', '*');
     $self->set_param('path', '(Builtin)');
     $self->set_param('is_ok', 1);
     $self->set_param('status', 'ok');

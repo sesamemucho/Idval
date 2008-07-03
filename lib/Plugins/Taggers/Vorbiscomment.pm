@@ -1,4 +1,4 @@
-package Idval::SysPlugins::Vorbiscomment;
+package Idval::SysPlugins::Taggers::Vorbiscomment;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 

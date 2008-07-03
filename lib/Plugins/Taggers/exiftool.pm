@@ -1,4 +1,4 @@
-package Idval::SysPlugins::Exiftool;
+package Idval::SysPlugins::Taggers::Exiftool;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
@@ -41,9 +41,12 @@ if ($req_msg ne 'Load OK')
 }
 
 my $name = 'exiftool';
-my $type = 'JPEG';
 
-Idval::Common::register_provider({provides=>'reads_tags', name=>$name, type=>$type, weight=>50});
+foreach my $type (qw(JPEG TIFF RAW))
+{
+    Idval::Common::register_provider({provides=>'reads_tags',  name=>$name, type=>$type, weight=>50});
+    Idval::Common::register_provider({provides=>'writes_tags', name=>$name, type=>$type, weight=>50});
+}
 
 sub new
 {
@@ -59,10 +62,13 @@ sub init
     my $self = shift;
 
     $self->set_param('name', $self->{NAME});
-    $self->set_param('dot_map', {'JPEG' => [qw{ j }]});
-    $self->set_param('filetype_map', {'JPEG' => [qw{ jpg jpeg }]});
-    $self->set_param('classtype_map', {'IMAGE' => [qw( JPEG )]});
-    $self->set_param('type', $type);
+    $self->set_param('dot_map', {'JPEG' => [qw{ j }],
+                                 'TIFF' => [qw{ t }],
+                                 'RAW'  => [qw{ r }]});
+    $self->set_param('filetype_map', {'JPEG' => [qw{ jpg jpeg }],
+                                      'TIFF' => [qw( tiff )],
+                                      'RAW'  => [qw( raw  )]});
+    $self->set_param('classtype_map', {'IMAGE' => [qw( JPEG TIFF RAW)]});
 
     $self->set_param('path', "(Perl module}");
     $self->set_param('is_ok', $req_msg eq "Load OK");
@@ -142,7 +148,7 @@ sub write_tags
     {
         # set a new value and capture any error message
         ($exif_tag = $tag) =~ s/\Q$vs\E/ /g;
-        ($success, $errStr) = $exifTool->SetNewValue($tag, $tag_record->get_value($tag));
+        ($success, $errStr) = $exiftool->SetNewValue($tag, $tag_record->get_value($tag));
 
         if ($errStr)
         {
@@ -151,7 +157,7 @@ sub write_tags
         }
     }
 
-    $exifTool->WriteInfo($fileid);
+    $exiftool->WriteInfo($fileid);
 
     return 0;
 }

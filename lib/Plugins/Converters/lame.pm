@@ -52,15 +52,6 @@ sub init
                                       'MP3' => [qw{ mp3 }]});
     $self->set_param('classtype_map', {'MUSIC' => [qw( WAV MP3 )]});
 
-    if ($name eq 'lame_dec')
-    {
-        $self->add_endpoint('MP3', 'WAV');
-    }
-    else
-    {
-        $self->add_endpoint('WAV', 'MP3');
-    }
-
     $self->find_and_set_exe_path('lame');
 
     return;

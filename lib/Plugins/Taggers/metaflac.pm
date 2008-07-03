@@ -1,4 +1,4 @@
-package Idval::SysPlugins::Metaflac;
+package Idval::SysPlugins::Taggers::Metaflac;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 

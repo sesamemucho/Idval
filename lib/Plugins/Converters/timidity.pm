@@ -52,8 +52,6 @@ sub init
     # output files to have a '.flac' extension
     $self->set_param('output_ext_map', {'WAV' => [qw( wav )]});
 
-    $self->add_endpoint('MIDI', 'WAV');
-
     my $config = Idval::Common::get_common_object('config');
     $self->{VISIBLE_SEPARATOR} = $config->get_single_value('visible_separator', {'config_group' => 'idval_settings'});
 

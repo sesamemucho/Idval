@@ -55,6 +55,7 @@ sub new
     my $from = shift;
     my $to = shift;
     my @cnv_list = @_;
+    confess "No converters in smoosh?" unless @_ and defined($_[0]);
     my $name = join('/', map{$_->query('name')} @cnv_list);
     my $config = $cnv_list[0]->{CONFIG}; # They all have the same CONFIG object.
     my $self = $class->SUPER::new($config, $name);

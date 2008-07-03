@@ -49,7 +49,6 @@ sub init
     $self->set_param('filetype_map', {'WAV' => [qw{ wav }],
                                       'OGG' => [qw{ ogg }]});
     $self->set_param('classtype_map', {'MUSIC' => [qw( WAV OGG )]});
-    $self->add_endpoint($from, $to);
 
     $self->find_and_set_exe_path();
 

@@ -1,4 +1,4 @@
-package Idval::SysPlugins::Abc;
+package Idval::SysPlugins::Taggers::Abc;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
