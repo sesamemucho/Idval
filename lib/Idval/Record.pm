@@ -111,7 +111,7 @@ sub add_tag
     my $value = shift;
 
     #$self->{TEMP}->{$name} = $value;
-    $self->{$name} = $value;
+    $self->{$name} = defined($value) ? $value : '';
 
     return;
 }

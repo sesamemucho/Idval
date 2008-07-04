@@ -27,7 +27,7 @@ use Carp;
 use base qw(Idval::Plugin);
 
 my $req_status = eval {require MP3::Tag};
-my $req_msg = !defined($req_status) ? "$!" : 
+my $req_msg = !defined($req_status) ? "$!" :
                    $req_status == 0 ? "$@" :
                                        "Load OK";
 
@@ -71,6 +71,10 @@ sub init
     }
     $self->set_param('status', $req_msg);
 
+    my $config = Idval::Common::get_common_object('config');
+    $self->{VISIBLE_SEPARATOR} = $config->get_single_value('visible_separator', {'config_group' => 'idval_settings'});
+    $self->{MELD_MP3_TAGS} = $config->get_single_value('meld_mp3_tags', {'config_group' => 'idval_settings'}, 1);
+
     return;
 }
 
@@ -87,40 +91,83 @@ sub read_tags
     my $filename = $tag_record->get_value('FILE');
 
     my $mp3 = MP3::Tag->new($filename);
-    my ($title, $track, $artist, $album, $comment, $year, $genre) = $mp3->autoinfo();
+    my ($title, $track, $artist, $album, $comment, $year, $genre);
 
-    $tag_record->add_tag('TITLE', $title);
-    $tag_record->add_tag('TRACKNUMBER', $track);
-    $tag_record->add_tag('ARTIST', $artist);
-    $tag_record->add_tag('ALBUM', $album);
-    $tag_record->add_tag('COMMENT', $comment);
-    $tag_record->add_tag('DATE', $year);
-    $tag_record->add_tag('GENRE', $genre);
-
-    #print join("\n", $tag_record->format_record());
-    if (exists $mp3->{ID3v2})
+    if ($self->{MELD_MP3_TAGS})
     {
-        my $h = $mp3->get_id3v2_frame_ids();
-        my $name;
-        my $info;
-        foreach my $key (keys %$h)
+        ($title, $track, $artist, $album, $comment, $year, $genre) = $mp3->autoinfo();
+    }
+    else
+    {
+        if (exists $mp3->{ID3v1})
         {
-            ($info, $name) = $mp3->{ID3v2}->get_frame($key);
-
-            if (ref $info eq 'HASH')
-            {
-                print "$name:\n";
-                foreach my $infokey (keys %$info)
-                {
-                    print "   $infokey => ", substr($infokey, 0, 1) eq '_' ? 'Binary' : $info->{$infokey}, "\n";
-                }
-            }
-            else
-            {
-                print "$name, $info\n";
-            }
+            ($title, $artist, $album, $year, $comment, $track, $genre) = $mp3->{ID3v1}->all;
+            $tag_record->add_tag('TITLE', $title);
+            $tag_record->add_tag('TRACKNUMBER', $track);
+            $tag_record->add_tag('ARTIST', $artist);
+            $tag_record->add_tag('ALBUM', $album);
+            $tag_record->add_tag('COMMENT', $comment);
+            $tag_record->add_tag('DATE', $year);
+            $tag_record->add_tag('GENRE', $genre);
         }
     }
+
+
+    my $frameIDs_hash = {};
+
+    if (exists $mp3->{ID3v2})
+    {
+        $frameIDs_hash = $mp3->{ID3v2}->get_frame_ids('truename');
+        my $valstr = '';
+
+        foreach my $frame (keys %$frameIDs_hash)
+        {
+            #print ">>> $frame:\n";
+            next if $frame eq 'GEOB';
+            next if $frame eq 'PRIV';
+            next if $frame eq 'APIC';
+            next if $frame eq 'NCON';
+            my ($info_item, $name, @rest) = $mp3->{ID3v2}->get_frame($frame);
+            next unless defined($name); # Unrecognized format
+            #print "<<<<GOT AN ARRAY>>>\n" if scalar @rest;
+            my @tagvalues = ();
+            for my $info ($info_item, @rest)
+            {
+                if (ref $info)
+                {
+                    #print "$name ($frame):\n";
+                    my @vals = ();
+                    while(my ($key,$val)=each %$info)
+                    {
+                        #print " * $key => $val\n";
+                        push(@vals, $val);
+                    }
+                    $valstr = join($self->{VISIBLE_SEPARATOR}, @vals);
+                }
+                else
+                {
+                    #print "$name: $info\n";
+                    $valstr = $info;
+                }
+
+                push(@tagvalues, $valstr);
+            }
+            if (scalar(@tagvalues) > 1)
+            {
+                print "<<< Got an array for file $filename, frame $frame\n";
+            }
+            $tag_record->add_tag($frame, scalar @tagvalues == 1 ? \@tagvalues : $tagvalues[0]);
+        }
+    }
+
+    $frameIDs_hash->{'TIT2'} = $title   if ($title   && !exists($frameIDs_hash->{'TIT2'}));
+    $frameIDs_hash->{'TPE1'} = $artist  if ($artist  && !exists($frameIDs_hash->{'TPE1'}));
+    $frameIDs_hash->{'TALB'} = $album   if ($album   && !exists($frameIDs_hash->{'TALB'}));
+    $frameIDs_hash->{'TYER'} = $year    if ($year    && !exists($frameIDs_hash->{'TYER'}));
+    $frameIDs_hash->{'COMM'} = $comment if ($comment && !exists($frameIDs_hash->{'COMM'}));
+    $frameIDs_hash->{'TRCK'} = $track   if ($track   && !exists($frameIDs_hash->{'TRCK'}));
+    $frameIDs_hash->{'TCON'} = $genre   if ($genre   && !exists($frameIDs_hash->{'TCON'}));
+
 
     return $retval;
 }

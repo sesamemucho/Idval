@@ -325,8 +325,8 @@ sub get_frame {
 #   the encryption method byte. These additions affects the 'frame size'
 #   field, but are not subject to encryption or compression.
     if ($frame->{flags}->{groupid}) {
-	$frame->{gid} = substring $result, 0, 1;
-	$result = substring $result, 1;
+	$frame->{gid} = substr($result, 0, 1);
+	$result = substr($result, 1);
     }
 
     if ($frame->{flags}->{compression}) {

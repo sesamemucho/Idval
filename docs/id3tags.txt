@@ -26,16 +26,44 @@ By spec, and by available tools
 
 * mp3 tags (id3v1, id3v2)
 
-** Files may (shall?) have both
-*** Unless only v1 writer is available
+Looks like I will use MP3::Tag and friends. This supports v1 and v2 tags.
 
-** Source files may have either, both, or none
+** Internal
 
-If changed (by update), both types will be written
+V1 tags will have standard v1 names. V2 tags will have standard v2
+names. This allows for the (perverse) possiblity of having different
+values for the shared tags. Different values for GENRE and TCON are,
+of course, licit.
 
-It looks like the tag writers that write both kinds will automatically
-write id3v2 tags for the id3v1 tags (for instance, setting year=2001
-will also set TYER=2001.
+** Tag reading
+
+*** v1 and v2 handling
+
+If the config 'meld_tags' is not set, make tag record strictly from
+what is found in file.
+
+If it is set, then, if a v1 tag is found but not a v2, create v2 from
+v1, and vice versa. If both tags are found, set each from file.
+
+*** Ignore v2 tags that we can't handle.
+
+** Tag writing
+
+*** v1 and v2 handling
+
+As in "Tag reading", above.
+
+
+# ** Files may (shall?) have both
+# *** Unless only v1 writer is available
+
+# ** Source files may have either, both, or none
+
+# If changed (by update), both types will be written
+
+# It looks like the tag writers that write both kinds will automatically
+# write id3v2 tags for the id3v1 tags (for instance, setting year=2001
+# will also set TYER=2001.
 
 
 
