@@ -91,27 +91,20 @@ sub read_tags
     my $filename = $tag_record->get_value('FILE');
 
     my $mp3 = MP3::Tag->new($filename);
+    $mp3->get_tags();
     my ($title, $track, $artist, $album, $comment, $year, $genre);
 
-    if ($self->{MELD_MP3_TAGS})
+    if (exists $mp3->{ID3v1})
     {
-        ($title, $track, $artist, $album, $comment, $year, $genre) = $mp3->autoinfo();
+        ($title, $artist, $album, $year, $comment, $track, $genre) = $mp3->{ID3v1}->all;
+        $tag_record->add_tag('TITLE', $title);
+        $tag_record->add_tag('TRACKNUMBER', $track);
+        $tag_record->add_tag('ARTIST', $artist);
+        $tag_record->add_tag('ALBUM', $album);
+        $tag_record->add_tag('COMMENT', $comment);
+        $tag_record->add_tag('DATE', $year);
+        $tag_record->add_tag('GENRE', $genre);
     }
-    else
-    {
-        if (exists $mp3->{ID3v1})
-        {
-            ($title, $artist, $album, $year, $comment, $track, $genre) = $mp3->{ID3v1}->all;
-            $tag_record->add_tag('TITLE', $title);
-            $tag_record->add_tag('TRACKNUMBER', $track);
-            $tag_record->add_tag('ARTIST', $artist);
-            $tag_record->add_tag('ALBUM', $album);
-            $tag_record->add_tag('COMMENT', $comment);
-            $tag_record->add_tag('DATE', $year);
-            $tag_record->add_tag('GENRE', $genre);
-        }
-    }
-
 
     my $frameIDs_hash = {};
 
@@ -123,53 +116,70 @@ sub read_tags
         foreach my $frame (keys %$frameIDs_hash)
         {
             #print ">>> $frame:\n";
-            next if $frame eq 'GEOB';
-            next if $frame eq 'PRIV';
-            next if $frame eq 'APIC';
-            next if $frame eq 'NCON';
-            my ($info_item, $name, @rest) = $mp3->{ID3v2}->get_frame($frame);
-            next unless defined($name); # Unrecognized format
-            #print "<<<<GOT AN ARRAY>>>\n" if scalar @rest;
             my @tagvalues = ();
-            for my $info ($info_item, @rest)
+            if ($frame eq 'GEOB' or
+                $frame eq 'PRIV' or
+                $frame eq 'APIC' or
+                $frame eq 'NCON')
             {
-                if (ref $info)
+                $tagvalues[0] = '%placeholder%';
+            }
+            else
+            {
+                #my ($info_item, $name, @rest) = $mp3->{ID3v2}->get_frame($frame);
+                my ($info_item, $name, @rest) = $mp3->{ID3v2}->get_frame($frame, 'array_nokey');
+                 #print "<<<<GOT AN ARRAY>>>\n" if scalar @rest;
+                if (!defined($name))
                 {
-                    #print "$name ($frame):\n";
-                    my @vals = ();
-                    while(my ($key,$val)=each %$info)
-                    {
-                        #print " * $key => $val\n";
-                        push(@vals, $val);
-                    }
-                    $valstr = join($self->{VISIBLE_SEPARATOR}, @vals);
+                    $tagvalues[0] = '%placeholder%';
                 }
                 else
                 {
-                    #print "$name: $info\n";
-                    $valstr = $info;
+                    for my $info ($info_item, @rest)
+                    {
+                        if (ref $info)
+                        {
+                            $valstr = join($self->{VISIBLE_SEPARATOR}, @{$info});
+#                             #print "$name ($frame):\n";
+#                             my @vals = ();
+#                             while(my ($key,$val)=each %$info)
+#                             {
+#                                 #print " * $key => $val\n";
+#                                 push(@vals, $val);
+#                             }
+#                             $valstr = join($self->{VISIBLE_SEPARATOR}, @vals);
+                        }
+                        else
+                        {
+                            #print "$name: $info\n";
+                            $valstr = $info;
+                        }
+                        
+                        push(@tagvalues, $valstr);
+                    }
                 }
+            }
 
-                push(@tagvalues, $valstr);
-            }
-            if (scalar(@tagvalues) > 1)
-            {
-                print "<<< Got an array for file $filename, frame $frame\n";
-            }
+#             if (scalar(@tagvalues) > 1)
+#             {
+#                 print "<<< Got an array for file $filename, frame $frame\n";
+#             }
             $tag_record->add_tag($frame, scalar @tagvalues == 1 ? \@tagvalues : $tagvalues[0]);
         }
     }
 
-    $frameIDs_hash->{'TIT2'} = $title   if ($title   && !exists($frameIDs_hash->{'TIT2'}));
-    $frameIDs_hash->{'TPE1'} = $artist  if ($artist  && !exists($frameIDs_hash->{'TPE1'}));
-    $frameIDs_hash->{'TALB'} = $album   if ($album   && !exists($frameIDs_hash->{'TALB'}));
-    $frameIDs_hash->{'TYER'} = $year    if ($year    && !exists($frameIDs_hash->{'TYER'}));
-    $frameIDs_hash->{'COMM'} = $comment if ($comment && !exists($frameIDs_hash->{'COMM'}));
-    $frameIDs_hash->{'TRCK'} = $track   if ($track   && !exists($frameIDs_hash->{'TRCK'}));
-    $frameIDs_hash->{'TCON'} = $genre   if ($genre   && !exists($frameIDs_hash->{'TCON'}));
-
-
     return $retval;
+}
+
+sub write_tags
+{
+    my $self = shift;
+    my $tag_record = shift;
+
+    return 0 if !$self->query('is_ok');
+
+    my $filename = $tag_record->get_name();
+
 }
 
 1;

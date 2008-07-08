@@ -1,4 +1,4 @@
-Make Taggers use endpoints. The converters should make more use of
-them. For instance, there should be only one FLAC encoder/decoder,
-that should be specified with three sets of endpoints (WAV:FLAC,
-OGG:FLAC, FLAG:WAV).
+Done: Make Taggers use endpoints. The converters should make more use of
+      them. For instance, there should be only one FLAC encoder/decoder,
+      that should be specified with three sets of endpoints (WAV:FLAC,
+      OGG:FLAC, FLAG:WAV).
