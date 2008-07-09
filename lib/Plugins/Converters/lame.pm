@@ -54,6 +54,8 @@ sub init
 
     $self->find_and_set_exe_path('lame');
 
+    $self->{PROVIDERS} = Idval::Common::get_common_object('providers');
+
     return;
 }
 
@@ -107,25 +109,42 @@ sub encode
 
     return 0 if !$self->query('is_ok');
 
+    if (!exists($self->{WRITER}))
+    {
+        $self->{WRITER} = $self->{PROVIDERS}->get_provider('writes_tags', 'MP3', 'NULL');
+    }
+
     $dest = Idval::Common::mung_path($dest);
     $src = Idval::Common::mung_path($src);
 
     my $path = $self->query('path') . " ";
     #print STDERR "LAME: $path --output=$dest $src\n";
+#     my $status = Idval::Common::run($path,
+#                                     Idval::Common::mkarglist(
+#                                         "--quiet",
+#                                         "--add-id3v2",
+#                                         "--ignore-tag-errors",
+#                                         $tag_record->get_value_as_arg('--tt ', 'TITLE'),
+#                                         $tag_record->get_value_as_arg('--ta ', 'ARTIST'),
+#                                         $tag_record->get_value_as_arg('--tl ', 'ALBUM'),
+#                                         $tag_record->get_value_as_arg('--ty ', 'YEAR'),
+#                                         $tag_record->get_value_as_arg('--tc ', 'COMMENT'),
+#                                         $tag_record->get_value_as_arg('--tn ', 'TRACK'),
+#                                         $tag_record->get_value_as_arg('--tg ', 'GENRE'),
+#                                         $src,
+#                                         $dest));
+
     my $status = Idval::Common::run($path,
                                     Idval::Common::mkarglist(
                                         "--quiet",
-                                        "--add-id3v2",
-                                        "--ignore-tag-errors",
-                                        $tag_record->get_value_as_arg('--tt ', 'TITLE'),
-                                        $tag_record->get_value_as_arg('--ta ', 'ARTIST'),
-                                        $tag_record->get_value_as_arg('--tl ', 'ALBUM'),
-                                        $tag_record->get_value_as_arg('--ty ', 'DATE'),
-                                        $tag_record->get_value_as_arg('--tc ', 'COMMENT'),
-                                        $tag_record->get_value_as_arg('--tn ', 'TRACKNUMBER'),
-                                        $tag_record->get_value_as_arg('--tg ', 'GENRE'),
                                         $src,
                                         $dest));
+
+
+    if ($status == 0)
+    {
+        $status = $self->{WRITER}->writes_tags($tag_record);
+    }
 
     return $status;
 }
