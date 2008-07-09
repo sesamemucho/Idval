@@ -111,6 +111,17 @@ sub add_tag
     my $value = shift;
 
     #$self->{TEMP}->{$name} = $value;
+    if (ref $value eq 'ARRAY')
+    {
+        foreach my $item (@$value)
+        {
+            # Remove blank lines (for parsing)
+            $item =~ s/(\r\n|\n|\r)\s*(?:\r\n|\n|\r)*/$1/g;
+            # indent for later parsing
+            $item =~ s/([\r\n]+)(?!$)/$1  /g;
+        }
+    }
+
     $self->{$name} = defined($value) ? $value : '';
 
     return;

@@ -23,6 +23,7 @@ use warnings;
 no  warnings qw(redefine);
 use Class::ISA;
 use Carp;
+use Data::Dumper;
 
 use base qw(Idval::Plugin);
 
@@ -44,6 +45,7 @@ my $name = 'MP3_Tag';
 my $type = 'MP3';
 
 Idval::Common::register_provider({provides=>'reads_tags', name=>$name, type=>$type, weight=>50});
+Idval::Common::register_provider({provides=>'writes_tags', name=>$name, type=>$type, weight=>50});
 
 sub new
 {
@@ -98,11 +100,11 @@ sub read_tags
     {
         ($title, $artist, $album, $year, $comment, $track, $genre) = $mp3->{ID3v1}->all;
         $tag_record->add_tag('TITLE', $title);
-        $tag_record->add_tag('TRACKNUMBER', $track);
+        $tag_record->add_tag('TRACK', $track);
         $tag_record->add_tag('ARTIST', $artist);
         $tag_record->add_tag('ALBUM', $album);
         $tag_record->add_tag('COMMENT', $comment);
-        $tag_record->add_tag('DATE', $year);
+        $tag_record->add_tag('YEAR', $year);
         $tag_record->add_tag('GENRE', $genre);
     }
 
@@ -178,8 +180,92 @@ sub write_tags
 
     return 0 if !$self->query('is_ok');
 
+    my $vs = $self->{VISIBLE_SEPARATOR};
     my $filename = $tag_record->get_name();
 
+    my $temp_rec = Idval::Record->new({Record=>$tag_record});
+
+    my $mp3 = MP3::Tag->new($filename);
+    $mp3->get_tags();
+
+    my $has_id3v1 = 0;
+    my %id3v1_tags;
+
+    print "MP3_Tag, processing \"$filename\"\n";
+    foreach my $id3v1_key (qw(title track artist album comment year genre))
+    {
+        if ($temp_rec->key_exists(uc $id3v1_key))
+        {
+            $has_id3v1++;
+            $id3v1_tags{$id3v1_key} = $temp_rec->shift_value(uc $id3v1_key);
+        }
+    }
+
+    if ($has_id3v1)
+    {
+        my $id3v1 = exists($mp3->{ID3v1}) ? $mp3->{ID3v1} : $mp3->new_tag("ID3v1");
+        foreach my $id3v1_key (keys %id3v1_tags)
+        {
+            $id3v1->artist( exists($id3v1_tags{$id3v1_key}) ? $id3v1_tags{$id3v1_key} : '') if $id3v1_key eq 'artist';
+            $id3v1->album(  exists($id3v1_tags{$id3v1_key}) ? $id3v1_tags{$id3v1_key} : '') if $id3v1_key eq 'album';
+            $id3v1->comment(exists($id3v1_tags{$id3v1_key}) ? $id3v1_tags{$id3v1_key} : '') if $id3v1_key eq 'comment';
+            $id3v1->genre(  exists($id3v1_tags{$id3v1_key}) ? $id3v1_tags{$id3v1_key} : '') if $id3v1_key eq 'genre';
+            $id3v1->title(  exists($id3v1_tags{$id3v1_key}) ? $id3v1_tags{$id3v1_key} : '') if $id3v1_key eq 'title';
+            $id3v1->track(  exists($id3v1_tags{$id3v1_key}) ? $id3v1_tags{$id3v1_key} : '') if $id3v1_key eq 'track';
+            $id3v1->year(   exists($id3v1_tags{$id3v1_key}) ? $id3v1_tags{$id3v1_key} : '') if $id3v1_key eq 'year';
+        }
+
+        $id3v1->write_tag();
+    }
+
+    my $id3v2 = exists($mp3->{ID3v2}) ? $mp3->{ID3v2} : $mp3->new_tag("ID3v2");
+
+    # Gather up the names of all the ID3v2 fields
+    my $frameIDs = $id3v2->get_frame_ids('truename');
+    my $tagvalue;
+    my @frameargs;
+
+    foreach my $tagname ($temp_rec->get_all_keys())
+    {
+        print "Checking \"$tagname\"\n";
+        # Does it already exist in the file?
+        if (exists($frameIDs->{$tagname}))
+        {
+            print "Tag $tagname exists in file\n";
+            while ($tagvalue = $temp_rec->shift_value($tagname))
+            {
+                next if $tagvalue eq '%placeholder%'; # Don't know how to handle; leave it be
+                @frameargs = ($tagvalue =~ m/\Q$vs\E/) ? split(/\Q$vs\E/, $tagvalue) : ($tagvalue);
+                print "Calling change_frame for $tagname with ", Dumper(\@frameargs);
+                $id3v2->change_frame($tagname, @frameargs);
+            }
+            next;
+        }
+        # Is it a known ID3v2 tag?
+        if (defined ($id3v2->add_frame($tagname)))
+        {
+            # Okey-dokey, back up and push
+            $id3v2->delete_frame($tagname);
+        }
+        else
+        {
+            next;
+        }
+
+        while ($tagvalue = $temp_rec->shift_value($tagname))
+        {
+            @frameargs = ($tagvalue =~ m/\Q$vs\E/) ? split(/\Q$vs\E/, $tagvalue) : ($tagvalue);
+            print "Calling add_frame for $tagname with ", Dumper(\@frameargs);
+            $id3v2->add_frame($tagname, @frameargs);
+        }
+    }
+
+    $id3v2->write_tag();
+    # Now, we should be left with all the tags that weren't ID3v1 or ID3v2
+
+    print "Tags left: ", join(":", $temp_rec->format_record()), "\n";
+
+    return 0;
 }
 
 1;

@@ -64,7 +64,8 @@ sub init
     $self->set_param('classtype_map', {'MUSIC' => [qw( MP3 )]});
 
     $self->set_param('path', "(Perl module}");
-    $self->set_param('is_ok', $req_msg eq "Load OK");
+    #$self->set_param('is_ok', $req_msg eq "Load OK");
+    $self->set_param('is_ok', 0);
     if ($req_msg eq "No such file or directory")
     {
         $req_msg = "Perl module MPEG::ID3v2Tag not found";

@@ -53,7 +53,12 @@ sub read ## no critic (ProhibitBuiltinHomonyms)
         Idval::Ui::get_source_from_file($inputfile, $config->get_single_value('data_store',
                                                                               {'config_group' => 'idval_settings'}));};
 
-    croak($@) if $@;
+    print "Got back from eval, ret is \"$@\"\n";
+    if ($@)
+    {
+        $@ =~ s/\r//g;
+        croak("Got error from Idval::Ui::get_source_from_file: ", $@, "\n") if $@;
+    }
 
     Idval::Common::register_common_object('data', $datastore);
 
