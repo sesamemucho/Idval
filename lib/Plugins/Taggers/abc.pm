@@ -34,6 +34,20 @@ my $type = 'ABC';
 Idval::Common::register_provider({provides=>'reads_tags', name=>$name, type=>$type});
 Idval::Common::register_provider({provides=>'writes_tags', name=>$name, type=>$type});
 
+my %abc2idv = (
+    T => 'TITLE',
+    C => 'TCOM',
+    D => 'TALB',
+    A => 'TEXT',
+    K => 'TKEY',
+    Z => 'TENC',
+    X => 'TRACK',
+    'abc-copyright' => 'TCOP',
+    );
+
+# And a reverse-lookup table
+my %idv2abc = map { $abc2idv{$_} => $_ } keys %abc2idv;
+
 sub new
 {
     my $class = shift;
@@ -79,9 +93,9 @@ sub read_tags
         my @tag_value_list = @{$tags->{$key}};
         $taginfo = scalar(@tag_value_list) == 1 ? $tag_value_list[0] : \@tag_value_list;
 
-        if ($key eq 'T')
+        if (exists $abc2idv{$key})
         {
-            $tag_record->add_tag('TITLE', $taginfo);
+            $tag_record->add_tag($abc2idv{$key}, $taginfo);
         }
         else
         {
@@ -128,15 +142,16 @@ sub write_tags
 
   LOOP2:
     {
-        if ($text =~ m/\G([ABCDFGHIKLMmNOPQRrSTUVWXZ]):(.*?)([\r\n]+)/gsc)
+        if ($text =~ m/\G([ABCDFGHIKLMmNOPQRrSTUVWXZ]):(.*?)(\s*%.*?)?([\r\n]+)/gsc)
         {
             $field_id = $1;
             $field_value = $2;
-            $eol = $3;
+            my $field_comment = defined($3) ? $3 : '';
+            $eol = $4;
 
-            if ($field_id eq 'T')
+            if (exists $abc2idv{$field_id})
             {
-                $tag_value = $temp_rec->shift_value('TITLE');
+                $tag_value = $temp_rec->shift_value($abc2idv{$field_id});
             }
             else
             {
@@ -151,7 +166,7 @@ sub write_tags
                 
             if ($tag_value)
             {
-                $output .= $field_id . ':' . $tag_value . $eol;
+                $output .= $field_id . ':' . $tag_value . $field_comment . $eol;
             }
             redo LOOP2;
         }
@@ -200,22 +215,34 @@ sub write_tags
         }
     }
 
+    my $tagvalue;
+    my $abc_id;
     # Are there any new '%%*' tags to add?
     foreach my $tag_id ($temp_rec->get_all_keys())
     {
         print "temp: checking key \"$tag_id\"\n";
-        if ($tag_id =~ m/^[^-]+-/)
+        while ($tagvalue = $temp_rec->shift_value($tag_id))
         {
-            print "Got \"$tag_id\", setting ", $temp_rec->get_value($tag_id), "\n";
-            # Let's hope an eol has been defined. TODO - make sure
-            $output .= '%% ' . $tag_id . ' '. $temp_rec->get_value($tag_id) . $eol;
-        }
-        elsif ($tag_id =~ m/^../) # At least two chars and not an %%foo- tag
-            # means it should be an idv- tag.
-        {
-            print "Got idv tag \"$tag_id\", setting ", $temp_rec->get_value($tag_id), "\n";
-            # Let's hope an eol has been defined. TODO - make sure
-            $output .= '%% idv-' . lc $tag_id . ' '. $temp_rec->get_value($tag_id) . $eol;
+            # Do we have a special translation?
+            if (exists($idv2abc{$tag_id}))
+            {
+                $abc_id = $idv2abc{$tag_id};
+                print "Got translated tag \"$abc_id\", setting ", $temp_rec->get_value($tag_id), "\n";
+                $output .= $abc_id . (length($abc_id) eq 1) ? ':' : '' . ' '. $temp_rec->get_value($tag_id) . $eol;
+            }
+            elsif ($tag_id =~ m/^[^-]+-/)
+            {
+                print "Got \"$tag_id\", setting ", $temp_rec->get_value($tag_id), "\n";
+                # Let's hope an eol has been defined. TODO - make sure
+                $output .= '%% ' . $tag_id . ' '. $temp_rec->get_value($tag_id) . $eol;
+            }
+            elsif ($tag_id =~ m/^../) # At least two chars and not an %%foo- tag
+                # means it should be an idv- tag.
+            {
+                print "Got idv tag \"$tag_id\", setting ", $temp_rec->get_value($tag_id), "\n";
+                # Let's hope an eol has been defined. TODO - make sure
+                $output .= '%% idv-' . lc $tag_id . ' '. $temp_rec->get_value($tag_id) . $eol;
+            }
         }
     }
 
@@ -279,15 +306,18 @@ sub parse_file
 #     }
   LOOP2:
     {
-        if ($text =~ m/\G^([ABCDFGHIKLMmNOPQRrSTUVWXZ]):(.*)$/gmc)
+        if ($text =~ m/\G^([ABCDFGHIKLMmNOPQRrSTUVWXZ]):(.*?)(\s*%.*?)?$/gmc)
         {
             my $fieldid = $1;
             my $tagvalue = $2;
-            {
-                my $text1 = $tagvalue;
-                $text1 =~ s/\r//g;
-                #print "Parsing: Field $fieldid, text <$text1>\n";
-            }
+#             if($fieldid eq 'M')
+#             {
+#                 my $text1 = defined($3) ? $3 : 'undef';
+#                 my $text2 = $tagvalue;
+#                 $text1 =~ s/\r//g;
+#                 $text2 =~ s/\r//g;
+#                 print "Parsing: Field $fieldid, tagvalue <$text2>, comment <$text1>\n";
+#             }
             push(@{$tags{$fieldid}}, $tagvalue);
             redo LOOP2;
         }
@@ -300,7 +330,7 @@ sub parse_file
             {
                 my $text1 = $tagvalue;
                 $text1 =~ s/\r//g;
-                print "Parsing: idv Field $fieldid, text <$text1>\n";
+                print "Parsing: idv Field \"$fieldid\", text <$text1>\n";
             }
             push(@{$tags{$fieldid}}, $tagvalue);
             redo LOOP2;
@@ -313,7 +343,7 @@ sub parse_file
             {
                 my $text1 = $tagvalue;
                 $text1 =~ s/\r//g;
-                print "Parsing: other Field $fieldid, text <$text1>\n";
+                print "Parsing: other Field \"$fieldid\", text <$text1>\n";
             }
             push(@{$tags{$fieldid}}, $tagvalue);
             redo LOOP2;
@@ -364,7 +394,6 @@ sub create_records
             $srclist->add($rec);
         };
     }
-
 
     return;
 }

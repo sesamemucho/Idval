@@ -93,6 +93,7 @@ sub read_tags
     my $filename = $tag_record->get_value('FILE');
 
     my $mp3 = MP3::Tag->new($filename);
+
     $mp3->get_tags();
     my ($title, $track, $artist, $album, $comment, $year, $genre);
 
@@ -112,6 +113,11 @@ sub read_tags
 
     if (exists $mp3->{ID3v2})
     {
+        if (!exists($self->{SUPPORTED_TAGS}))
+        {
+            $self->{SUPPORTED_TAGS} = $mp3->{ID3v2}->supported_frames();
+        }
+
         $frameIDs_hash = $mp3->{ID3v2}->get_frame_ids('truename');
         my $valstr = '';
 
@@ -119,29 +125,56 @@ sub read_tags
         {
             #print ">>> $frame:\n";
             my @tagvalues = ();
-            if ($frame eq 'GEOB' or
-                $frame eq 'PRIV' or
-                $frame eq 'APIC' or
-                $frame eq 'NCON')
-            {
-                $tagvalues[0] = '%placeholder%';
-            }
-            else
+#             if ($frame eq 'GEOB' or
+#                 $frame eq 'PRIV' or
+#                 $frame eq 'APIC' or
+#                 $frame eq 'NCON')
+#             {
+#                 print "Got a \"$frame\" tag\n";
+#                 $tagvalues[0] = '%placeholder%';
+#             }
+#             else
             {
                 #my ($info_item, $name, @rest) = $mp3->{ID3v2}->get_frame($frame);
                 my ($info_item, $name, @rest) = $mp3->{ID3v2}->get_frame($frame, 'array_nokey');
-                 #print "<<<<GOT AN ARRAY>>>\n" if scalar @rest;
+                #print "<<<<GOT AN ARRAY>>>\n" if scalar @rest;
+                print "Frame $frame, info_item: ", Dumper($info_item);
+                print "Frame $frame, rest: ", Dumper(\@rest);
                 if (!defined($name))
                 {
                     $tagvalues[0] = '%placeholder%';
                 }
+#                 elsif ($frame eq 'GEOB' or
+#                        $frame eq 'PRIV' or
+#                        $frame eq 'APIC' or
+#                        $frame eq 'NCON')
+#                 {
+#                      $tagvalues[0] = '%placeholder%';
+#                 }
                 else
                 {
                     for my $info ($info_item, @rest)
                     {
                         if (ref $info)
                         {
-                            $valstr = join($self->{VISIBLE_SEPARATOR}, @{$info});
+                            if ($$info[1] =~ m/^idv-(.*)/)
+                            {
+                                # This was a tag that was wrapped into a TXXX tag.
+                                # Unwrap it here and store it in the record.
+                                $tag_record->add_tag($1, $$info[2]);
+                                next;
+                            }
+                            elsif ($frame eq 'GEOB' or
+                                   $frame eq 'PRIV' or
+                                   $frame eq 'APIC' or
+                                   $frame eq 'NCON')
+                            {
+                                $valstr = '%placeholder%';
+                            }
+                            else
+                            {
+                                $valstr = join($self->{VISIBLE_SEPARATOR}, @{$info});
+                            }
 #                             #print "$name ($frame):\n";
 #                             my @vals = ();
 #                             while(my ($key,$val)=each %$info)
@@ -157,6 +190,9 @@ sub read_tags
                             $valstr = $info;
                         }
                         
+                        my $text1;
+                        ($text1 = $valstr) =~ s/\r/CR/g;
+                        print "Frame $frame, valstr: \"$valstr\"\n";
                         push(@tagvalues, $valstr);
                     }
                 }
@@ -166,7 +202,7 @@ sub read_tags
 #             {
 #                 print "<<< Got an array for file $filename, frame $frame\n";
 #             }
-            $tag_record->add_tag($frame, scalar @tagvalues == 1 ? \@tagvalues : $tagvalues[0]);
+            $tag_record->add_tag($frame, scalar @tagvalues == 1 ? $tagvalues[0] : \@tagvalues);
         }
     }
 
@@ -220,45 +256,116 @@ sub write_tags
 
     my $id3v2 = exists($mp3->{ID3v2}) ? $mp3->{ID3v2} : $mp3->new_tag("ID3v2");
 
+    if (!exists($self->{SUPPORTED_TAGS}))
+    {
+        $self->{SUPPORTED_TAGS} = $id3v2->supported_frames();
+    }
+
     # Gather up the names of all the ID3v2 fields
-    my $frameIDs = $id3v2->get_frame_ids('truename');
+    my $frameIDs = $id3v2->get_frame_ids();
     my $tagvalue;
     my @frameargs;
+    my $tag_index;
+    my $txxx_index = -1;
+    my $framename;
+    print "ID3v2:", Dumper($id3v2);
 
+  TAG_LOOP:
     foreach my $tagname ($temp_rec->get_all_keys())
     {
         print "Checking \"$tagname\"\n";
-        # Does it already exist in the file?
-        if (exists($frameIDs->{$tagname}))
-        {
-            print "Tag $tagname exists in file\n";
-            while ($tagvalue = $temp_rec->shift_value($tagname))
-            {
-                next if $tagvalue eq '%placeholder%'; # Don't know how to handle; leave it be
-                @frameargs = ($tagvalue =~ m/\Q$vs\E/) ? split(/\Q$vs\E/, $tagvalue) : ($tagvalue);
-                print "Calling change_frame for $tagname with ", Dumper(\@frameargs);
-                $id3v2->change_frame($tagname, @frameargs);
-            }
-            next;
-        }
-        # Is it a known ID3v2 tag?
-        if (defined ($id3v2->add_frame($tagname)))
-        {
-            # Okey-dokey, back up and push
-            $id3v2->delete_frame($tagname);
-        }
-        else
-        {
-            next;
-        }
-
+        $tag_index = -1;
         while ($tagvalue = $temp_rec->shift_value($tagname))
         {
-            @frameargs = ($tagvalue =~ m/\Q$vs\E/) ? split(/\Q$vs\E/, $tagvalue) : ($tagvalue);
-            print "Calling add_frame for $tagname with ", Dumper(\@frameargs);
-            $id3v2->add_frame($tagname, @frameargs);
+            $tag_index++;
+            $framename = $tag_index > 0 ? sprintf("%s%02d", $tagname, $tag_index) : $tagname;
+
+            print "Tag name is \"$tagname\"\n";
+            if($tagvalue eq '%placeholder%') # Don't know how to handle; leave it be
+            {
+                delete $frameIDs->{$framename};
+                next;
+            }
+            
+            # Is the tag name a supported ID3v2 tag?
+            if (exists($self->{SUPPORTED_TAGS}->{$tagname}))
+            {
+                if ($tagname eq 'TXXX')
+                {
+                    $txxx_index++;
+                    $framename = $txxx_index > 0 ? sprintf("TXXX%02d", $txxx_index) : 'TXXX';
+                }
+
+                @frameargs = ($tagvalue =~ m/\Q$vs\E/) ? split(/\Q$vs\E/, $tagvalue) : ($tagvalue);
+                print "Args for $framename are ", Dumper(\@frameargs);
+            }
+            else
+            {
+                # Nope - let's make a special TXXX idv tag
+                $txxx_index++;
+                $framename = $txxx_index > 0 ? sprintf("TXXX%02d", $txxx_index) : 'TXXX';
+                @frameargs = (0, 'idv-' . $tagname, $tagvalue);
+                #$id3v2->change_frame($txxx_index ? sprintf("TXXX%02d", $txxx_index) : 'TXXX', 0, 'idv-' . $tagname, $tagvalue);
+            }
+
+
+            # Does it already exist in the file?
+            if (exists($frameIDs->{$framename}))
+            {
+                delete $frameIDs->{$framename};
+                print "Tag $framename exists in file\n";
+                $id3v2->change_frame($framename, @frameargs);
+            }
+            else
+            {
+                print "Tag $framename does not exist in file\n";
+                $id3v2->add_frame($framename, @frameargs);
+            }
         }
     }
+
+    # Handle the leftover tags (they were in the file, but not in the tag record, so they should be deleted)
+    foreach my $frameID (keys %{$frameIDs})
+    {
+        print "Removing $frameID\n";
+        $id3v2->remove_frame($frameID);
+    }
+
+#     foreach my $tagname ($temp_rec->get_all_keys())
+#     {
+#         print "Checking \"$tagname\"\n";
+#         # Does it already exist in the file?
+#         if (exists($frameIDs->{$tagname}))
+#         {
+#             print "Tag $tagname exists in file\n";
+#             while ($tagvalue = $temp_rec->shift_value($tagname))
+#             {
+#                 next if $tagvalue eq '%placeholder%'; # Don't know how to handle; leave it be
+#                 @frameargs = ($tagvalue =~ m/\Q$vs\E/) ? split(/\Q$vs\E/, $tagvalue) : ($tagvalue);
+#                 print "Calling change_frame for $tagname with ", Dumper(\@frameargs);
+#                 $id3v2->change_frame($tagname, @frameargs);
+#             }
+#             next;
+#         }
+#         # Is it a known ID3v2 tag?
+#         # Currently, the only way I can tell is to try and create it.
+#         if (defined ($id3v2->add_frame($tagname)))
+#         {
+#             # Okey-dokey, back up and push
+#             $id3v2->delete_frame($tagname);
+#         }
+#         else
+#         {
+#             next;
+#         }
+
+#         while ($tagvalue = $temp_rec->shift_value($tagname))
+#         {
+#             @frameargs = ($tagvalue =~ m/\Q$vs\E/) ? split(/\Q$vs\E/, $tagvalue) : ($tagvalue);
+#             print "Calling add_frame for $tagname with ", Dumper(\@frameargs);
+#             $id3v2->add_frame($tagname, @frameargs);
+#         }
+#     }
 
     $id3v2->write_tag();
     # Now, we should be left with all the tags that weren't ID3v1 or ID3v2
