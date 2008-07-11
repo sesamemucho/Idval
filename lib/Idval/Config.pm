@@ -36,8 +36,10 @@ use Idval::FileIO;
 use constant STRICT_MATCH => 0;
 use constant LOOSE_MATCH  => 1;
 
-our $DEBUG = 0;
-our $USE_LOGGER = 1;
+#our $DEBUG = 0;
+our $DEBUG = 1;
+#our $USE_LOGGER = 1;
+our $USE_LOGGER = 0;
 
 if ($USE_LOGGER)
 {
@@ -290,6 +292,7 @@ sub visit
     my $top = shift;
     my $subr = shift;
 
+    confess "top is undefined?" unless defined $top;
     chatty("visiting ", $top->myname(), "\n");
     my $retval = &$subr($top);
 
@@ -330,7 +333,12 @@ sub merge_blocks
 
     my $visitor = sub {
         my $node = shift;
-        return if $node->evaluate($selects) == 0;
+        # can't take this shortcut any more
+        # But we could maybe if evaluate returned
+        # 0 => no matches on any select
+        # 1 => a match on at least one select (allows descent)
+        # 2 => matches on all selects
+        #return if $node->evaluate($selects) == 0;
 
         foreach my $name (@{$node->get_assignment_data_names()})
         {
@@ -620,7 +628,7 @@ sub evaluate
         chatty ("Checking select key \"$key\" with a value of \"", Dumper($selectors{$key}), "\"\n") if $self->{DEBUG};
         if (!exists($self->{SELECT_DATA}->{$key}))
         {
-            next;
+            return 0;
         }
         else
         {

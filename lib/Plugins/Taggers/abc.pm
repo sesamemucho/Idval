@@ -74,6 +74,11 @@ sub init
     my $config = Idval::Common::get_common_object('config');
     $self->{VISIBLE_SEPARATOR} = $config->get_single_value('visible_separator', {'config_group' => 'idval_settings'});
 
+    $self->{FWD_MAPPING} = $config->merge_blocks({'config_group' => 'tag_mappings',
+                                                  'type' => 'ABC'
+                                                 });
+
+    print "ABC: fwd mapping: ", Dumper($self->{FWD_MAPPING});
     return;
 }
 
