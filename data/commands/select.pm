@@ -105,7 +105,7 @@ sub select ## no critic (ProhibitBuiltinHomonyms)
 # =cut
 
 # EOD
-#     $help_file->{'select'} = $pod_input;
+#    $help_file->man_info('select', $pod_input);
 # }
 
 1;

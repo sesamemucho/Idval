@@ -16,7 +16,7 @@ Idval::ServiceLocator::provide('io_type', 'FileString');
 my $tree1 = {'testdir' => {}};
 Idval::FileString::idv_set_tree($tree1);
 
-my $scenario = 5;
+my $scenario = 8;
 
 if ($scenario == 1)
 {
@@ -50,6 +50,7 @@ my $obj = Idval::Config->new('/testdir/gt1.txt', 0, 1);
 
 my $vars = $obj->merge_blocks({'config_group' => 'idval_settings'});
 
+# Should be just 'plugin_dir through 'visible_separator'
 print "result of merge blocks with \{'config_group' => 'idval_settings'\}: ", Dumper($vars);
 }
 
@@ -61,7 +62,7 @@ if ($scenario == 2)
 
     my $val = $obj->get_value('gubber', {'type' => 'boo'});
 
-    print "val is: \"$val\"\n";
+    print "val is: \"$val\"\n"; # should be 'bouncy'
 }
 
 if ($scenario == 3)
@@ -70,7 +71,7 @@ if ($scenario == 3)
                                     "{\ntype == foo\nmarley == tuff\ngubber = pachoo wachoo\n}\n{\ntype == boo\nmarley == tuff\ngubber = bouncy}\n");
     my $obj = Idval::Config->new('/testdir/gt1.txt', 1, 1);
     my $val = $obj->get_value('gubber', {'type' => 'foo', 'marley' => 'tuff'});
-    print "Result for \{'type' => 'foo', 'marley' => 'tuff'\}: ", Dumper($val);
+    print "Result for \{'type' => 'foo', 'marley' => 'tuff'\}: ", Dumper($val); # Should be 'pachoo wachoo'
 }
 
 if ($scenario == 4)
@@ -83,7 +84,7 @@ if ($scenario == 4)
                               {'type' => ['awfu', 'big', 'foo']},
                               'scooby doo');
 
-    print "Result for : {'type' => ['awfu', 'big', 'foo']}", Dumper($val);
+    print "Result for : {'type' => ['awfu', 'big', 'foo']}", Dumper($val); #  Should be 'pachoo wachoo'
     
 }
 
@@ -132,6 +133,8 @@ my $cfg_file =<<EOF;
 {
     config_group == tag_mappings
 
+    # Always have this
+    GUBBER = HUBBER
 
     {
         type == ABC
@@ -158,10 +161,193 @@ EOF
 Idval::FileString::idv_add_file('/testdir/gt1.txt', $cfg_file);
 my $obj = Idval::Config->new('/testdir/gt1.txt', 0, 1);
 
-print "new config: ", Dumper($obj);
+#print "new config: ", Dumper($obj);
 my $vars = $obj->merge_blocks({'config_group' => 'tag_mappings',
                                                   'type' => 'ABC'
                                                  });
 
+# Should be just 'T' through 'abc-copyright', plus GUBBER
 print "result of merge blocks with \{'config_group' => 'tag_mappings', 'type' => 'ABC'\}: ", Dumper($vars);
+}
+
+if ($scenario == 6)
+{
+my $cfg_file =<<EOF;
+{
+    # Set up default conversions (any MUSIC file should be converted to .mp3)
+    class        == MUSIC
+    convert      = MP3
+    {
+        type        == ABC
+        convert      = MIDI
+    }
+}
+
+{
+    config_group == tag_mappings
+
+    # Always have this
+    GUBBER = HUBBER
+
+    {
+        type == ABC
+
+        T = TITLE
+        C = TCOM
+        D = TALB
+        A = TEXT
+        K = TKEY
+        Z = TENC
+        X = TRACK
+        abc-copyright = TCOP
+    }
+
+    {
+        type == OGG
+
+        TRACKNUMBER = TRACK
+        DATE == YEAR
+    }
+
+}
+
+{
+    class == MUSIC
+    convert = OGG
+}
+
+EOF
+Idval::FileString::idv_add_file('/testdir/gt1.txt', $cfg_file);
+my $obj = Idval::Config->new('/testdir/gt1.txt', 0, 1);
+
+#print "new config: ", Dumper($obj);
+my $vars = $obj->merge_blocks({'class' => 'MUSIC',
+                               'type' => 'FLAC'
+                              });
+
+# Should be just 'T' through 'abc-copyright', plus GUBBER
+print "result of merge blocks with \{'class' => 'MUSIC', 'type' => 'FLAC'\}: ", Dumper($vars);
+}
+
+# Can we back-add inherited values?
+# Nope! This masking behavior allows overrides
+if ($scenario == 7)
+{
+my $cfg_file =<<EOF;
+{
+    # Set up default conversions (any MUSIC file should be converted to .mp3)
+    class        == MUSIC
+    convert      = MP3
+    {
+        type        == ABC
+        convert      = MIDI
+    }
+}
+
+{
+    config_group == tag_mappings
+
+    # Always have this
+    GUBBER = HUBBER
+
+    {
+        type == ABC
+
+        T = TITLE
+        C = TCOM
+        D = TALB
+        A = TEXT
+        K = TKEY
+        Z = TENC
+        X = TRACK
+        abc-copyright = TCOP
+    }
+
+    {
+        type == OGG
+
+        TRACKNUMBER = TRACK
+        DATE == YEAR
+    }
+
+}
+
+{
+    class == MUSIC
+    convert = OGG
+    fuffer = nutter
+}
+
+EOF
+Idval::FileString::idv_add_file('/testdir/gt1.txt', $cfg_file);
+my $obj = Idval::Config->new('/testdir/gt1.txt', 0, 1);
+
+#print "new config: ", Dumper($obj);
+my $vars = $obj->merge_blocks({'class' => 'MUSIC',
+                               'type' => 'ABC'
+                              });
+
+# Should be just 'T' through 'abc-copyright', plus GUBBER
+print "result of merge blocks with \{'class' => 'MUSIC', 'type' => 'ABC'\}: ", Dumper($vars);
+}
+
+# Can we back-add other values?
+# Yep!
+if ($scenario == 8)
+{
+my $cfg_file =<<EOF;
+{
+    # Set up default conversions (any MUSIC file should be converted to .mp3)
+    class        == MUSIC
+    convert      = MP3
+    {
+        type        == ABC
+        convert      = MIDI
+    }
+}
+
+{
+    config_group == tag_mappings
+
+    # Always have this
+    GUBBER = HUBBER
+
+    {
+        type == ABC
+
+        T = TITLE
+        C = TCOM
+        D = TALB
+        A = TEXT
+        K = TKEY
+        Z = TENC
+        X = TRACK
+        abc-copyright = TCOP
+    }
+
+    {
+        type == OGG
+
+        TRACKNUMBER = TRACK
+        DATE == YEAR
+    }
+
+}
+
+{
+    class == MUSIC
+    fuffer = nutter
+}
+
+EOF
+Idval::FileString::idv_add_file('/testdir/gt1.txt', $cfg_file);
+my $obj = Idval::Config->new('/testdir/gt1.txt', 0, 1);
+
+#print "new config: ", Dumper($obj);
+my $vars = $obj->merge_blocks({'class' => 'MUSIC',
+                               'type' => 'ABC'
+                              });
+
+# Should be just 'T' through 'abc-copyright', plus GUBBER
+print "result of merge blocks with \{'class' => 'MUSIC', 'type' => 'ABC'\}: ", Dumper($vars);
 }

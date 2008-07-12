@@ -93,7 +93,7 @@ data store.
 =cut
 
 EOD
-    $help_file->{'print'} = $pod_input;
+    $help_file->man_info('print', $pod_input);
 
     return;
 }

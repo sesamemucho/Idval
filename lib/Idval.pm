@@ -35,6 +35,7 @@ use Idval::NewFH;
 use Idval::FileIO;
 use Idval::Common;
 use Idval::Logger;
+use Idval::Help;
 
 my @standard_options;
 my %options;
@@ -144,9 +145,9 @@ sub _init
     Idval::Logger::initialize_logger(@logger_args);
     $log = Idval::Common::get_logger();
 
-    # Set up a common location for help files
-    my %help_info;
-    Idval::Common::register_common_object('help_file', \%help_info);
+    # Set up a common location for help info
+    my $help_info = Idval::Help->new();
+    Idval::Common::register_common_object('help_file', $help_info);
 
     $self->set_pod_input();
 

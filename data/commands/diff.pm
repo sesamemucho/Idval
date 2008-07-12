@@ -363,7 +363,7 @@ data store.
 =cut
 
 EOD
-    $help_file->{'diff'} = $pod_input;
+    $help_file->man_info('diff', $pod_input);
 
     return;
 }

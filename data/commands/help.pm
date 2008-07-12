@@ -65,23 +65,23 @@ sub help
         
         croak "Unrecognized command name \"$name\"\n" unless exists($cmd_abbrev->{$name});
         $cmd_name = $cmd_abbrev->{$name};
-        croak "No help information for command name \"$name\"\n" unless exists($help_file->{$cmd_name});
+        croak "No help information for command name \"$name\"\n" unless defined($help_file->man_info($cmd_name));
         $cmd = $providers->find_command($cmd_name);
     
         if ($verbose)
         {
-            silent_q(Idval::Help::get_full_description($cmd_name));
+            silent_q($help_file->get_full_description($cmd_name));
         }
         else
         {
-            silent_q(Idval::Help::get_synopsis($cmd_name));
+            silent_q($help_file->get_synopsis($cmd_name));
             silent_q("\nUse \"help -v $cmd_name\" for more information.\n");
         }
     }
     else
     {
         # Just a bare 'help' command => print help for the main program
-        silent_q(Idval::Help::get_full_description('main'));
+        silent_q($help_file->get_full_description('main'));
     }
 
     if ($cmd_name eq 'help')
@@ -90,8 +90,8 @@ sub help
        silent_q("\nAvailable commands:\n");
        my @cmd_list = $providers->find_all_commands();
        foreach my $cmd_name (@cmd_list) {
-           my $gsd = Idval::Help::get_short_description($cmd_name);
-           silent_q("  ", Idval::Help::get_short_description($cmd_name), "\n");
+           my $gsd = $help_file->get_short_description($cmd_name);
+           silent_q("  ", $help_file->get_short_description($cmd_name), "\n");
        }
     }
 
@@ -138,7 +138,7 @@ useful with the contents thereof.
 =cut
 
 EOD
-    $help_file->{'help'} = $pod_input;
+    $help_file->man_info('help', $pod_input);
 
     return;
 }

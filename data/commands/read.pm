@@ -99,7 +99,7 @@ current data store.
 =cut
 
 EOD
-    $help_file->{'read_data'} = $pod_input;
+    $help_file->man_info('read', $pod_input);
 
     return;
 }

@@ -534,7 +534,7 @@ useful with the contents thereof.
 =cut
 
 EOD
-    $help_file->{'sync'} = $pod_input;
+    $help_file->man_info('sync', $pod_input);
 
     return;
 }

@@ -101,7 +101,7 @@ unless a B<store> command is issued!
 =cut
 
 EOD
-    $help_file->{'store'} = $pod_input;
+    $help_file->man_info('store', $pod_input);
 
     return;
 }

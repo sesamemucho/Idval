@@ -184,7 +184,7 @@ useful with the contents thereof.
 =cut
 
 EOD
-    $help_file->{'cmd_val'} = $pod_input;
+    $help_file->man_info('validate', $pod_input);
 
     return;
 }

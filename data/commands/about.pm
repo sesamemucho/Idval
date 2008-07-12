@@ -61,11 +61,28 @@ sub about
     my $provider;
     my @msgs;
 
-    #print "Config:\n", Dumper($config);
-    #print "Pars:\n", Dumper($pars);
-    # Find converters
+    my $help_file = Idval::Common::get_common_object('help_file');
 
-    if ($show_config)
+    if (@ARGV)
+    {
+        my $name = $ARGV[0];
+        my $info_ref = $help_file->detailed_info_ref($name);
+
+        if (defined($info_ref))
+        {
+            foreach my $pkg (keys %{$info_ref})
+            {
+                print "Information for \"${pkg}::${name}\":\n";
+                print $info_ref->{$pkg};
+                print "\n";
+            }
+        }
+        else
+        {
+            print "No information available for \"$name\"\n";
+        }
+    }
+    elsif ($show_config)
     {
         my $config = Idval::Common::get_common_object('config');
         my $vars = $config->merge_blocks({'config_group' => 'idval_settings'});
@@ -260,7 +277,7 @@ useful with the contents thereof.
 =cut
 
 EOD
-    $help_file->{'about'} = $pod_input;
+    $help_file->man_info('about', $pod_input);
 
     return;
 }

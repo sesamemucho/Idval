@@ -105,7 +105,7 @@ use to change tag information in your files.
 =cut
 
 EOD
-    $help_file->{'update'} = $pod_input;
+    $help_file->man_info('update', $pod_input);
 
     return;
 }

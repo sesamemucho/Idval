@@ -34,20 +34,6 @@ my $type = 'ABC';
 Idval::Common::register_provider({provides=>'reads_tags', name=>$name, type=>$type});
 Idval::Common::register_provider({provides=>'writes_tags', name=>$name, type=>$type});
 
-my %abc2idv = (
-    T => 'TITLE',
-    C => 'TCOM',
-    D => 'TALB',
-    A => 'TEXT',
-    K => 'TKEY',
-    Z => 'TENC',
-    X => 'TRACK',
-    'abc-copyright' => 'TCOP',
-    );
-
-# And a reverse-lookup table
-my %idv2abc = map { $abc2idv{$_} => $_ } keys %abc2idv;
-
 sub new
 {
     my $class = shift;
@@ -78,7 +64,9 @@ sub init
                                                   'type' => 'ABC'
                                                  });
 
-    print "ABC: fwd mapping: ", Dumper($self->{FWD_MAPPING});
+    $self->{REV_MAPPING} = map { $self->{FWD_MAPPING}->{$_} => $_ } keys %{$self->{FWD_MAPPING}};
+
+    $self->save_info();
     return;
 }
 
@@ -98,9 +86,9 @@ sub read_tags
         my @tag_value_list = @{$tags->{$key}};
         $taginfo = scalar(@tag_value_list) == 1 ? $tag_value_list[0] : \@tag_value_list;
 
-        if (exists $abc2idv{$key})
+        if (exists $self->{FWD_MAPPING}->{$key})
         {
-            $tag_record->add_tag($abc2idv{$key}, $taginfo);
+            $tag_record->add_tag($self->{FWD_MAPPING}->{$key}, $taginfo);
         }
         else
         {
@@ -154,9 +142,9 @@ sub write_tags
             my $field_comment = defined($3) ? $3 : '';
             $eol = $4;
 
-            if (exists $abc2idv{$field_id})
+            if (exists $self->{FWD_MAPPING}->{$field_id})
             {
-                $tag_value = $temp_rec->shift_value($abc2idv{$field_id});
+                $tag_value = $temp_rec->shift_value($self->{FWD_MAPPING}->{$field_id});
             }
             else
             {
@@ -229,9 +217,9 @@ sub write_tags
         while ($tagvalue = $temp_rec->shift_value($tag_id))
         {
             # Do we have a special translation?
-            if (exists($idv2abc{$tag_id}))
+            if (exists($self->{REV_MAPPING}->{$tag_id}))
             {
-                $abc_id = $idv2abc{$tag_id};
+                $abc_id = $self->{REV_MAPPING}->{$tag_id};
                 print "Got translated tag \"$abc_id\", setting ", $temp_rec->get_value($tag_id), "\n";
                 $output .= $abc_id . (length($abc_id) eq 1) ? ':' : '' . ' '. $temp_rec->get_value($tag_id) . $eol;
             }
@@ -423,6 +411,23 @@ sub close
         $self->{OUTPUT} = {};
         delete $self->{OUTPUT};
     }
+}
+
+sub save_info
+{
+    my $self = shift;
+    my $help_file = Idval::Common::get_common_object('help_file');
+
+    my $mappings = "Tag mappings:\n";
+
+    foreach my $key (sort keys %{$self->{FWD_MAPPING}})
+    {
+        $mappings .=  sprintf("%20s => %-10s\n", $key, $self->{FWD_MAPPING}->{$key});
+    }
+
+    $help_file->detailed_info_ref('abc', __PACKAGE__, $mappings);
+
+    return;
 }
 
 sub glabber

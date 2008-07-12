@@ -24,18 +24,56 @@ use Carp;
 use Pod::Usage;
 use Pod::Select;
 
+my $help_info;
+
+
+sub new
+{
+    my $class = shift;
+    my $self = {};
+    bless($self, ref($class) || $class);
+    $self->_init(@_);
+    return $self;
+}
+
+sub _init
+{
+    my $self = shift;
+}
+
+sub man_info
+{
+    my $self = shift;
+    my $src = shift;
+    my $info = shift;
+
+    $help_info->{MAN}->{$src} = $info if defined($info);
+    return $help_info->{MAN}->{$src};
+}
+
+sub detailed_info_ref
+{
+    my $self = shift;
+    my $src = shift;
+    my $pkg = shift;
+    my $info = shift;
+
+    $help_info->{DETAIL}->{$src}->{$pkg} = $info if defined($pkg);
+
+    return $help_info->{DETAIL}->{$src};
+}
+
 sub _call_pod2usage
 {
+    my $self = shift;
     my $name = shift;
     my @sections = @_;
 
     my $usage = '';
 
-    my $help_file = Idval::Common::get_common_object('help_file');
+    my $input = $self->man_info($name);
+    return "$name: no information available" unless defined($input);
 
-    return "$name: no information available" unless exists $help_file->{$name};
-
-    my $input = $help_file->{$name};
     open(my $INPUT, '<', \$input) || die "Can't open in-core filehandle for pod_input: $!\n";
     open(my $FILE, '>', \$usage) || die "Can't open in-core filehandle: $!\n";
     my $parser = new Pod::Text();
@@ -49,8 +87,9 @@ sub _call_pod2usage
 
 sub get_short_description
 {
+    my $self = shift;
     my $name = shift;
-    my $usage = _call_pod2usage($name, "NAME");
+    my $usage = $self->_call_pod2usage($name, "NAME");
 
     # Now trim it
     $usage =~ s/Name\s*//si;
@@ -61,18 +100,20 @@ sub get_short_description
 
 sub get_full_description
 {
+    my $self = shift;
     my $name = shift;
 
-    my $usage = _call_pod2usage($name, '');
+    my $usage = $self->_call_pod2usage($name, '');
 
     return $usage;
 }
 
 sub get_synopsis
 {
+    my $self = shift;
     my $name = shift;
 
-    my $usage = _call_pod2usage($name, 'SYNOPSIS', 'OPTIONS');
+    my $usage = $self->_call_pod2usage($name, 'SYNOPSIS', 'OPTIONS');
 
     return $usage;
 }

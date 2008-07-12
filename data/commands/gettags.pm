@@ -172,7 +172,7 @@ is present).
 =cut
 
 EOD
-    $help_file->{'gettags'} = $pod_input;
+    $help_file->man_info('gettags', $pod_input);
 
     return;
 }

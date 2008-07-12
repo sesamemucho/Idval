@@ -21,7 +21,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 use English '-no_match_vars';
-use Carp;
+use Carp qw(cluck croak confess);
 use Memoize;
 use Text::Balanced qw (
                        extract_delimited
@@ -36,10 +36,10 @@ use Idval::FileIO;
 use constant STRICT_MATCH => 0;
 use constant LOOSE_MATCH  => 1;
 
-#our $DEBUG = 0;
-our $DEBUG = 1;
-#our $USE_LOGGER = 1;
-our $USE_LOGGER = 0;
+our $DEBUG = 0;
+#our $DEBUG = 1;
+our $USE_LOGGER = 1;
+#our $USE_LOGGER = 0;
 
 if ($USE_LOGGER)
 {
@@ -228,7 +228,7 @@ sub parse_one_block
         $line =~ s/\#.*$//x;      # Remove comments
         next if $line =~ m/^\s*$/x;
 
-        if ($line =~ m{^([[:alnum:]]\w*)($op_regex)(.*)$}imx)
+        if ($line =~ m{^([[:alnum:]][\w-]*)($op_regex)(.*)$}imx)
         {
             $node->add_data($current_tag, $current_op, $current_value) if defined $current_tag;
             chatty ("Got tag of \"$1\" \"$2\" \"$3\" \n") if $self->{DEBUG};
@@ -248,6 +248,7 @@ sub parse_one_block
             next;
         };
 
+        cluck("Unrecognized configuration entry \"$line\"\n");
     }
 
     $node->add_data($current_tag, $current_op, $current_value) if defined $current_tag;
@@ -338,7 +339,7 @@ sub merge_blocks
         # 0 => no matches on any select
         # 1 => a match on at least one select (allows descent)
         # 2 => matches on all selects
-        #return if $node->evaluate($selects) == 0;
+        return if $node->evaluate($selects) == 0;
 
         foreach my $name (@{$node->get_assignment_data_names()})
         {
@@ -595,6 +596,19 @@ sub get_children
     return \@nodelist;
 }
 
+
+# If the block has no SELECT_DATA, then
+#   match should succeed (return 1)
+# else
+#   if everything in the block's SELECT_DATA is matched (that is,
+#               the passed-in selectors may have more keys, but as
+#               long as everything that the block looks for is satisfied)
+#               then
+#      match succeeds (return 1)
+#   else   (there was at least one selector in SELECT_DATA that was
+#           not matched by the passed-in selectors)
+#      match fails (return 0)
+#
 sub evaluate
 {
     my $self = shift;
@@ -623,29 +637,32 @@ sub evaluate
 
     chatty ("In node \"", $self->myname(), "\"\n") if $self->{DEBUG};
     print Dumper($self) unless $self->myname();
-    foreach my $key (keys %selectors)
+
+    foreach my $block_key (@{$self->get_select_data_names()})
     {
-        chatty ("Checking select key \"$key\" with a value of \"", Dumper($selectors{$key}), "\"\n") if $self->{DEBUG};
-        if (!exists($self->{SELECT_DATA}->{$key}))
+        chatty ("Checking block selector \"$block_key\"\n");
+        if (!exists($select_list->{$block_key}))
         {
+            # The select list has nothing to match a required selector, so this must fail
             return 0;
         }
-        else
-        {
-            chatty ("For select key of \"$key\", got value(s) of \"", Dumper($selectors{$key}), "\"\n") if $self->{DEBUG};
-        }
 
-        my $sel_value = ref $selectors{$key} eq 'ARRAY' ? $selectors{$key} : [$selectors{$key}];
-        my $cmp_op = $self->get_select_op($key);
-        my $cmp_value = $self->get_select_value($key);
-        my $cmpfunc = Idval::Select::get_compare_function($cmp_op, 'STR');
+        my $arg_value_list = ref $selectors{$block_key} eq 'ARRAY' ? $selectors{$block_key} : [$selectors{$block_key}];
+        # Now, arg_value is guaranteed to be a list reference
+
+        my $block_op = $self->get_select_op($block_key);
+        my $block_value = $self->get_select_value($block_key);
+        my $block_cmp_func = Idval::Select::get_compare_function($block_op, 'STR');
         my $cmp_result = 0;
-        foreach my $value (@{$sel_value})
-        {
-            chatty ("Comparing \"$cmp_value\" \"$cmp_op\" \"$value\" resulted in ",
-                    &$cmpfunc($value, $cmp_value) ? "True\n" : "False\n") if $self->{DEBUG};
 
-            $cmp_result ||= &$cmpfunc($value, $cmp_value);
+        # For any key, the passed_in selector may have a list of values that it can offer up to be matched.
+        # A successful match for any of these values constitutes a successful match for the block selector.
+        foreach my $value (@{$arg_value_list})
+        {
+            chatty ("Comparing \"$value\" \"$block_op\" \"$block_value\" resulted in ",
+                    &$block_cmp_func($value, $block_value) ? "True\n" : "False\n") if $self->{DEBUG};
+
+            $cmp_result ||= &$block_cmp_func($value, $block_value);
             last if $cmp_result;
         }
 
@@ -655,6 +672,41 @@ sub evaluate
 
     chatty ("evaluate returning $retval\n") if $self->{DEBUG};
     return $retval;
+
+
+
+#     foreach my $key (keys %selectors)
+#     {
+#         chatty ("Checking select key \"$key\" with a value of \"", Dumper($selectors{$key}), "\"\n") if $self->{DEBUG};
+#         if (!exists($self->{SELECT_DATA}->{$key}))
+#         {
+#             return 0;
+#         }
+#         else
+#         {
+#             chatty ("For select key of \"$key\", got value(s) of \"", Dumper($selectors{$key}), "\"\n") if $self->{DEBUG};
+#         }
+
+#         my $sel_value = ref $selectors{$key} eq 'ARRAY' ? $selectors{$key} : [$selectors{$key}];
+#         my $cmp_op = $self->get_select_op($key);
+#         my $cmp_value = $self->get_select_value($key);
+#         my $cmpfunc = Idval::Select::get_compare_function($cmp_op, 'STR');
+#         my $cmp_result = 0;
+#         foreach my $value (@{$sel_value})
+#         {
+#             chatty ("Comparing \"$cmp_value\" \"$cmp_op\" \"$value\" resulted in ",
+#                     &$cmpfunc($value, $cmp_value) ? "True\n" : "False\n") if $self->{DEBUG};
+
+#             $cmp_result ||= &$cmpfunc($value, $cmp_value);
+#             last if $cmp_result;
+#         }
+
+#         $retval &&= $cmp_result;
+#         last if !$retval;
+#     }
+
+#     chatty ("evaluate returning $retval\n") if $self->{DEBUG};
+#     return $retval;
 }
 
 1;
