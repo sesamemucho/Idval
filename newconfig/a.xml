@@ -1,0 +1,72 @@
+<config>
+<group>
+<select name="config_group" op="==" value="idval_settings"/>
+<set name="plugin_dir" value="LIB%/Plugins"/>
+</group>
+
+<group>
+<select name="config_group" op="==" value="idval_settings"/>
+<set name="plugin_dir" value="%LIB%/Plugins"/>
+<set name="command_dir" value="%DATA%/commands"/>
+<set name="command_extension" value="pm"/>
+<set name="data_store" value="%DATA%/data_store.bin"/>
+<set name="demo_validate_cfg" value="%DATA%/val_demo.cfg"/>
+<set name="visible_separator" value="%%"/>
+</group>
+
+<group>
+<select name="command_name" op="==" value="lame"/>
+<set name="command_path" value="~/local/bin/lame.exe"/>
+</group>
+
+<group>
+<select name="command_name" op="==" value="tag"/>
+<set name="command_path" value="~/local/bin/Tag.exe"/>
+</group>
+
+<group>
+<select name="command_name" op="==" value="timidity"/>
+<set name="command_path" value="/cygdrive/c/Program Files/Timidity++ Project/Timidity++/timidity.exe"/>
+<set name="config_file" value="/cygdrive/h/local/share/freepats/crude.cfg"/>
+</group>
+
+<group>
+<select name="class" op="==" value="MUSIC"/>
+<set name="convert" value="MP3"/>
+</group>
+
+<group>
+<select name="type" op="==" value="ABC"/>
+<set name="convert" value="MIDI"/>
+</group>
+
+<group>
+<select name="config_group" op="==" value="tag_mappings"/>
+
+<group>
+<select name="type" op="==" value="ABC"/>
+
+<set name="T" value="TITLE"/>
+<set name="C" value="TCOM"/>
+<set name="D" value="TALB"/>
+<set name="A" value="TEXT"/>
+<set name="K" value="TKEY"/>
+<set name="Z" value="TENC"/>
+<set name="X" value="TRACK"/>
+<set name="abc-copyright" value="TCOP"/>
+</group>
+
+<group>
+<select name="type" op="==" value="OGG"/>
+<set name="TRACKNUMBER" value="TRACK"/>
+<set name="DATE" value="YEAR"/>
+</group>
+
+<group>
+<select name="type" op="==" value="FLAC"/>
+
+<set name="TRACKNUMBER" value="TRACK"/>
+<set name="DATE" value="YEAR"/>
+</group>
+</group>
+</config>

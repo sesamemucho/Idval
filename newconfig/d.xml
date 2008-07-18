@@ -1,0 +1,82 @@
+<config>
+  <group>
+    <select name="config_group" op="==" value="idval_settings"/>
+    <plugin_dir>LIB%/Plugins</plugin_dir>
+  </group>
+
+  <group>
+    <select name="config_group" op="==" value="idval_settings"/>
+    <plugin_dir>%LIB%/Plugins</plugin_dir>
+    <plugin_dir>%LIB%/MyPlugins</plugin_dir>
+    <command_dir>%DATA%/commands</command_dir>
+    <command_extension>pm</command_extension>
+    <data_store>%DATA%/data_store.bin</data_store>
+    <demo_validate_cfg>%DATA%/val_demo.cfg</demo_validate_cfg>
+    <visible_separator>%%</visible_separator>
+  </group>
+
+  <group>
+    <select name="command_name" op="==" value="lame"/>
+    <command_path>~/local/bin/lame.exe</command_path>
+  </group>
+
+  <group>
+    <select name="command_name" op="==" value="tag"/>
+    <command_path>~/local/bin/Tag.exe</command_path>
+  </group>
+
+  <group>
+    <select name="command_name" op="==" value="timidity"/>
+    <command_path>/cygdrive/c/Program Files/Timidity++ Project/Timidity++/timidity.exe</command_path>
+    <config_file>/cygdrive/h/local/share/freepats/crude.cfg</config_file>
+  </group>
+
+  <group>
+    <select name="class" op="==" value="MUSIC"/>
+    <convert>MP3</convert>
+  </group>
+
+  <group>
+    <select name="type" op="==" value="ABC"/>
+    <convert>MIDI</convert>
+  </group>
+
+  <group>
+    <select name="config_group" op="==" value="tag_mappings"/>
+
+    <group>
+      <select name="type" op="==" value="ABC"/>
+
+      <T>TITLE</T>
+      <C>TCOM</C>
+      <D>TALB</D>
+      <A>TEXT</A>
+      <K>TKEY</K>
+      <Z>TENC</Z>
+      <X>TRACK</X>
+      <abc-copyright>TCOP</abc-copyright>
+    </group>
+
+    <group>
+      <select name="type" op="==" value="OGG"/>
+      <TRACKNUMBER>TRACK</TRACKNUMBER>
+      <DATE>YEAR</DATE>
+    </group>
+
+    <group>
+      <select name="type" op="==" value="FLAC"/>
+
+      <TRACKNUMBER>TRACK</TRACKNUMBER>
+      <DATE>YEAR</DATE>
+    </group>
+  </group>
+
+
+  <group>
+    <select name="type" op="==" value="MP3"/>
+    <select name="command_name" op="==" value="lame"/>
+
+    <foo>boo</foo>
+  </group>
+
+</config>

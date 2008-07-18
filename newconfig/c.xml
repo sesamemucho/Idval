@@ -1,0 +1,73 @@
+<config>
+  <group>
+    <config_group op="==">idval_settings</config_group>
+    <plugin_dir>LIB%/Plugins</plugin_dir>
+  </group>
+
+  <group>
+    <config_group op="==">idval_settings</config_group>
+    <plugin_dir>%LIB%/Plugins</plugin_dir>
+    <plugin_dir>%LIB%/MyPlugins</plugin_dir>
+    <command_dir>%DATA%/commands</command_dir>
+    <command_extension>pm</command_extension>
+    <data_store>%DATA%/data_store.bin</data_store>
+    <demo_validate_cfg>%DATA%/val_demo.cfg</demo_validate_cfg>
+    <visible_separator>%%</visible_separator>
+  </group>
+
+  <group>
+    <command_name op="==">lame</command_name>
+    <command_path>~/local/bin/lame.exe</command_path>
+  </group>
+
+  <group>
+    <command_name op="==">tag</command_name>
+    <command_path>~/local/bin/Tag.exe</command_path>
+  </group>
+
+  <group>
+    <command_name op="==">timidity</command_name>
+    <command_path>/cygdrive/c/Program Files/Timidity++ Project/Timidity++/timidity.exe</command_path>
+    <config_file>/cygdrive/h/local/share/freepats/crude.cfg</config_file>
+  </group>
+
+  <group>
+    <class op="==">MUSIC</class>
+    <convert>MP3</convert>
+  </group>
+
+  <group>
+    <type op="==">ABC</type>
+    <convert>MIDI</convert>
+  </group>
+
+  <group>
+    <config_group op="==">tag_mappings</config_group>
+
+    <group>
+      <type op="==">ABC</type>
+
+      <T>TITLE</T>
+      <C>TCOM</C>
+      <D>TALB</D>
+      <A>TEXT</A>
+      <K>TKEY</K>
+      <Z>TENC</Z>
+      <X>TRACK</X>
+      <abc-copyright>TCOP</abc-copyright>
+    </group>
+
+    <group>
+      <type op="==">OGG</type>
+      <TRACKNUMBER>TRACK</TRACKNUMBER>
+      <DATE>YEAR</DATE>
+    </group>
+
+    <group>
+      <type op="==">FLAC</type>
+
+      <TRACKNUMBER>TRACK</TRACKNUMBER>
+      <DATE>YEAR</DATE>
+    </group>
+  </group>
+</config>
