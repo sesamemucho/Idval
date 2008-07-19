@@ -9,7 +9,18 @@ use FindBin;
 use lib ("$FindBin::Bin/../lib/perl");
 
 use YAML::Tiny;
+use XML::Simple;
 
+my $c = YAML::Tiny->read('a.yml');
+
+print "c: ", Dumper($c);
+
+my $hr = $$c[1];
+
+print "hr: ", Dumper($hr);
+
+print "xml:\n", XMLout($hr);
+__END__
 my @a = (
     { haha => 'hoho',
       baba => 'bobo'}, 
@@ -85,12 +96,7 @@ my $b =<<EOF;
 EOF
 
     #my $c = YAML::Tiny::Load($b);
-    my $c = YAML::Tiny->read('a.yml');
 
-print Dumper($c);
-
-
-__END__
 my $b =<<EOF;
 ---
 farfar:

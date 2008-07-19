@@ -14,7 +14,9 @@ use YAML::Tiny;
 #my $c = XMLin('a.xml', keyattr => {set => 'name', select => 'name'}, forcearray => [ qw(set select) ]);
 #my $c = XMLin('b.xml');
 #my $c = XMLin('c.xml');
-my $c = XMLin('d.xml', keyattr => {select=>'name'}, forcearray => ['select']);
+#my $c = XMLin('d.xml', keyattr => {select=>'name'}, forcearray => ['select']);
+#my $c = XMLin('e.xml', keyattr => {select=>'name'}, forcearray => ['select']);
+my $c = XMLin('f.xml', keyattr => {select=>'name'}, forcearray => ['select']);
 
 print Dumper($c);
 print YAML::Tiny::Dump($c);
