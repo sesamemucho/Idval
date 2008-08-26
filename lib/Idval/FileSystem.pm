@@ -76,4 +76,11 @@ sub idv_test_isfile
     return -f $filename;
 }
 
+sub idv_get_mtime
+{
+    my $filename = shift;
+
+    return (stat($filename))[9];
+}
+
 1;

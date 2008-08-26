@@ -33,6 +33,7 @@ use Idval::Select;
 my $dbg = 0;
 my $filename;
 my $val_cfg;
+my $silent_q;
 
 sub init
 {

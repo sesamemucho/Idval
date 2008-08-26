@@ -13,13 +13,15 @@ use XML::Simple;
 use YAML::Tiny;
 use Idval::Select;
 
-my $fname = 'a.cfg';
+my $fname = 'd.xml';
 my $fh = IO::File->new($fname, "r") || do {print STDERR Carp::shortmess("shormess");
                                              croak "Can't open \"$fname\" for reading: $! in " . __PACKAGE__ . " line(" . __LINE__ . ")";};
+
 my $text = do { local $/ = undef; <$fh> };
 $fh->close();
 
-my $xml = config_to_xml($text);
+#my $xml = config_to_xml($text);
+my $xml = $text;
 
 #print "Got: $xml\n";
 my $c = XMLin($xml, keyattr => {select=>'name'}, forcearray => ['select']);
@@ -87,12 +89,22 @@ sub merge_blocks
 
         return if evaluate($noderef, $selects) == 0;
 
+        #print "evaluate returned nonzero\n";
+        #return 1 if not exists $noderef->{'set'};
+        #my $set_list_ref = ref $noderef->{'set'} eq 'HASH' ? [$noderef->{'set'}] :
+        #    $noderef->{'set'};
+        #foreach my $val_href (@{$set_list_ref})
         foreach my $key (sort keys %{$noderef})
         {
             my $value = $noderef->{$key};
             next if ref $value;
+            #my $name = $val_href->{'name'};
+            #my $value = $val_href->{'value'};
+            #print "Adding \"$value\" to \"$name\"\n";
+            print "Adding \"$value\" to \"$key\"\n";
 
             $vars{$key} = $value;
+            #$vars{$name} = $value;
         }
 
         return 1;

@@ -563,6 +563,17 @@ sub idv_get_file
     return $dpath->{$filename};
 }
 
+sub idv_get_mtime
+{
+    my $filename = shift;
+    my $data = idv_get_file($filename);
+
+    $data =~ m/^\s*#\s*mtime\*=\*(\d+)/m;
+    my $mtime = $2;
+    return $mtime;
+}
+
+
 #
 # Given something that looks like a directory tree,
 sub idv_convert_to_tree

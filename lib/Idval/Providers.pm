@@ -50,6 +50,7 @@ sub _init
     my $config = shift;
     $self->{CONFIG} = $config;
     $self->{DEFAULT_SELECTS} = {'config_group' => 'idval_settings'};
+    Idval::Common::register_common_object('providers', $self);
 
     my $dirlist = $self->local_get_list_value('plugin_dir');
     #print "dirlist is: ", join(":", @{$dirlist}), "\n";
@@ -110,7 +111,6 @@ sub local_get_single_value
 sub num_providers
 {
     my $self = shift;
-
     return $self->{NUM_PROVIDERS};
 }
 

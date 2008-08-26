@@ -16,7 +16,6 @@ use Idval::Common;
 use Idval::Config;
 use Idval::ServiceLocator;
 
-my $tree1 = {'testdir' => {}};
 my $testdir = "tsts/unittest-data";
 my $provs;
 
@@ -29,6 +28,7 @@ sub new {
 
 sub set_up {
     # provide fixture
+    my $tree1 = {'testdir' => {}};
     Idval::FileString::idv_set_tree($tree1);
 
     return;
@@ -50,6 +50,7 @@ sub test_init
     my $fc = Idval::Config->new("/testdir/gt1.txt");
     $provs = eval{Idval::Providers->new($fc)};
     $self->assert_equals('Idval::Providers', ref $provs);
+    $self->assert_equals(1, $provs->num_providers());
 
     return;
 }
@@ -65,6 +66,8 @@ sub test_get_providers
     add_UserPlugin3_up4();
     my $fc = Idval::Config->new("/testdir/gt1.txt");
     $provs = eval{Idval::Providers->new($fc)};
+    print "Error from Idval::Providers->new: $@\n" if $@;
+    #print "test_get_providers: provs is: ", Dumper($provs);
     $self->assert_equals(4, $provs->num_providers());
 
     return;
@@ -176,7 +179,7 @@ sub test_choose_provider_by_weight_in_config_file_2
 #     my $self = shift;
 
 #     my $fc = FakeConfig->new("$testdir/Idval/UserPlugins3");
-#     my $prov = Idval::Providers->new($fc);
+#     $provs = Idval::Providers->new($fc);
 
 #     my $item = $prov->get_provider('converts', 'WAV', 'FLAC');
 

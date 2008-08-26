@@ -57,7 +57,7 @@ print "result of merge blocks with \{'config_group' => 'idval_settings'\}: ", Du
 if ($scenario == 2)
 {
     Idval::FileString::idv_add_file('/testdir/gt1.txt',
-                                    "{\ntype == foo\ngubber = pachoo wachoo\n}\n{\ntype == boo\ngubber = bouncy}\n");
+                                    "{\ntype == foo\ngubber = pachoo wachoo\n}\n{\ntype == boo\ngubber = bouncy\n}\n");
     my $obj = Idval::Config->new('/testdir/gt1.txt', 1, 1);
 
     my $val = $obj->get_value('gubber', {'type' => 'boo'});
@@ -68,7 +68,7 @@ if ($scenario == 2)
 if ($scenario == 3)
 {
     Idval::FileString::idv_add_file('/testdir/gt1.txt',
-                                    "{\ntype == foo\nmarley == tuff\ngubber = pachoo wachoo\n}\n{\ntype == boo\nmarley == tuff\ngubber = bouncy}\n");
+                                    "{\ntype == foo\nmarley == tuff\ngubber = pachoo wachoo\n}\n{\ntype == boo\nmarley == tuff\ngubber = bouncy\n}\n");
     my $obj = Idval::Config->new('/testdir/gt1.txt', 1, 1);
     my $val = $obj->get_value('gubber', {'type' => 'foo', 'marley' => 'tuff'});
     print "Result for \{'type' => 'foo', 'marley' => 'tuff'\}: ", Dumper($val); # Should be 'pachoo wachoo'
@@ -77,7 +77,7 @@ if ($scenario == 3)
 if ($scenario == 4)
 {
     Idval::FileString::idv_add_file('/testdir/gt1.txt',
-                                    "{\ntype == foo\ngubber = pachoo wachoo}\n{\ntype == boo\ngubber = bouncy}\n");
+                                    "{\ntype == foo\ngubber = pachoo wachoo}\n{\ntype == boo\ngubber = bouncy\n}\n");
     my $obj = Idval::Config->new('/testdir/gt1.txt', 1, 1);
 
     my $val = $obj->get_value('gubber',
@@ -343,7 +343,7 @@ EOF
 Idval::FileString::idv_add_file('/testdir/gt1.txt', $cfg_file);
 my $obj = Idval::Config->new('/testdir/gt1.txt', 0, 1);
 
-#print "new config: ", Dumper($obj);
+print "new config: ", Dumper($obj);
 my $vars = $obj->merge_blocks({'class' => 'MUSIC',
                                'type' => 'ABC'
                               });

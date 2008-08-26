@@ -53,7 +53,6 @@ sub read ## no critic (ProhibitBuiltinHomonyms)
         Idval::Ui::get_source_from_file($inputfile, $config->get_single_value('data_store',
                                                                               {'config_group' => 'idval_settings'}));};
 
-    print "Got back from eval, ret is \"$@\"\n";
     if ($@)
     {
         $@ =~ s/\r//g;

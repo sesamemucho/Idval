@@ -23,15 +23,28 @@ use Data::Dumper;
 use English '-no_match_vars';
 use Carp qw(cluck croak confess);
 use Memoize;
-use Text::Balanced qw (
-                       extract_delimited
-                       extract_multiple
-                      );
+use File::Temp;
 
 use Idval::Common;
 use Idval::Constants;
 use Idval::Select;
 use Idval::FileIO;
+
+my $xml_req_status = eval {require XML::Simple};
+my $xml_req_msg = !defined($xml_req_status) ? "$!" :
+    $xml_req_status == 0 ? "$@" :
+    "Load OK";
+
+if ($xml_req_msg ne 'Load OK')
+{
+    print "Oops; let's try again for XML::Simple\n";
+    use lib Idval::Common::get_top_dir('lib/perl');
+
+    $xml_req_status = eval {require XML::Simple};
+    $xml_req_msg = 'Load OK' if (defined($xml_req_status) && ($xml_req_status != 0));
+}
+
+croak "Need XML support (via XML::Simple)" unless $xml_req_msg eq 'Load OK';
 
 use constant STRICT_MATCH => 0;
 use constant LOOSE_MATCH  => 1;
@@ -59,14 +72,14 @@ else
 #                                              debugmask => $DBG_CONFIG,
 #                                              decorate => 1}) unless defined(*harfo{CODE});
 
-# Make a flat list out of the arguments, which may be scalars or array refs
-# Leave out any undefined args.
-sub make_flat_list
-{
-    my @result = map {ref $_ eq 'ARRAY' ? @{$_} : $_ } grep {defined($_)} @_;
-    #harfo ("make_flat list: result is: ", Dumper(\@result));
-    return \@result;
-}
+# # Make a flat list out of the arguments, which may be scalars or array refs
+# # Leave out any undefined args.
+# sub make_flat_list
+# {
+#     my @result = map {ref $_ eq 'ARRAY' ? @{$_} : $_ } grep {defined($_)} @_;
+#     #harfo ("make_flat list: result is: ", Dumper(\@result));
+#     return \@result;
+# }
 
 ##sub normalize { join ' ', $_[0], $_[1], map{ @{$_} } @{$_[2]}}
 ###memoize('_merge_blocks', NORMALIZER => 'normalize');
@@ -92,11 +105,11 @@ sub _init
 {
     my $self = shift;
     my $initfile = shift;
-    my $unmatched_selector_keys_ok = shift;
+    #my $unmatched_selector_keys_ok = shift;
     my $init_debug = shift || 0;
 
     #$unmatched_selector_keys_ok = STRICT_MATCH unless defined($unmatched_selector_keys_ok);
-    $unmatched_selector_keys_ok = 0;
+    #$unmatched_selector_keys_ok = 0;
 #     *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
 #                                                   debugmask => $DBG_CONFIG,
 #                                                   decorate => 1}) unless defined(*verbose{CODE});
@@ -109,13 +122,17 @@ sub _init
 #                                                    decorate => 1,
 #                                                  from=>'CHATTY'}) unless defined(*chatty{CODE});
 
-    $self->{OP_REGEX} = Idval::Select::get_op_regex();
-    $self->{ASSIGN_OP_REGEX} = Idval::Select::get_assign_regex();
-    $self->{CMP_OP_REGEX} = Idval::Select::get_cmp_regex();
+#    $self->{OP_REGEX} = Idval::Select::get_op_regex();
+#    $self->{ASSIGN_OP_REGEX} = Idval::Select::get_assign_regex();
+#    $self->{CMP_OP_REGEX} = Idval::Select::get_cmp_regex();
     $self->{INITFILES} = [];
-    $self->{TREE} = {};
+#    $self->{TREE} = {};
     $self->{DEBUG} = $init_debug;
-    $self->{USK_OK} = $unmatched_selector_keys_ok;
+#    $self->{USK_OK} = $unmatched_selector_keys_ok;
+    $self->{datadir} = Idval::Common::get_top_dir('data');
+    $self->{libdir} = Idval::Common::get_top_dir('lib');
+
+    $self->{HAS_YAML_SUPPORT} = 0;
 
     if ($initfile)
     {
@@ -140,232 +157,393 @@ sub add_file
     my $self = shift;
     my $initfile = shift;
 
-    #print "Adding file \"$initfile\"\n";
-    return unless $initfile;      # Blank input file names are OK...
-    push(@{$self->{INITFILES}}, $initfile);
+    # Is this immediate data?
+    if ($initfile =~ m/\n/)
+    {
+        my $fh = new File::Temp(UNLINK => 0);
+        my $fname = $fh->filename;
+        print $fh $initfile;
+        $fh->close();
+        $initfile = $fname;
+        my $tempfiles = Idval::Common::get_common_object('tempfiles');
+        push(@{$tempfiles}, $fname);
+    }
 
+    return unless $initfile;      # Blank input file names are OK... Just don't do anything.
+    push(@{$self->{INITFILES}}, $initfile);
+    croak "Need a file" unless @{$self->{INITFILES}}; # We do need at least one config file
+
+
+    my $xmltext = "<config>\n";
     my $text = '';
     my $fh;
 
     foreach my $fname (@{$self->{INITFILES}})
     {
-        $fh = Idval::FileIO->new($fname, "r") || do {print STDERR Carp::shortmess("shormess");
+
+        if ($fname =~ m|^/tmp/|)
+        {
+            $fh = IO::File->new($fname, '<');
+        }
+        else
+        {
+
+
+            $fh = Idval::FileIO->new($fname, "r") || do {print STDERR Carp::shortmess("shormess");
                                                      croak "Can't open \"$fname\" for reading: $! in " . __PACKAGE__ . " line(" . __LINE__ . ")";};
-        $text .= do { local $/ = undef; <$fh> };
+        }
+
+        $text = do { local $/ = undef; <$fh> };
         $fh->close();
+
+        if ($fname =~ m/tmp/)
+        {
+            #print "For \"$fname\", text is: \"$text\"\n";
+        }
+
+        if ($fname =~ m/\.xml$/i)
+        {
+            $text =~ s|\A.*?<config>||i;
+            $text =~ s|</config>.*?\z||i;
+            $xmltext .= $text;
+        }
+        elsif ($fname =~ m/\.yml$/i)
+        {
+            if ($self->{HAS_YAML_SUPPORT})
+            {
+                my $c = YAML::Tiny->read_string($text);
+                my $hr = $$c[1];
+                my $data = XMLout($hr);
+                $data =~ s|\A.*?<opt>||i;
+                $data =~ s|</opt>.*?\z||i;
+                $xmltext .= $data;
+            }
+            else
+            {
+                croak "This installation of idv does not have YAML support.";
+            }
+        }
+        else # Must be a idv-style config file
+        {
+            $xmltext .= $self->config_to_xml($text);
+        }
     }
 
-    croak "Need a file" unless $text; # We do need at least one config file
+    $xmltext .= "</config>\n";
+    eval { $self->{TREE} = XML::Simple::XMLin($xmltext, keyattr => {select=>'name'}, forcearray => ['select']); };
+    if ($@)
+    {
+        print "Error from XML conversion: $@\n";
+        my ($linenum, $col, $byte) = ($@ =~ m/ line (\d+), column (\d+), byte (\d+)/);
+        $linenum = 0 unless (defined($linenum) && $linenum);
+        my $i = 1;
+        foreach my $line (split("\n", $xmltext))
+        {
+            printf "%3d: %s\n", $i, $line;
+            if ($i == $linenum)
+            {
+                print '.....' . '.' x ($col - 1) . "^\n";
+            }
 
-    $text =~ s/^\s*#.*$//mgx;      # Remove comments
-    $text =~ s/^\n+//sx;         # Trim off newline(s) at start
-    $text =~ s/\n+$//sx;         # Trim off newline(s) at end
+            $i++;
+        }
+        print "\n\n";
+        croak;
+    }
 
+    $self->{XMLTEXT} = $xmltext; # In case someone wants to see it later
+    $self->{PRETTY} = XML::Simple::XMLout($self->{TREE},
+                                          NoAttr => 1,
+                                          KeepRoot => 1,
+        );
 
-    $self->{NODENAME} = 'Node0000';
-    my $top = $self->parse_blocks("\{$text\}");
-    $self->{TREE} = $top->{NODE}->{'Node0000'};
-
+    if($self->{DEBUG})
+    {
+        print "xmltext: ", $self->{XMLTEXT};
+        print "\n\n\n";
+        print "XML: ", $self->{PRETTY};
+        print "\n\n\n";
+        print "TREE: ", Dumper($self->{TREE});
+    }
     return;
 }
 
-sub get_next_nodename
+sub config_to_xml
 {
     my $self = shift;
-    my $newnode = $self->{NODENAME}++;
-    chatty ("returning nodename $newnode\n") if $self->{DEBUG};
-    return $newnode;
-}
+    my $cfg_text = shift;
+    my $xml = '';
+    my $cmp_regex = Idval::Select::get_cmp_regex();
+    my $assign_regex = Idval::Select::get_assign_regex();
 
-sub extract_blocks
-{
-    my $self = shift;
-    my $text = shift;
-
-    my @blocks;
-    my ($extracted, $remainder, $skipped);
-    my $front = '';
-
-    chatty ("in extract_blocks\n") if $self->{DEBUG};
-    while(1)
+    foreach my $line (split(/\n|\r\n|\r/, $cfg_text))
     {
-        ($extracted, $remainder, $skipped) = Text::Balanced::extract_codeblock($text, '{}', '[^{}]*');
-        chatty ("extracted: \"$extracted\", remainder is: \"$remainder\", skipped: \"$skipped\"\n") if $self->{DEBUG};
+        #print "Looking at: <$line>\n";
 
-        last unless $extracted;
-
-        push(@blocks, $extracted);
-
-        $text = $remainder;
-        $front .= $skipped;
-    }
-
-    $remainder = $front . $remainder;
-    chatty ("** blocks are: ", join('::', @blocks), "   remainder is: \"$remainder\"\n") if $self->{DEBUG};
-    return (\@blocks, $remainder);
-}
-
-sub parse_one_block
-{
-    my $self = shift;
-    my $node = shift;
-    my $text = shift;
-
-    my $op_regex = $self->{OP_REGEX};
-
-    my $current_tag = undef;
-    my $current_op;
-    my $current_value;
-
-    return unless defined $text; # Nothing to do...
-
-    chatty ("parse_one_block, op_regex is: \"$op_regex\"\ndata is: <$text>\n") if $self->{DEBUG};
-
-    foreach my $line (split(/\n/x, $text))
-    {
-        chomp $line;
-        $line =~ s{\r}{}gx;
-        $line =~ s/\#.*$//x;      # Remove comments
-        next if $line =~ m/^\s*$/x;
-
-        if ($line =~ m{^([[:alnum:]][\w-]*)($op_regex)(.*)$}imx)
-        {
-            $node->add_data($current_tag, $current_op, $current_value) if defined $current_tag;
-            chatty ("Got tag of \"$1\" \"$2\" \"$3\" \n") if $self->{DEBUG};
-            $current_tag = $1;
-            $current_op = $2;
-            $current_value = $3;
-
-            $current_op =~ s/\s//gx;
+        $line =~ /^\s*{\s*$/ and do {
+            $xml .= "<group>\n";
             next;
         };
 
-        if ($line =~ m{^\s+(.*)$}imx)
-        {
-            croak("Found unexpected continuation line \"$line\" at the beginning of a block") unless defined $current_tag;
-            chatty ("Got continuation tag of \"$1\" \"$2\" \"$3\" \n") if $self->{DEBUG};
-            $current_value .= $3;
+        $line =~ /^\s*}\s*$/ and do {
+            $xml .= "</group>\n";
             next;
         };
 
-        cluck("Unrecognized configuration entry \"$line\"\n");
+        $line =~ /^\s*(#.*)$/ and do {
+            $xml .= "<!-- $1 -->\n";
+            next;
+        };
+
+        $line =~ m/^\s*$/ and do {
+            next;
+        };
+
+        $line =~ m{^\s*([%[:alnum:]][\w%-]*)($cmp_regex)(.*)\s*$}imx and do {
+            my $name = $1;
+            my $op = $2;
+            my $value = $3;
+            $op =~ s/^\s+//;
+            $op =~ s/\s+$//;
+            $op =~ s/>/\&gt;/;
+            $op =~ s/</\&lt;/;
+            $xml .= "<select name=\"$name\" op=\"$op\" value=\"$value\"/>\n";
+            next;
+        };
+
+        $line =~ m{^\s*([%[:alnum:]][\w%-]*)($assign_regex)(.*)\s*$}imx and do {
+            my $name = $1;
+            my $op = $2;
+            $op =~ s/>/\&gt;/;
+            $op =~ s/</\&lt;/;
+            my $value = $3;
+            if ($op =~ m/\+\=/)
+            {
+                $xml .= "<$name append=\"1\">$value</$name>\n";
+            }
+            else
+            {
+                $xml .= "<$name>$value</$name>\n";
+            }
+            next;
+        };
+
+
+        print "Unrecognized input line <$line>\n";
     }
 
-    $node->add_data($current_tag, $current_op, $current_value) if defined $current_tag;
-
-    return;
+    return $xml;
 }
 
-sub parse_blocks
-{
-    my $self = shift;
-    my $text = shift;
-
-    my $tree = Idval::Config::Block->new($self->{DEBUG}, $self->{USK_OK});
-    my ($kidsref, $data) = $self->extract_blocks($text);
-    my $child_name;
-    my $op_regex = $self->{OP_REGEX};
-
-    # Clean it up
-    $data =~ s/^\s+//gmx;
-    $data =~ s/\s+$//gmx;
-
-    # Preprocess the data, for use in the visit subroutine
-    $self->parse_one_block($tree, $data);
-
-    chatty ("Current node has ", scalar(@{$kidsref}), " children.\n") if $self->{DEBUG};
-    foreach my $blk (@{$kidsref})
-    {
-        chop $blk;
-        $blk = substr($blk, 1);
-        $child_name = $self->get_next_nodename();
-        chatty ("At \"$child_name\", Looking at: \"$blk\"\n") if $self->{DEBUG};
-        $tree->add_node($child_name, $self->parse_blocks($blk));
-    }
-
-    chatty ("tree: ", Dumper($tree)) if $self->{DEBUG};
-    return $tree;
-}
+# For any node, there are three possible kinds of keys
+#  'select', which contains the selection information
+#  'group',  which is a list of child nodes
+#  anything else, which indicate a key->value pair
+#
+#  For each node N in a list of nodes:
+#    evaluate it (using the 'select' key, if present) to see if it should be processed or skipped
+#    if it should be processed:
+#       add key->value pairs to result
+#       recurse into the nodes of N->{'group'}
+#    else
+#       next
+#  end for
+#
 
 sub visit
 {
-    my $self = shift;
-    my $top = shift;
+    my $node_list_ref = shift;
+    my $name = shift;
+    my $level = shift;
     my $subr = shift;
 
-    confess "top is undefined?" unless defined $top;
-    chatty("visiting ", $top->myname(), "\n");
-    my $retval = &$subr($top);
+    my $status;
 
-    # If retval is undef, this node is not for us
-    # and therefore, none of its children are, either
-    chatty("return from subr on ", $top->myname(), " is undef\n") if not defined($retval);
-    return if not defined($retval);
+    #print "visit ($level): ref of node_list_ref is: ", ref $node_list_ref, "\n";
+    #print("visit ($level): visiting \"$name\", with ", scalar(@{$node_list_ref}), " nodes\n");
 
-    # get_children returns a list of child nodes, sorted
-    # by nodename.
-    foreach my $node (@{$top->get_children()})
+    foreach my $node (@{$node_list_ref})
     {
-        $self->visit($node, $subr);
-    }
+        # Should we process this node?
+        $status = &$subr($node);
+        #print "visit ($level): subr returned \"$status\"\n";
+        if ($status)
+        {
+#             # Don't allow 'select' as a regular key
+#             if (exists($node->{'group'}) && (ref($node->{'group'}) ne 'HASH'))
+#             {
+#                 croak "Dis-allowed configuration name 'group' found";
+#             }
 
-    return;
+            # Do we have any sub-nodes to visit?
+            my $kids = [];
+            if (exists($node->{'group'}))
+            {
+                if (ref($node->{'group'}) eq 'ARRAY')
+                {
+                    $kids = $node->{'group'};
+                }
+                elsif (ref($node->{'group'}) eq 'HASH')
+                {
+                    $kids = [$node->{'group'}];
+                }
+
+                if ($kids)
+                {
+                    my $nameid = sprintf "node%03d000", $level;
+                    $level++;
+                    visit($kids, $nameid++, $level, $subr);
+                }
+                else
+                {
+                    #print "visit ($level): No kids for \"$name\"\n";
+                }
+            }
+        }
+    }
 }
 
 sub merge_blocks
 {
     my $self = shift;
     my $selects = shift;
+    my $tree = $self->{TREE};
     my %vars;
 
-    confess "selects argument required for config call" unless (defined($selects) && $selects);
-    verbose ("Start of _merge_blocks, selects: ", Dumper($selects)) if $self->{DEBUG};
-
-    if ($Idval::Config::DEBUG)
-    {
-        print STDERR "Start of _merge_blocks, selects: ", Dumper($selects);
-    }
-
-    # visit each node, in correct order
-    # if node evaluates to TRUE,
-    #    accumulate values (including appends)
-
-    # When finished with tree, return hash of values
+    print("Start of _merge_blocks, selects: ", Dumper($selects)) if $self->{DEBUG};
 
     my $visitor = sub {
-        my $node = shift;
-        # can't take this shortcut any more
-        # But we could maybe if evaluate returned
-        # 0 => no matches on any select
-        # 1 => a match on at least one select (allows descent)
-        # 2 => matches on all selects
-        return if $node->evaluate($selects) == 0;
+        my $noderef = shift;
 
-        foreach my $name (@{$node->get_assignment_data_names()})
+        print "merge_blocks: noderef is: ", Dumper($noderef) if $self->{DEBUG};
+        return if evaluate($noderef, $selects) == 0;
+
+        print "merge_blocks: evaluate returned nonzero\n" if $self->{DEBUG};
+        foreach my $key (sort keys %{$noderef})
         {
-            my ($op, $value) = $node->get_assignment_data_values($name);
-            chatty ("name \"$name\" op \"$op\" value \"$value\"\n") if $self->{DEBUG};
+            print "merge_blocks: checking key $key\n" if $self->{DEBUG};
+            next if ($key eq 'group');
+            next if ($key eq 'select');
 
-            if ($op eq '=')
+            my $value = $noderef->{$key};
+            my $append = 0;
+            print "ref of value is: ", ref $value, "\n" if $self->{DEBUG};
+            if (ref $value eq 'HASH')
             {
-                chatty ("For \"$name\", op is \"=\" and value is \"$value\"\n") if $self->{DEBUG};
-                $vars{$name} = $value;
+                if (!exists($value->{append}))
+                {
+                    croak "Unexpected attributes for value: ", join(', ', sort keys %{$value});
+                }
+                $append = $value->{append};
+                $value = $value->{content};
+                $value =~ s/\%DATA\%/$self->{datadir}/gx;
+                $value =~ s/\%LIB\%/$self->{libdir}/gx;
             }
-            elsif ($op eq '+=')
+            elsif (ref $value eq 'ARRAY')
             {
-                chatty ("For \"$name\", op is \"+=\" and value is \"$value\"\n") if $self->{DEBUG};
-                $vars{$name} = make_flat_list($vars{$name}, $value);
+                # XML::Simple has already done it for us
+                my @newlist;
+                my $newvalue;
+                foreach my $item (@{$value})
+                {
+                    $newvalue = (ref $item eq 'HASH') ? $item->{content} : $item;
+                    $newvalue =~ s/\%DATA\%/$self->{datadir}/gx;
+                    $newvalue =~ s/\%LIB\%/$self->{libdir}/gx;
+
+                    push(@newlist, $newvalue);
+                }
+                $value = \@newlist;
+            }
+            else
+            {
+                $value =~ s/\%DATA\%/$self->{datadir}/gx;
+                $value =~ s/\%LIB\%/$self->{libdir}/gx;
+            }
+
+            #print "merge_blocks: Adding \"$value\" to \"$key\"\n";
+            #print "value: ", Dumper($value);
+            if ($append)
+            {
+                # If it's alread been appended, push
+                # Otherwise, make it a list ref
+                $vars{$key} = ref $vars{$key} ? push(@{$vars{$key}}, $value) : [$vars{$key}, $value];
+            }
+            else
+            {
+                $vars{$key} = $value;            
             }
         }
 
         return 1;
     };
 
-    $self->visit($self->{TREE}, $visitor);
+    visit([$tree], 'top', 0, $visitor);
 
-    chatty ("Result of merge blocks - VARS: ", Dumper(\%vars)) if $self->{DEBUG};
+    print("Result of merge blocks - VARS: ", Dumper(\%vars)) if $self->{DEBUG};
 
     return \%vars;
+}
+
+sub evaluate
+{
+    my $noderef = shift;
+    my $select_list = shift;
+    my $retval = 1;
+
+    print "in evaluate: ", Dumper($noderef) if $DEBUG;
+    print "evaluate: 1 select_list: ", Dumper($select_list) if $DEBUG;
+    # If the block has no selector keys itself, then all matches should succeed
+    if (not (exists($noderef->{'select'}) && ref($noderef->{'select'}) eq 'HASH'))
+    {
+        print "Block has no selector keys, returning 1\n" if $DEBUG;
+        return 1;
+    }
+
+    my %selectors = %{$select_list};
+
+    return 0 unless %selectors;
+
+    foreach my $block_key (keys %{$noderef->{'select'}})
+    {
+        if ($block_key eq '%FILE_TIME%')
+        {
+            $selectors{$block_key} = Idval::FileIO::idv_get_mtime($selectors{FILE});
+        }
+
+        print "evaluate: 2 select_list: ", Dumper(\%selectors) if $DEBUG;
+        print("Checking block selector \"$block_key\"\n") if $DEBUG;
+        if (!exists($selectors{$block_key}))
+        {
+            # The select list has nothing to match a required selector, so this must fail
+            return 0;
+        }
+        my $bstor = $noderef->{'select'}->{$block_key};
+
+        my $arg_value_list = ref $selectors{$block_key} eq 'ARRAY' ? $selectors{$block_key} : [$selectors{$block_key}];
+        # Now, arg_value is guaranteed to be a list reference
+
+        my $block_op = $bstor->{'op'};
+        my $block_value = $bstor->{'value'};
+        my $block_cmp_func = Idval::Select::get_compare_function($block_op, 'STR');
+        my $cmp_result = 0;
+
+        # For any key, the passed_in selector may have a list of values that it can offer up to be matched.
+        # A successful match for any of these values constitutes a successful match for the block selector.
+        foreach my $value (@{$arg_value_list})
+        {
+            print("Comparing \"$value\" \"$block_op\" \"$block_value\" resulted in ",
+                  &$block_cmp_func($value, $block_value) ? "True\n" : "False\n") if $DEBUG;
+
+            $cmp_result ||= &$block_cmp_func($value, $block_value);
+            last if $cmp_result;
+        }
+
+        $retval &&= $cmp_result;
+        last if !$retval;
+    }
+
+    #print("evaluate returning $retval\n");
+    return $retval;
 }
 
 sub get_single_value
@@ -414,299 +592,6 @@ sub value_exists
 
     my $vars = $self->merge_blocks($selects);
     return defined($vars->{$key});
-}
-
-package Idval::Config::Block;
-
-use strict;
-use warnings;
-use Data::Dumper;
-use English '-no_match_vars';
-use Carp;
-
-use Idval::Common;
-use Idval::Constants;
-
-if ($USE_LOGGER)
-{
-    *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
-                                                  debugmask => $DBG_CONFIG,
-                                                  decorate => 1}) unless defined(*verbose{CODE});
-    *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
-                                                  debugmask => $DBG_CONFIG,
-                                                  decorate => 1}) unless defined(*chatty{CODE});
-}
-else
-{
-    *verbose = sub{ print @_; };
-    *chatty = sub{ print @_; };
-}
-
-sub new
-{
-    my $class = shift;
-    my $self = {};
-    bless($self, ref($class) || $class);
-    $self->_init(@_);
-    return $self;
-}
-
-sub _init
-{
-    my $self = shift;
-    my $debug = shift;
-    my $unmatched_selector_keys_ok = shift;
-
-    $self->{ASSIGN_OP_REGEX} = Idval::Select::get_assign_regex();
-    $self->{datadir} = Idval::Common::get_top_dir('data');
-    $self->{libdir} = Idval::Common::get_top_dir('lib');
-
-    $self->{USK_OK} = $unmatched_selector_keys_ok;
-    $self->{DEBUG} = $debug;
-
-    return;
-}
-
-sub add_data
-{
-    my $self = shift;
-    my $name = shift;
-    my $op = shift;
-    my $value = shift;
-
-    confess "undef op" unless defined $op;
-
-    $value =~ s/\%DATA\%/$self->{datadir}/gx;
-    $value =~ s/\%LIB\%/$self->{libdir}/gx;
-
-    if ($op eq '=')
-    {
-        $self->{ASSIGNMENT_DATA}->{$name} = [$op, $value];
-    }
-    elsif ($op eq '+=')
-    {
-        my $data = $self->get_assignment_value($name);
-        $self->{ASSIGNMENT_DATA}->{$name} = [$op,
-                                             ref $data eq 'ARRAY' ? [@{$data}, $value] :
-                                             $data                ? [$data, $value] :
-                                                                    [$value]];
-    }
-    else
-    {
-        $self->{SELECT_DATA}->{$name} = [$op, $value];
-    }
-
-    return;
-}
-
-sub get_select_data_names
-{
-    my $self = shift;
-
-    return [keys %{$self->{SELECT_DATA}}];
-}
-
-sub get_select_data_values
-{
-    my $self = shift;
-    my $name = shift;
-
-    return @{$self->{SELECT_DATA}->{$name}};
-}
-
-sub get_select_op
-{
-    my $self = shift;
-    my $name = shift;
-
-    return ${$self->{SELECT_DATA}->{$name}}[0];
-}
-
-sub get_select_value
-{
-    my $self = shift;
-    my $name = shift;
-
-    return ${$self->{SELECT_DATA}->{$name}}[1];
-}
-
-sub get_assignment_data_names
-{
-    my $self = shift;
-
-    return [keys %{$self->{ASSIGNMENT_DATA}}];
-}
-
-sub get_assignment_data_values
-{
-    my $self = shift;
-    my $name = shift;
-
-    return @{$self->{ASSIGNMENT_DATA}->{$name}};
-}
-
-sub get_assignment_op
-{
-    my $self = shift;
-    my $name = shift;
-
-    return ${$self->{ASSIGNMENT_DATA}->{$name}}[0];
-}
-
-sub get_assignment_value
-{
-    my $self = shift;
-    my $name = shift;
-
-    return ${$self->{ASSIGNMENT_DATA}->{$name}}[1];
-}
-
-sub myname
-{
-    my $self = shift;
-    my $name = shift || '';
-
-    $self->{MYNAME} = $name if $name;
-
-    return $self->{MYNAME};
-}
-
-sub add_node
-{
-    my $self = shift;
-    my $nodename = shift;
-    my $node = shift;
-
-    $self->{NODE}->{$nodename} = $node;
-    $node->myname($nodename);
-
-    return;
-}
-
-sub get_children
-{
-    my $self = shift;
-    my @nodelist;
-
-    foreach my $nodename (sort keys %{$self->{NODE}})
-    {
-        push(@nodelist, $self->{NODE}->{$nodename});
-    }
-
-    return \@nodelist;
-}
-
-
-# If the block has no SELECT_DATA, then
-#   match should succeed (return 1)
-# else
-#   if everything in the block's SELECT_DATA is matched (that is,
-#               the passed-in selectors may have more keys, but as
-#               long as everything that the block looks for is satisfied)
-#               then
-#      match succeeds (return 1)
-#   else   (there was at least one selector in SELECT_DATA that was
-#           not matched by the passed-in selectors)
-#      match fails (return 0)
-#
-sub evaluate
-{
-    my $self = shift;
-    my $select_list = shift;
-    my $retval = 1;
-    my $dupval;
-
-    # We can pass in a Record as a selector
-    $select_list = $select_list->get_selectors() if ref $select_list eq 'Idval::Record';
-
-    if (ref $select_list ne 'HASH')
-    {
-        confess "Selector list must be a HASH\n";
-    }
-
-    # If the block has no selector keys itself, then all matches should succeed
-    if (!exists($self->{SELECT_DATA}))
-    {
-        verbose("Eval: returning 1 since no SELECT_DATA\n") if $self->{DEBUG};
-        return 1;
-    }
-
-    my  %selectors = %{$select_list};
-
-    return 0 unless %selectors;
-
-    chatty ("In node \"", $self->myname(), "\"\n") if $self->{DEBUG};
-    print Dumper($self) unless $self->myname();
-
-    foreach my $block_key (@{$self->get_select_data_names()})
-    {
-        chatty ("Checking block selector \"$block_key\"\n");
-        if (!exists($select_list->{$block_key}))
-        {
-            # The select list has nothing to match a required selector, so this must fail
-            return 0;
-        }
-
-        my $arg_value_list = ref $selectors{$block_key} eq 'ARRAY' ? $selectors{$block_key} : [$selectors{$block_key}];
-        # Now, arg_value is guaranteed to be a list reference
-
-        my $block_op = $self->get_select_op($block_key);
-        my $block_value = $self->get_select_value($block_key);
-        my $block_cmp_func = Idval::Select::get_compare_function($block_op, 'STR');
-        my $cmp_result = 0;
-
-        # For any key, the passed_in selector may have a list of values that it can offer up to be matched.
-        # A successful match for any of these values constitutes a successful match for the block selector.
-        foreach my $value (@{$arg_value_list})
-        {
-            chatty ("Comparing \"$value\" \"$block_op\" \"$block_value\" resulted in ",
-                    &$block_cmp_func($value, $block_value) ? "True\n" : "False\n") if $self->{DEBUG};
-
-            $cmp_result ||= &$block_cmp_func($value, $block_value);
-            last if $cmp_result;
-        }
-
-        $retval &&= $cmp_result;
-        last if !$retval;
-    }
-
-    chatty ("evaluate returning $retval\n") if $self->{DEBUG};
-    return $retval;
-
-
-
-#     foreach my $key (keys %selectors)
-#     {
-#         chatty ("Checking select key \"$key\" with a value of \"", Dumper($selectors{$key}), "\"\n") if $self->{DEBUG};
-#         if (!exists($self->{SELECT_DATA}->{$key}))
-#         {
-#             return 0;
-#         }
-#         else
-#         {
-#             chatty ("For select key of \"$key\", got value(s) of \"", Dumper($selectors{$key}), "\"\n") if $self->{DEBUG};
-#         }
-
-#         my $sel_value = ref $selectors{$key} eq 'ARRAY' ? $selectors{$key} : [$selectors{$key}];
-#         my $cmp_op = $self->get_select_op($key);
-#         my $cmp_value = $self->get_select_value($key);
-#         my $cmpfunc = Idval::Select::get_compare_function($cmp_op, 'STR');
-#         my $cmp_result = 0;
-#         foreach my $value (@{$sel_value})
-#         {
-#             chatty ("Comparing \"$cmp_value\" \"$cmp_op\" \"$value\" resulted in ",
-#                     &$cmpfunc($value, $cmp_value) ? "True\n" : "False\n") if $self->{DEBUG};
-
-#             $cmp_result ||= &$cmpfunc($value, $cmp_value);
-#             last if $cmp_result;
-#         }
-
-#         $retval &&= $cmp_result;
-#         last if !$retval;
-#     }
-
-#     chatty ("evaluate returning $retval\n") if $self->{DEBUG};
-#     return $retval;
 }
 
 1;

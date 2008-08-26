@@ -27,6 +27,8 @@ use Idval::Common;
 use Idval::Constants;
 use Idval::TypeMap;
 
+my $silent_q;
+
 sub init
 {
     *silent_q = Idval::Common::make_custom_logger({level => $SILENT,
@@ -45,10 +47,13 @@ sub about
 
     my $verbose = 0;
     my $show_config = 0;
+    my $show_xml = 0;
 
     my $result = GetOptions(
         'verbose' => \$verbose,
-        'config'  => \$show_config);
+        'config'  => \$show_config,
+        'xml'     => \$show_xml,
+        );
 
     my $typemap = Idval::TypeMap->new($providers);
 
@@ -92,6 +97,11 @@ sub about
         {
             printf "%-20s:%s\n", $key, $vars->{$key};
         }
+    }
+    elsif ($show_xml)
+    {
+        my $config = Idval::Common::get_common_object('config');
+        print $config->{PRETTY};
     }
     else
     {

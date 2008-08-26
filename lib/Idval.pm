@@ -42,6 +42,7 @@ my %options;
 my $VERSION;
 our $AUTOLOAD;  ## no critic (ProhibitPackageVars)
 my $log;
+my $tempfiles = [];
 
 local $| = 1;
 
@@ -87,6 +88,10 @@ $options{'debug'} = undef;
 $options{'development'} = 0;
 $options{'log_out'} = '';
 $options{'print_to'} = '';
+
+END {
+    unlink @{$tempfiles};
+}
 
 sub new
 {
@@ -167,9 +172,9 @@ sub _init
     Idval::ServiceLocator::provide('io_type', 'FileSystem');
 
     $log->verbose($DBG_STARTUP, "option list:", Dumper(\%options));
-    $log->verbose($DBG_STARTUP, "Looking for: <$data_dir/idval.cfg>\n");
+    $log->verbose($DBG_STARTUP, "Looking for: ", Idval::Ui::get_sysconfig_file($data_dir), "\n");
 
-    my $sysconfig_file  = $options{'sysconfig'} || "$data_dir/idval.cfg";
+    my $sysconfig_file  = $options{'sysconfig'} || Idval::Ui::get_sysconfig_file($data_dir);
     my $userconfig_file = $options{'userconfig'} || Idval::Ui::get_userconfig_file($data_dir);
     $log->verbose($DBG_STARTUP, "sysconfig is: \"$sysconfig_file\", userconfig is \"$userconfig_file\"\n");
 
@@ -185,6 +190,7 @@ sub _init
 #         $config->add_file($cfgfile);
 #     }
 
+    Idval::Common::register_common_object('tempfiles', $tempfiles);
     $self->{CONFIG} = $config;
     Idval::Common::register_common_object('config', $self->config());
     $self->{PROVIDERS} = Idval::Providers->new($config);

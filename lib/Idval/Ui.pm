@@ -39,6 +39,27 @@ use Idval::DoDots;
 
 my $srclist;
 
+sub get_sysconfig_file
+{
+    my $datadir = shift;
+    my $cfgname = '';
+
+    if (Idval::FileIO::idv_test_exists("$datadir/idval.xml"))
+    {
+        $cfgname = "$datadir/idval.xml";
+    }
+    elsif (Idval::FileIO::idv_test_exists("$datadir/idval.cfg"))
+    {
+        $cfgname = "$datadir/idval.cfg";
+    }
+    else
+    {
+        croak "No idval configuration file found in \"$datadir\"\n";
+    }
+
+    return $cfgname;
+}
+
 sub get_userconfig_file
 {
     my $datadir = shift;
@@ -65,6 +86,7 @@ sub get_userconfig_file
         $cfgname = 'data/idvaluser.cfg' if Idval::FileIO::idv_test_exists('data/idvaluser.cfg');
     }
 
+    print "user config file name is: \"$cfgname\"\n";
     return $cfgname;
 }
 
