@@ -276,6 +276,12 @@ sub set_name
     return;
 }
 
+sub get_calculated_keys_re
+{
+    my $self = shift;
+    return qr/(:?CLASS|TYPE|__LINES|__NEXT_LINE)/;
+}
+
 # Actually, "get all keys, except for those that are calculated"
 sub get_all_keys
 {

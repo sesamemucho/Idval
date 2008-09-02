@@ -24,6 +24,7 @@ use Scalar::Util;
 use English qw( -no_match_vars );
 use Carp;
 
+use Idval::Config;
 use Idval::Constants;
 use Idval::FileIO;
 use Idval::DoDots;
@@ -58,7 +59,7 @@ sub validate
 
     # As a special case, allow 'demo' as a cfg file name
     my $vcfg = Idval::Validate->new($cfgfile eq 'demo'
-                                    ? $config->get_single_value('demo_validate_cfg', $selects) 
+                                    ? $config->get_single_value('demo_validate_cfg', $selects)
                                     : $cfgfile);
     foreach my $f (@_)
     {
@@ -66,10 +67,13 @@ sub validate
     }
 
     $val_cfg = $vcfg;
+    #$Idval::Config::DEBUG=1;  # XXX
+    #$val_cfg->{DEBUG} = 1;    # XXX
 
     $datastore->stringify();
     $filename = $datastore->get_source();
 
+    #print "datastore is: ", Dumper($datastore);
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
         $status = each_item($datastore, $key);
@@ -88,69 +92,25 @@ sub each_item
     my $hash = shift;
     my $key = shift;
     my $tag_record = $hash->{RECORDS}->{$key};
+    my $linenumber;
     my $tagname;
-    my $checkvalue;
-    my $tag;
-    my $cmp_result = 1;
-    my $cmp_op;
-    my $cmp_value;
-    my $cmpfunc;
-    my $type;
     my $gripe;
 
     my @rectags = $tag_record->get_all_keys();
     my $lines = $tag_record->get_value('__LINES');
-    my $blocks = $val_cfg->get_blocks($tag_record);
-    foreach my $node_id (sort keys %{$blocks})
+    #print "val_cfg: ", Dumper($val_cfg);
+    my $varlist = $val_cfg->merge_blocks($tag_record);
+
+    #print "For $key, got varlist: ", Dumper($varlist);
+
+    foreach my $gripe_item (@{$varlist})
     {
-        my $block = $blocks->{$node_id};
-        #print "Checking:", Dumper($block);
-        #return 1 if $dbg > 5;
-        #$dbg++ if @rectags;
-        $tagname = $block->get_select_value('TAGNAME');
-        $cmp_value = $block->get_select_value('TAGVALUE');
-        $cmp_op = $block->get_select_op('TAGVALUE');
-        $gripe = $block->get_assignment_value('GRIPE');
-
-        #print "Checking block for \"$tagname\" in \"", join(' ', @rectags), "\"\n";
-        next unless (($tag) = grep {/^$tagname$/x} @rectags);
-
-        # Make sure $tag_record->{$tagname} matches with $info->{TAGVALUE}->{VALUE} using $info->{TAGVALUE}->{OP}
-        #print "Checking \"$tag\" (value \"", $tag_record->get_value($tagname), "\") against \"$cmp_value\" using \"$cmp_op\"\n";
-        #$cmp_op = $info->{TAGVALUE}->{OP};
-        #$cmp_value = $info->{TAGVALUE}->{VALUE};
-        $type = Scalar::Util::looks_like_number($cmp_value) ? 'NUM' : 'STR';
-        $cmpfunc = Idval::Select::get_compare_function($cmp_op, $type);
-        #print STDERR "Comparing \"", $tag_record->get_value($tagname), "\" \"$cmp_op\" \"$cmp_value\" resulted in ",
-        #             &$cmpfunc($tag_record->get_value($tagname), $cmp_value) ? "True\n" : "False\n";
-        $checkvalue = $tag_record->get_value($tagname);
-        #no strict 'refs';
-        $cmp_result = &$cmpfunc($checkvalue, $cmp_value);
-        #use strict;
-        if (!defined($cmp_result))
-        {
-            silent_q(sprintf "%s:%d: error: %s\n", $filename,
-                     exists $lines->{$tagname} ? $lines->{$tagname} : "unknown tag ($tagname)",
-                     sprintf Idval::Validate::perror(), $checkvalue, $tagname);
-        }
-        elsif (!$cmp_result)
-        {
-            silent_q(sprintf "%s:%d: error: %s\n", $filename,
-                     exists $lines->{$tagname} ? $lines->{$tagname} : "unknown tag ($tagname)",
-                     sprintf $gripe, $checkvalue, $tagname);
-            last;
-        }
+        $gripe = $$gripe_item[0];
+        $linenumber = $$gripe_item[1];
+        $tagname = $$gripe_item[2];
+        silent_q(sprintf "%s:%d: error: For %s, %s\n", $filename, $linenumber, $tagname, $gripe);
     }
 
-    #print $cmp_result ? "GOOD" : "BAD ", " Record ", $tag_record->get_name(), "\n";
-#     if (!$cmp_result and $gripe)
-#     {
-#         print "\nBecause \"$gripe\"\n\n";
-#     }
-#     if (!$cmp_result)
-#     {
-#         printf "%s:%d: error: %s\n", $self->{FILENAME}, $tag_record->get_value('__LINE'), $gripe;
-#     }
 #a.c:7: error: `garf' undeclared (first use in this function)
 
     return 0;
@@ -174,11 +134,12 @@ validate validation-config-file
 validation-config-file is a cascading configuration file that defines the allowable values for the tags.
 
 =head1 OPTIONS
-
+X<options>
 This command has no options.
 
 =head1 DESCRIPTION
 
+X<desc>
 B<This program> will read the given input file(s) and do something
 useful with the contents thereof.
 

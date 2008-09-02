@@ -48,8 +48,8 @@ our $DBG_STARTUP   = 1;
 our $DBG_PROCESS   = 2;
 our $DBG_CONFIG    = 4;
 our $DBG_PROVIDERS = 8;
-our $DBG_CONVERT   = 16;
-our $DBG_GRAPH     = 32;
+our $DBG_CONVERT   = 0x10;
+our $DBG_GRAPH     = 0x20;
 
 # ...
 

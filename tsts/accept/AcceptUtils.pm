@@ -10,7 +10,9 @@ use File::stat;
 use File::Copy;
 use File::Path;
 use File::Basename;
+use File::Temp qw/ tempfile tempdir /;
 use Idval;
+use Idval::Common;
 
 our $audiodir = $main::topdir . '/data/audio';
 
@@ -19,6 +21,13 @@ my %startfiles = (
     'MP3'  => $audiodir . '/sbeep.mp3',
     'OGG'  => $audiodir . '/sbeep.ogg',
     );
+
+my @tempfiles = ();
+
+END {
+    my $options = Idval::Common::get_common_object('options');
+    unlink @tempfiles unless $options->{'no-delete'};
+}
 
 sub get_audiodir
 {
@@ -50,9 +59,9 @@ sub mktree
         $info{$path}->{TITLE} = $title;
         $info{$path}->{ARTIST} = $artist;
         $info{$path}->{ALBUM} = $album;
-        $info{$path}->{TRACKNUMBER} = $tracknum;
+        $info{$path}->{TRACK} = $tracknum;
         $info{$path}->{GENRE} = $genre;
-        $info{$path}->{DATE} = $date;
+        $info{$path}->{YEAR} = $date;
 
         # If the generated file exists and it is newer than the datafile (from which it was made),
         # make a new one
@@ -65,7 +74,8 @@ sub mktree
 
     my $taglist = $idval->datastore();
     $taglist = Idval::Scripts::gettags($taglist, $idval->providers(), $testpath);
-    #$taglist = Idval::Scripts::print($taglist, $idval->providers());
+    my ($fh, $fname) = tempfile();
+    push(@tempfiles, $fname);
 
     my $tag_record;
     my $type;
@@ -78,13 +88,14 @@ sub mktree
         $tag_record->add_tag('TITLE', $info{$key}->{TITLE});
         $tag_record->add_tag('ARTIST', $info{$key}->{ARTIST});
         $tag_record->add_tag('ALBUM', $info{$key}->{ALBUM});
-        $tag_record->add_tag('TRACKNUMBER', $info{$key}->{TRACKNUMBER});
+        $tag_record->add_tag('TRACK', $info{$key}->{TRACK});
         $tag_record->add_tag('GENRE', $info{$key}->{GENRE});
-        $tag_record->add_tag('DATE', $info{$key}->{DATE});
+        $tag_record->add_tag('YEAR', $info{$key}->{YEAR});
     }
 
+    $taglist = Idval::Scripts::print($taglist, $idval->providers(), $fh);
     #print "Updating tags:\n";
-    $taglist = Idval::Scripts::update($taglist, $idval->providers());
+    $taglist = Idval::Scripts::update($taglist, $idval->providers(), $fname);
     #$taglist = Idval::printlist($taglist, $idval->providers());
 
     return $taglist;

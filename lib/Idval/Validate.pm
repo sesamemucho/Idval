@@ -52,13 +52,6 @@ sub perror
     return $retval;
 }
 
-sub Check_Genre_for_id3v1
-{
-    my $tagvalue = lc(shift);
-
-    return Idval::Data::Genres::isNameValid($tagvalue);
-}
-
 sub new
 {
     my $class = shift;
@@ -70,39 +63,193 @@ sub new
     *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
                                                   debugmask => $DBG_CONFIG,
                                                   decorate => 1}) unless defined(*chatty{CODE});
-
+    $self->{ALLOW_KEY_REGEXPS} = 1;
     return $self;
 }
 
-sub get_blocks
+# Similar to Config.pm's evaluate, but sufficiently different
+sub evaluate
+{
+    my $self = shift;
+    my $noderef = shift;
+    my $select_list = shift;
+    my $retval = 1;
+    my @s_key_list;
+    my $match = '';
+    my $is_regexp = 0;
+    my @tags_matched = ();
+
+    print "in evaluate: ", Dumper($noderef) if $self->{DEBUG};
+    print "evaluate: 1 select_list: ", Dumper($select_list) if $self->{DEBUG};
+    # If the block has no selector keys itself, then all matches should succeed
+    if (not (exists($noderef->{'select'}) && ref($noderef->{'select'}) eq 'HASH'))
+    {
+        print "Block has no selector keys, returning 1\n" if $self->{DEBUG};
+        return 1;
+    }
+
+    my %selectors = %{$select_list};
+
+    return 0 unless %selectors;
+
+    my $tags_to_ignore = $select_list->get_calculated_keys_re();
+
+  KEY_MATCH: foreach my $block_key (keys %{$noderef->{'select'}})
+    {
+        if ($block_key eq '%FILE_TIME%')
+        {
+            $selectors{$block_key} = Idval::FileIO::idv_get_mtime($selectors{FILE});
+        }
+
+        my $bstor = $noderef->{'select'}->{$block_key}; # Naming convenience
+
+        print "evaluate: 2 select_list: ", Dumper(\%selectors) if $self->{DEBUG};
+        print("Checking block selector \"$block_key\"\n") if $self->{DEBUG};
+
+        @s_key_list = $self->{ALLOW_KEY_REGEXPS} ? grep(/^$block_key$/, keys %selectors) :
+            ($block_key);
+
+        $is_regexp = $block_key =~ m/\W/;
+        foreach my $s_key (@s_key_list)
+        {
+            if (!exists($selectors{$s_key}))
+            {
+                # The select list has nothing to match a required selector, so this must fail
+                return 0;
+            }
+
+            next if ($is_regexp && ($s_key =~ m/$tags_to_ignore/));
+
+            # Make sure arg_value is a list reference
+            my $arg_value_list = ref $selectors{$s_key} eq 'ARRAY' ? $selectors{$s_key} :
+                [$selectors{$s_key}];
+
+            my $block_op = $bstor->{'op'};
+            my $block_value = $bstor->{'value'};
+            my $block_cmp_func = Idval::Select::get_compare_function($block_op, 'STR');
+            my $cmp_result = 0;
+
+            # For any key, the passed_in selector may have a list of values that it can offer up to be matched.
+            # A successful match for any of these values constitutes a successful match for the block selector.
+            foreach my $value (@{$arg_value_list})
+            {
+                print("Comparing \"$value\" \"$block_op\" \"$block_value\" resulted in ",
+                      &$block_cmp_func($value, $block_value) ? "True\n" : "False\n") if $self->{DEBUG};
+
+                $cmp_result ||= &$block_cmp_func($value, $block_value);
+                last if $cmp_result;
+            }
+
+            if ($is_regexp)
+            {
+                $retval ||= $cmp_result;
+            }
+            else
+            {
+                $retval &&= $cmp_result;
+            }
+
+            if ($cmp_result)
+            {
+                push(@tags_matched, $s_key);
+            }
+        }
+    }
+
+    #print("evaluate returning $retval\n");
+    return ($retval, \@tags_matched);
+}
+
+# The only variable we care about is the GRIPE
+# Use 'select' key to find out which tags matched, and so get the right line number
+sub merge_blocks
 {
     my $self = shift;
     my $selects = shift;
-    my %vars;
+    my $tree = $self->{TREE};
+    my @gripelist;
 
-    verbose("Start of _merge_blocks, selects: ", Dumper($selects));
-
-    # visit each node, in correct order
-    # if node evaluates to TRUE,
-    #  Accumulate it
-    # When finished with tree, return list of selected blocks
+    print("Start of _merge_blocks, selects: ", Dumper($selects)) if $self->{DEBUG};
 
     my $visitor = sub {
-        my $node = shift;
+        my $self = shift;
+        my $noderef = shift;
 
-        return if $node->evaluate($selects) == 0;
+        my $gripe = 'no gripe found?';
+        my @match_tags = ();
 
-        if (exists $node->{ASSIGNMENT_DATA})
+        print "merge_blocks: noderef is: ", Dumper($noderef) if $self->{DEBUG};
+        my ($retval, $matches) = $self->evaluate($noderef, $selects);
+        return if ($retval == 0);
+
+        print "merge_blocks: evaluate returned nonzero\n" if $self->{DEBUG};
+
+        # There might not be a GRIPE at this node (for instance, a top-level 'group')
+        if(exists $noderef->{GRIPE})
         {
-            $vars{$node->myname()} = $node;
+            $gripe = $noderef->{GRIPE};
+            push(@gripelist, [$gripe, $matches]) if @{$matches};
         }
+
+        return 1;
     };
 
-    $self->visit($self->{TREE}, $visitor);
+    $self->visit([$tree], 'top', 0, $visitor);
 
-    chatty("Result of merge blocks - VARS: ", Dumper(\%vars));
+    # Translate tag names to line numbers
+    my $gripe;
+    my $linenum;
+    # The $selects argument for this call had better be a tag record...
+    my $lines = $selects->get_value('__LINES');
+    my @retlist;
+    foreach my $gripe_item (@gripelist)
+    {
+        $gripe = $$gripe_item[0];
+        # Just flag the first bad tag
+        foreach my $bad_tag (@{$$gripe_item[1]})
+        {
+            # If we can't find the tag (maybe it's a regexp), just return the line
+            # number for the start of the tag record (the FILE line).
+            $linenum = exists $lines->{$bad_tag} ? $lines->{$bad_tag} : $lines->{FILE};
 
-    return \%vars;
+            push(@retlist, [$gripe, $linenum, $bad_tag]);
+            #print "Got gripe \"$gripe\" for tag \"$bad_tag\" at line number \"$linenum\"\n";
+        }
+    }
+
+    print("Result of merge blocks - VARS: ", Dumper(\@retlist)) if $self->{DEBUG};
+
+    return \@retlist;
 }
+
+package Idval::ValidateFuncs;
+
+use strict;
+
+sub Check_Genre_for_id3v1
+{
+    my $tagvalue = lc(shift);
+
+    return Idval::Data::Genres::isNameValid($tagvalue);
+}
+
+=head1 VALIDATE
+
+=head2 NAME
+
+Validate - Support for tag validation.
+
+=head2 SYNOPSIS
+
+Allows callers to validate a tag record according to a validation configuration file.
+
+=head2 DESCRIPTION
+
+sd
+ad
+asdf
+
+=cut
+
 
 1;

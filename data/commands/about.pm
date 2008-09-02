@@ -253,13 +253,14 @@ sub set_pod_input
     my $help_file = Idval::Common::get_common_object('help_file');
 
     my $pod_input =<<"EOD";
+
 =head1 NAME
 
 about - Using GetOpt::Long and Pod::Usage blah blah foo booaljasdf
 
 =head1 SYNOPSIS
 
-sample [options] [file ...]
+about [options] [file ...]
 
  Options:
    -help            brief help message
@@ -281,8 +282,7 @@ Prints the manual page and exits.
 
 =head1 DESCRIPTION
 
-B<This program> will read the given input file(s) and do something
-useful with the contents thereof.
+B<About> reports on interesting things in idv.
 
 =cut
 

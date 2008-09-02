@@ -437,4 +437,35 @@ sub glabber
     print "Hello from glabber\n";
 }
 
+=head1 NAME
+
+abc - tagger
+
+=head1 SYNOPSIS
+
+diff [options] file1 [file2]
+
+ Options:
+   -outputfile F<output_listing_file> 
+
+=head1 OPTIONS
+
+=over 8
+
+=item B<-outputfile output_listing_file>
+
+If specified, the difference report will be sent here. Otherwise, the report will be printed to the screen.
+
+=back
+
+=head1 DESCRIPTION
+
+If two files are given on the command line, B<diff> will report the
+differences between these two files. If only one file is given,
+B<diff> will report the differences between this file and the cached
+data store.
+
+=cut
+
+
 1;

@@ -138,8 +138,8 @@ sub read_tags
                 #my ($info_item, $name, @rest) = $mp3->{ID3v2}->get_frame($frame);
                 my ($info_item, $name, @rest) = $mp3->{ID3v2}->get_frame($frame, 'array_nokey');
                 #print "<<<<GOT AN ARRAY>>>\n" if scalar @rest;
-                print "Frame $frame, info_item: ", Dumper($info_item);
-                print "Frame $frame, rest: ", Dumper(\@rest);
+                #print "Frame $frame, info_item: ", Dumper($info_item);
+                #print "Frame $frame, rest: ", Dumper(\@rest);
                 if (!defined($name))
                 {
                     $tagvalues[0] = '%placeholder%';
@@ -227,7 +227,7 @@ sub write_tags
     my $has_id3v1 = 0;
     my %id3v1_tags;
 
-    print "MP3_Tag, processing \"$filename\"\n";
+    #print "MP3_Tag, processing \"$filename\"\n";
     foreach my $id3v1_key (qw(title track artist album comment year genre))
     {
         if ($temp_rec->key_exists(uc $id3v1_key))
@@ -268,7 +268,7 @@ sub write_tags
     my $tag_index;
     my $txxx_index = -1;
     my $framename;
-    print "ID3v2:", Dumper($id3v2);
+    #print "ID3v2:", Dumper($id3v2);
 
   TAG_LOOP:
     foreach my $tagname ($temp_rec->get_all_keys())
@@ -370,7 +370,7 @@ sub write_tags
     $id3v2->write_tag();
     # Now, we should be left with all the tags that weren't ID3v1 or ID3v2
 
-    print "Tags left: ", join(":", $temp_rec->format_record()), "\n";
+    #print "Tags left: ", join(":", $temp_rec->format_record()), "\n";
 
     return 0;
 }

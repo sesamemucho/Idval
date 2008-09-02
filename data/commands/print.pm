@@ -47,7 +47,10 @@ sub print ## no critic (ProhibitBuiltinHomonyms)
         "output=s" => \$outputfile,
         'full' => \$full);
 
-    my $out = Idval::FileIO->new($outputfile, '>') or croak "Can't open $outputfile for writing: $ERRNO\n";
+    # If there's something left, we've been passed a file handle
+    $outputfile = $ARGV[0] if @ARGV;
+    my $out = ref $outputfile ? $outputfile :
+        Idval::FileIO->new($outputfile, '>') or croak "Can't open $outputfile for writing: $ERRNO\n";
 
     #print STDERR Dumper($datastore);
     my $coll = $datastore->stringify($full);

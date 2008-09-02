@@ -160,6 +160,8 @@ This command has no options.
 
 =head1 DESCRIPTION
 
+X<gettags>
+
 B<Gettags> will go through each given directory and read tag
 information from the files it finds there. It places this information
 in the current data store. Be sure to use the B<store> command to save

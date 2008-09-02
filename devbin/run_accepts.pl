@@ -51,7 +51,48 @@ Idval::Logger::initialize_logger(@logger_args);
 my $log = Idval::Logger::get_logger();
 #print STDERR $log->str(), "\n";
 
-my @pkgs = bsd_glob("$FindBin::Bin/../tsts/accept/*Test.pm");
+Idval::Common::register_common_object('options', \%options);
+
+my @exceptions;
+my @inclusions;
+foreach my $item (@ARGV)
+{
+    if ($item =~ m/^-(\S*)/)
+    {
+        push(@exceptions, $1);
+        next;
+    }
+
+    push(@inclusions, $item);
+}
+
+$inclusions[0] = '*' unless @inclusions;
+
+my @pkgs;
+my %candidates;
+my %bums;
+
+foreach my $item (@inclusions)
+{
+    map {$candidates{$_} = $_} bsd_glob("$FindBin::Bin/../tsts/accept/${item}Test.pm");
+}
+
+foreach my $item (@exceptions)
+{
+    map {$bums{$_} = $_} bsd_glob("$FindBin::Bin/../tsts/accept/${item}Test.pm");
+}
+
+foreach my $item (keys %candidates)
+{
+    delete $candidates{$item} if exists $bums{$item};
+}
+
+@pkgs = keys %candidates;
+
+die "No tests found for args \"+", join(' +', @inclusions), "\" \"-", join(' -', @exceptions), "\"\n" unless @pkgs;
+
+
+#my @pkgs = bsd_glob("$FindBin::Bin/../tsts/accept/*Test.pm");
 
 # Uncomment and edit to debug individual packages.
 #debug_pkgs(qw/Test::Unit::TestCase/);

@@ -86,7 +86,7 @@ sub get_userconfig_file
         $cfgname = 'data/idvaluser.cfg' if Idval::FileIO::idv_test_exists('data/idvaluser.cfg');
     }
 
-    print "user config file name is: \"$cfgname\"\n";
+    #print "user config file name is: \"$cfgname\"\n";
     return $cfgname;
 }
 

@@ -108,6 +108,10 @@ my %compare_function =
                        STR => \&Idval::Select::passes},
               NAME => {NUM => 'Idval::Select::passes',
                        STR => 'Idval::Select::passes'}},
+     'fails' => {FUNC => {NUM => \&Idval::Select::fails,
+                       STR => \&Idval::Select::fails},
+              NAME => {NUM => 'Idval::Select::fails',
+                       STR => 'Idval::Select::fails'}},
      );
 
 my %assignments =
@@ -135,10 +139,30 @@ sub cmp_ge_str { return ($_[0] ge $_[1]); }
 
 sub cmp_has_str { return (index("$_[0]", "$_[1]") != -1); }
 
-sub passes { my $funcname = $_[1];
-             return unless Idval::Validate::CheckFunction($funcname);
-             my $func = \&{"Idval::Validate::$funcname"};
-             return (&$func(split(/,/, $_[0])) != 0 ); }
+# Check to see if we have a valid function in the package space 'Idval::ValidateFuncs'
+sub check_function
+{
+    my $funcname = shift;
+
+    return 0 unless exists $Idval::ValidateFuncs::{$funcname};
+
+    my $func = $Idval::ValidateFuncs::{$funcname};
+
+    return defined(*$func{CODE});
+}
+
+sub passes
+{
+    my $funcname = $_[1];
+    croak "Unknown function Idval::ValidateFuncs::$funcname" unless check_function($funcname);
+    my $func = \&{"Idval::ValidateFuncs::$funcname"};
+    return (&$func(split(/,/, $_[0])) != 0 );
+}
+
+sub fails
+{
+    return !passes(@_);
+}
 
 sub get_compare_function
 {

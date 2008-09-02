@@ -97,6 +97,7 @@ sub new
     my $class = shift;
     my $self = {};
     bless($self, ref($class) || $class);
+    $self->{ALLOW_KEY_REGEXPS} = 0; # Validate.pm will be different
     $self->_init(@_);
     return $self;
 }
@@ -299,7 +300,8 @@ sub config_to_xml
             next;
         };
 
-        $line =~ m{^\s*([%[:alnum:]][\w%-]*)($cmp_regex)(.*)\s*$}imx and do {
+        #$line =~ m{^\s*([%[:alnum:]][\w%-]*)($cmp_regex)(.*)\s*$}imx and do {
+        $line =~ m{^\s*(\S+)\s*($cmp_regex)(.*)\s*$}imx and do {
             my $name = $1;
             my $op = $2;
             my $value = $3;
@@ -352,6 +354,7 @@ sub config_to_xml
 
 sub visit
 {
+    my $self = shift;
     my $node_list_ref = shift;
     my $name = shift;
     my $level = shift;
@@ -362,11 +365,12 @@ sub visit
     #print "visit ($level): ref of node_list_ref is: ", ref $node_list_ref, "\n";
     #print("visit ($level): visiting \"$name\", with ", scalar(@{$node_list_ref}), " nodes\n");
 
+    confess "node_list_ref not an ARRAY ref" unless ref $node_list_ref eq 'ARRAY';
     foreach my $node (@{$node_list_ref})
     {
         # Should we process this node?
-        $status = &$subr($node);
-        #print "visit ($level): subr returned \"$status\"\n";
+        $status = &$subr($self, $node);
+        #print ("visit ($level): subr returned ", defined($status) ? "\"$status\"" : "undefined", "\n");
         if ($status)
         {
 #             # Don't allow 'select' as a regular key
@@ -392,7 +396,7 @@ sub visit
                 {
                     my $nameid = sprintf "node%03d000", $level;
                     $level++;
-                    visit($kids, $nameid++, $level, $subr);
+                    $self->visit($kids, $nameid++, $level, $subr);
                 }
                 else
                 {
@@ -409,14 +413,17 @@ sub merge_blocks
     my $selects = shift;
     my $tree = $self->{TREE};
     my %vars;
+    my $match_status;
+    my $match_id;
 
     print("Start of _merge_blocks, selects: ", Dumper($selects)) if $self->{DEBUG};
 
     my $visitor = sub {
+        my $self = shift;
         my $noderef = shift;
 
         print "merge_blocks: noderef is: ", Dumper($noderef) if $self->{DEBUG};
-        return if evaluate($noderef, $selects) == 0;
+        return if ($self->evaluate($noderef, $selects) == 0);
 
         print "merge_blocks: evaluate returned nonzero\n" if $self->{DEBUG};
         foreach my $key (sort keys %{$noderef})
@@ -470,25 +477,33 @@ sub merge_blocks
             }
             else
             {
-                $vars{$key} = $value;            
+                $vars{$key} = $value;
             }
         }
 
         return 1;
     };
 
-    visit([$tree], 'top', 0, $visitor);
+    $self->visit([$tree], 'top', 0, $visitor);
 
     print("Result of merge blocks - VARS: ", Dumper(\%vars)) if $self->{DEBUG};
 
     return \%vars;
 }
 
+# See if the selector keys in $select_list match the selector keys in
+# the block ($noderef).
+# If the block doesn't have any selector keys, it always matches.
+
 sub evaluate
 {
+    my $self = shift;
     my $noderef = shift;
     my $select_list = shift;
     my $retval = 1;
+    my @s_key_list;
+    my $match = '';
+    my $is_regexp = 0;
 
     print "in evaluate: ", Dumper($noderef) if $DEBUG;
     print "evaluate: 1 select_list: ", Dumper($select_list) if $DEBUG;
@@ -503,43 +518,70 @@ sub evaluate
 
     return 0 unless %selectors;
 
-    foreach my $block_key (keys %{$noderef->{'select'}})
+  KEY_MATCH: foreach my $block_key (keys %{$noderef->{'select'}})
     {
         if ($block_key eq '%FILE_TIME%')
         {
             $selectors{$block_key} = Idval::FileIO::idv_get_mtime($selectors{FILE});
         }
 
+        my $bstor = $noderef->{'select'}->{$block_key}; # Naming convenience
+
         print "evaluate: 2 select_list: ", Dumper(\%selectors) if $DEBUG;
         print("Checking block selector \"$block_key\"\n") if $DEBUG;
-        if (!exists($selectors{$block_key}))
+
+#        @s_key_list = ($block_key);
+        @s_key_list = $self->{ALLOW_KEY_REGEXPS} ? grep(/^$block_key$/, keys %selectors) :
+            ($block_key);
+
+# XXX Throw out ALLOW_KEY_REGEXPS changes. That's just dumb. We do need to keep track of _all_
+# the tags that matched (only in blocks that have a GRIPE variable...)
+
+        $is_regexp = $block_key =~ m/\W/;
+        foreach my $s_key (@s_key_list)
         {
-            # The select list has nothing to match a required selector, so this must fail
-            return 0;
+            if (!exists($selectors{$s_key}))
+            {
+                # The select list has nothing to match a required selector, so this must fail
+                return 0;
+            }
+
+
+            # Make sure arg_value is a list reference
+            my $arg_value_list = ref $selectors{$s_key} eq 'ARRAY' ? $selectors{$s_key} :
+                [$selectors{$s_key}];
+
+            my $block_op = $bstor->{'op'};
+            my $block_value = $bstor->{'value'};
+            my $block_cmp_func = Idval::Select::get_compare_function($block_op, 'STR');
+            my $cmp_result = 0;
+
+            # For any key, the passed_in selector may have a list of values that it can offer up to be matched.
+            # A successful match for any of these values constitutes a successful match for the block selector.
+            foreach my $value (@{$arg_value_list})
+            {
+                print("Comparing \"$value\" \"$block_op\" \"$block_value\" resulted in ",
+                      &$block_cmp_func($value, $block_value) ? "True\n" : "False\n") if $DEBUG;
+
+                $cmp_result ||= &$block_cmp_func($value, $block_value);
+                last if $cmp_result;
+            }
+
+            if ($is_regexp)
+            {
+                $retval ||= $cmp_result;
+            }
+            else
+            {
+                $retval &&= $cmp_result;
+            }
+
+            if (!$retval)
+            {
+                #print "Config: match id is \"$s_key\"\n";
+                last KEY_MATCH;
+            }
         }
-        my $bstor = $noderef->{'select'}->{$block_key};
-
-        my $arg_value_list = ref $selectors{$block_key} eq 'ARRAY' ? $selectors{$block_key} : [$selectors{$block_key}];
-        # Now, arg_value is guaranteed to be a list reference
-
-        my $block_op = $bstor->{'op'};
-        my $block_value = $bstor->{'value'};
-        my $block_cmp_func = Idval::Select::get_compare_function($block_op, 'STR');
-        my $cmp_result = 0;
-
-        # For any key, the passed_in selector may have a list of values that it can offer up to be matched.
-        # A successful match for any of these values constitutes a successful match for the block selector.
-        foreach my $value (@{$arg_value_list})
-        {
-            print("Comparing \"$value\" \"$block_op\" \"$block_value\" resulted in ",
-                  &$block_cmp_func($value, $block_value) ? "True\n" : "False\n") if $DEBUG;
-
-            $cmp_result ||= &$block_cmp_func($value, $block_value);
-            last if $cmp_result;
-        }
-
-        $retval &&= $cmp_result;
-        last if !$retval;
     }
 
     #print("evaluate returning $retval\n");
