@@ -516,7 +516,14 @@ sub evaluate
 
     my %selectors = %{$select_list};
 
-    return 0 unless %selectors;
+    #return 0 unless %selectors;
+
+    # Automatically set up the type of the current system ('MSWin32', 'Linux', etc.),
+    # unless the caller wants to override it.
+    if (!exists $selectors{'system_type'})
+    {
+        $selectors{'system_type'} = Idval::Common::get_system_type();
+    }
 
   KEY_MATCH: foreach my $block_key (keys %{$noderef->{'select'}})
     {

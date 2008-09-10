@@ -59,6 +59,11 @@ memoize('mung_path_query');
 # #     return $file;
 # # }
 
+sub get_system_type
+{
+    return $Config{osname};
+}
+
 sub mung_path_query
 {
     my $path = shift;
@@ -72,7 +77,7 @@ sub mung_path
 {
     my $path = shift;
 
-    if ($Config{osname} eq 'cygwin')
+    if (get_system_type() eq 'cygwin')
     {
         $path =~ s{/cygdrive/(\w)}{$1:}x;
         if ($path =~ m{^/}x)
@@ -94,7 +99,7 @@ sub mung_to_unix
     $path = Idval::Common::expand_tilde($path);
 
     # mung drive letter
-    if ($Config{osname} eq 'cygwin')
+    if (get_system_type() eq 'cygwin')
     {
         $path =~ s{^(\w):}{/cygdrive/$1}x;
     }
