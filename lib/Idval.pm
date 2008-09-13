@@ -156,7 +156,7 @@ sub _init
 
     $self->set_pod_input();
 
-    #$log->str();
+    #$log->str("Idval startup");
 
     #pod2usage(-verbose => 0)  if ($getopts{'help'});
     #pod2usage(-verbose => 2)  if ($getopts{'man'});
@@ -198,6 +198,7 @@ sub _init
     $self->{TYPEMAP} = Idval::TypeMap->new($self->providers());
     Idval::Common::register_common_object('typemap', $self->typemap());
 
+    # This call will set the current id3_encoding
     $self->{DATASTORE} = Idval::Collection->new({contents => '', source => 'blank'});
 
     $self->{REMAINING_ARGS} = [@other_args];

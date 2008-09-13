@@ -92,7 +92,7 @@ sub test_validation_with_one_error
         GRIPE = Date is wrong!
 }
 EOF
-    my $expected_result = "\\S+?:\\d+: error: For YEAR, Date is wrong!\n";
+    my $expected_result = ".+?:\\d+: error: For YEAR, Date is wrong!\n";
     my $test_result = $self->run_validation_test($val_cfg);
     $self->assert_matches(qr/$expected_result/, $test_result);
     return;
@@ -109,8 +109,8 @@ sub test_validation_showing_that_two_selectors_AND_together
         GRIPE = Too new for old-time
 }
 EOF
-    my $expected_result = "\\S+?:\\d+: error: For GENRE, Too new for old-time\n" .
-    "\\S+?:\\d+: error: For YEAR, Too new for old-time\n";
+    my $expected_result = ".+?:\\d+: error: For GENRE, Too new for old-time\n" .
+    ".+?:\\d+: error: For YEAR, Too new for old-time\n";
     my $test_result = $self->run_validation_test($val_cfg);
     $self->assert_matches(qr/$expected_result/, $test_result);
     return;
@@ -131,15 +131,15 @@ EOF
     # (note that this is case-sensitive).
 
     my $expected_result =<<EOF;
-\\S+?:\\d+: error: For ARTIST, Grumble Flac
-\\S+?:\\d+: error: For ALBUM, Grumble Flac
-\\S+?:\\d+: error: For TITLE, Grumble Flac
-\\S+?:\\d+: error: For ARTIST, Grumble Flac
-\\S+?:\\d+: error: For ALBUM, Grumble Flac
-\\S+?:\\d+: error: For TITLE, Grumble Flac
-\\S+?:\\d+: error: For ARTIST, Grumble Flac
-\\S+?:\\d+: error: For ALBUM, Grumble Flac
-\\S+?:\\d+: error: For TITLE, Grumble Flac
+.+?:\\d+: error: For ALBUM, Grumble Flac
+.+?:\\d+: error: For ARTIST, Grumble Flac
+.+?:\\d+: error: For TITLE, Grumble Flac
+.+?:\\d+: error: For ALBUM, Grumble Flac
+.+?:\\d+: error: For ARTIST, Grumble Flac
+.+?:\\d+: error: For TITLE, Grumble Flac
+.+?:\\d+: error: For ALBUM, Grumble Flac
+.+?:\\d+: error: For ARTIST, Grumble Flac
+.+?:\\d+: error: For TITLE, Grumble Flac
 EOF
 
     my $test_result;
@@ -164,12 +164,12 @@ EOF
     # that this is case-sensitive).
 
     my $expected_result =<<EOF;
-\\S+?:\\d+: error: For ARTIST, Grumble Flac
-\\S+?:\\d+: error: For ALBUM, Grumble Flac
-\\S+?:\\d+: error: For ARTIST, Grumble Flac
-\\S+?:\\d+: error: For ALBUM, Grumble Flac
-\\S+?:\\d+: error: For ARTIST, Grumble Flac
-\\S+?:\\d+: error: For ALBUM, Grumble Flac
+.+?:\\d+: error: For ALBUM, Grumble Flac
+.+?:\\d+: error: For ARTIST, Grumble Flac
+.+?:\\d+: error: For ALBUM, Grumble Flac
+.+?:\\d+: error: For ARTIST, Grumble Flac
+.+?:\\d+: error: For ALBUM, Grumble Flac
+.+?:\\d+: error: For ARTIST, Grumble Flac
 EOF
 
     my $test_result;
@@ -193,8 +193,8 @@ EOF
     # that start with A that contain "Flac" AND for YEAR == 2005
 
     my $expected_result =<<EOF;
-\\S+?:\\d+: error: For ARTIST, Grumble Flac
-\\S+?:\\d+: error: For ALBUM, Grumble Flac
+.+?:\\d+: error: For ARTIST, Grumble Flac
+.+?:\\d+: error: For ALBUM, Grumble Flac
 EOF
 
     my $test_result;
@@ -220,8 +220,8 @@ EOF
     # that start with A that contain "Flac" AND for YEAR == 2005
 
     my $expected_result =<<EOF;
-\\S+?:\\d+: error: For ARTIST, Grumble Flac
-\\S+?:\\d+: error: For ALBUM, Grumble Flac
+.+?:\\d+: error: For ALBUM, Grumble Flac
+.+?:\\d+: error: For ARTIST, Grumble Flac
 EOF
 
     my $test_result;

@@ -49,14 +49,15 @@ sub read ## no critic (ProhibitBuiltinHomonyms)
     #print "read.pm: inputfile is: \"$inputfile\"\n";
     my $loc = $inputfile ? $inputfile : 'Cached data store';
     mylog("Reading tag information from \"$loc\"\n");
-    $datastore = eval {
-        Idval::Ui::get_source_from_file($inputfile, $config->get_single_value('data_store',
-                                                                              {'config_group' => 'idval_settings'}));};
 
-    if ($@)
+    if ($inputfile)
     {
-        $@ =~ s/\r//g;
-        croak("Got error from Idval::Ui::get_source_from_file: ", $@, "\n") if $@;
+        $datastore = Idval::Ui::get_source_from_file($inputfile);
+    }
+    else
+    {
+        my $dsfile = $config->get_single_value('data_store', {'config_group' => 'idval_settings'});
+        $datastore = eval {Idval::Ui::get_source_from_cache("${dsfile}.bin", "${dsfile}.dat");};
     }
 
     Idval::Common::register_common_object('data', $datastore);

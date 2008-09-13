@@ -76,7 +76,10 @@ sub init
     my $config = Idval::Common::get_common_object('config');
     $self->{VISIBLE_SEPARATOR} = $config->get_single_value('visible_separator', {'config_group' => 'idval_settings'});
     $self->{MELD_MP3_TAGS} = $config->get_single_value('meld_mp3_tags', {'config_group' => 'idval_settings'}, 1);
+    $self->{EXACT_TAGS} = 0;
+    $self->{IS_ENCODABLE_REGEXP} = qr/^(?:T...|WXXX|IPLS|USLT|SYLT|COMM|GEOB|APIC|USER|OWNE|COMR)$/;
 
+    $self->{DEBUG} = 0;
     return;
 }
 
@@ -87,10 +90,23 @@ sub read_tags
     my $line;
     my $current_tag;
     my $retval = 0;
+    my $dbg = 0;
 
     return $retval if !$self->query('is_ok');
 
+    my $exact_tags = $self->{EXACT_TAGS};
+
     my $filename = $tag_record->get_value('FILE');
+    #print "MP3_Tag: filename is \"$filename\"\n";
+    #if ($filename eq q{/home/big/Music/mm/Hip-Hop Classics/Music/Nice and Smooth - Funky for you.mp3})
+    #{
+    #    $dbg = 1;
+    #}
+
+    if (!exists $self->{ID3_ENCODING})
+    {
+        $self->{ID3_ENCODING_TYPE} = Idval::Common::get_common_object('id3_encoding') eq 'iso-8859-1' ? 0 : 1;
+    }
 
     my $mp3 = MP3::Tag->new($filename);
 
@@ -100,13 +116,16 @@ sub read_tags
     if (exists $mp3->{ID3v1})
     {
         ($title, $artist, $album, $year, $comment, $track, $genre) = $mp3->{ID3v1}->all;
-        $tag_record->add_tag('TITLE', $title);
-        $tag_record->add_tag('TRACK', $track);
-        $tag_record->add_tag('ARTIST', $artist);
-        $tag_record->add_tag('ALBUM', $album);
-        $tag_record->add_tag('COMMENT', $comment);
-        $tag_record->add_tag('YEAR', $year);
-        $tag_record->add_tag('GENRE', $genre);
+        if ($exact_tags)
+        {
+            $tag_record->add_tag('TITLE', $title);
+            $tag_record->add_tag('TRACK', $track);
+            $tag_record->add_tag('ARTIST', $artist);
+            $tag_record->add_tag('ALBUM', $album);
+            $tag_record->add_tag('COMMENT', $comment);
+            $tag_record->add_tag('YEAR', $year);
+            $tag_record->add_tag('GENRE', $genre);
+        }
     }
 
     my $frameIDs_hash = {};
@@ -123,7 +142,14 @@ sub read_tags
 
         foreach my $frame (keys %$frameIDs_hash)
         {
-            #print ">>> $frame:\n";
+            print ">>> $frame:\n" if $dbg;
+
+            if (!exists($self->{SUPPORTED_TAGS}->{$frame}))
+            {
+                print "\"$frame\" not supported.\n" if $dbg;
+                next;
+            }
+
             my @tagvalues = ();
 #             if ($frame eq 'GEOB' or
 #                 $frame eq 'PRIV' or
@@ -137,9 +163,9 @@ sub read_tags
             {
                 #my ($info_item, $name, @rest) = $mp3->{ID3v2}->get_frame($frame);
                 my ($info_item, $name, @rest) = $mp3->{ID3v2}->get_frame($frame, 'array_nokey');
-                #print "<<<<GOT AN ARRAY>>>\n" if scalar @rest;
-                #print "Frame $frame, info_item: ", Dumper($info_item);
-                #print "Frame $frame, rest: ", Dumper(\@rest);
+                print "<<<<GOT AN ARRAY>>>\n" if $dbg and scalar @rest;
+                print "Frame $frame, info_item: ", Dumper($info_item) if $dbg;
+                print "Frame $frame, rest: ", Dumper(\@rest) if $dbg;
                 if (!defined($name))
                 {
                     $tagvalues[0] = '%placeholder%';
@@ -157,7 +183,8 @@ sub read_tags
                     {
                         if (ref $info)
                         {
-                            if ($$info[1] =~ m/^idv-(.*)/)
+                            print "MP3_Tag: info for frame \"$frame\" is: ", Dumper($info) if $dbg;
+                            if ($frame eq 'TXXX' and $$info[1] =~ m/^idv-(.*)/)
                             {
                                 # This was a tag that was wrapped into a TXXX tag.
                                 # Unwrap it here and store it in the record.
@@ -167,9 +194,25 @@ sub read_tags
                             elsif ($frame eq 'GEOB' or
                                    $frame eq 'PRIV' or
                                    $frame eq 'APIC' or
-                                   $frame eq 'NCON')
+                                   $frame eq 'NCON'
+                                  )
                             {
                                 $valstr = '%placeholder%';
+                            }
+                            elsif ($frame =~ $self->{IS_ENCODABLE_REGEXP})
+                            {
+                                print "MP3_Tag: Got encodable match for $frame\n" if $dbg;
+                                my $encoding = shift(@{$info});
+                                # Only keep the encoding if it's different from the default
+                                print "MP3_Tag: encoding is \"$encoding\" type is \"", $self->{ID3_ENCODING_TYPE}, "\"\n" if $dbg;
+                                $valstr = '';
+                                if ($encoding ne $self->{ID3_ENCODING_TYPE})
+                                {
+                                    $valstr = $encoding . $self->{VISIBLE_SEPARATOR};
+                                }
+                                print "MP3_Tag: 1 valstr is \"$valstr\"\n" if $dbg;
+                                $valstr .= join($self->{VISIBLE_SEPARATOR}, @{$info});
+                                print "MP3_Tag: 2 valstr is \"$valstr\"\n" if $dbg;
                             }
                             else
                             {
@@ -192,7 +235,7 @@ sub read_tags
                         
                         my $text1;
                         ($text1 = $valstr) =~ s/\r/CR/g;
-                        print "Frame $frame, valstr: \"$valstr\"\n";
+                        print "Frame $frame, valstr: \"$valstr\"\n" if $dbg;
                         push(@tagvalues, $valstr);
                     }
                 }
@@ -216,6 +259,7 @@ sub write_tags
 
     return 0 if !$self->query('is_ok');
 
+    my $dbg = 0;
     my $vs = $self->{VISIBLE_SEPARATOR};
     my $filename = $tag_record->get_name();
 
@@ -273,14 +317,14 @@ sub write_tags
   TAG_LOOP:
     foreach my $tagname ($temp_rec->get_all_keys())
     {
-        print "Checking \"$tagname\"\n";
+        print "Checking \"$tagname\"\n" if $dbg;
         $tag_index = -1;
         while ($tagvalue = $temp_rec->shift_value($tagname))
         {
             $tag_index++;
             $framename = $tag_index > 0 ? sprintf("%s%02d", $tagname, $tag_index) : $tagname;
 
-            print "Tag name is \"$tagname\"\n";
+            print "Tag name is \"$tagname\"\n" if $dbg;
             if($tagvalue eq '%placeholder%') # Don't know how to handle; leave it be
             {
                 delete $frameIDs->{$framename};
@@ -297,7 +341,7 @@ sub write_tags
                 }
 
                 @frameargs = ($tagvalue =~ m/\Q$vs\E/) ? split(/\Q$vs\E/, $tagvalue) : ($tagvalue);
-                print "Args for $framename are ", Dumper(\@frameargs);
+                print "Args for $framename are ", Dumper(\@frameargs) if $dbg;
             }
             else
             {
@@ -313,12 +357,12 @@ sub write_tags
             if (exists($frameIDs->{$framename}))
             {
                 delete $frameIDs->{$framename};
-                print "Tag $framename exists in file\n";
+                print "Tag $framename exists in file\n" if $dbg;
                 $id3v2->change_frame($framename, @frameargs);
             }
             else
             {
-                print "Tag $framename does not exist in file\n";
+                print "Tag $framename does not exist in file\n" if $dbg;
                 $id3v2->add_frame($framename, @frameargs);
             }
         }
@@ -327,7 +371,7 @@ sub write_tags
     # Handle the leftover tags (they were in the file, but not in the tag record, so they should be deleted)
     foreach my $frameID (keys %{$frameIDs})
     {
-        print "Removing $frameID\n";
+        print "Removing $frameID\n" if $dbg;
         $id3v2->remove_frame($frameID);
     }
 
@@ -373,6 +417,13 @@ sub write_tags
     #print "Tags left: ", join(":", $temp_rec->format_record()), "\n";
 
     return 0;
+}
+
+sub close
+{
+    my $self = shift;
+
+    delete $self->{ID3_ENCODING} if exists $self->{ID3_ENCODING};
 }
 
 1;

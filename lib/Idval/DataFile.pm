@@ -46,6 +46,7 @@ sub _init
     $self->{DATAFILE} = shift;
     $self->{TYPEMAP} = Idval::Common::get_common_object('typemap');
     $self->{BLOCKS} = $self->parse();
+
     return;
 }
 
@@ -63,9 +64,35 @@ sub parse
 
     my $fh = Idval::FileIO->new($datafile, "r") || croak "Can't open tag data file \"$datafile\" for reading: $!\n";
 
+    my $line;
+
+    # Get the data related to the collection itself
+    while(defined($line = <$fh>))
+    {
+        chomp $line;
+        next if $line =~ m/^\#/x;
+        # A blank line delimits this header information block
+        last if $line =~ m/^\s*$/;
+
+        $line =~ m{ ^created_on:\s+(.*?)$ }x and do {
+            $collection->{CREATIONDATE} = $1;
+            next;
+        };
+
+        $line =~ m{ ^source:\s+(.*?)$ }x and do {
+            $collection->{SOURCE} = $1;
+            next;
+        };
+
+        $line =~ m{ ^encoding:\s+(.*?)$ }x and do {
+            $collection->{ID3_ENCODING} = $1;
+            next;
+        };
+
+    }
+
     my $accumulate_line = '';
     my @block = ();
-    my $line;
     while(defined($line = <$fh>))
     {
         chomp $line;

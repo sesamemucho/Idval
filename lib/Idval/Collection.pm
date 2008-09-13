@@ -20,6 +20,9 @@ package Idval::Collection;
 use strict;
 use warnings;
 use Data::Dumper;
+use Carp qw(confess);
+
+use Idval::Common;
 
 sub new
 {
@@ -41,12 +44,15 @@ sub _init
                     : 'UNKNOWN'
                     ;
 
+    # Set the default encoding according to the current Perl input encoding
+    $self->{ID3_ENCODING} = ${^UNICODE} & 8 ? 'unicode' : 'iso-8859-1';
     $self->{CREATIONDATE} = scalar(localtime());
 
     if ($contents and ref($contents) eq 'Idval::Collection')
     {
         $self->{SOURCE} = $contents->{SOURCE};
         $self->{CREATIONDATE} = $contents->{CREATIONDATE};
+        $self->{ID3_ENCODING} = $contents->{ID3_ENCODING};
         $self->{RECORDS} = $contents->{RECORDS};
     }
     elsif ($contents and ref($contents) eq 'HASH')
@@ -57,6 +63,8 @@ sub _init
     {
         $self->{RECORDS} = {};
     }
+
+    Idval::Common::register_common_object('id3_encoding', $self->{ID3_ENCODING});
 
     return;
 }
@@ -96,11 +104,13 @@ sub stringify
 
     my @output = ();
     my @reclist;
+    confess "Huh?" unless defined $self->{CREATIONDATE};
     my $date = $self->{CREATIONDATE};
 
     push(@output, "# IDValidator Tag File (DO NOT REMOVE THIS LINE)");
-    push(@output, "# Created on: " . $date);
-    push(@output, "# Source: " . $self->{SOURCE});
+    push(@output, "created_on: " . $date);
+    push(@output, "source: " . $self->{SOURCE});
+    push(@output, "encoding: " . $self->{ID3_ENCODING});
     push(@output, "");
 
     my $lineno = 5;
@@ -119,9 +129,12 @@ sub stringify
     return \@output;
 }
 
-sub get_source
+sub source
 {
     my $self = shift;
+    my $source = shift;
+
+    $self->{SOURCE} = $source if defined $source;
 
     return $self->{SOURCE};
 }

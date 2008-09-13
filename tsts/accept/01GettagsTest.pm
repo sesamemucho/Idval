@@ -49,17 +49,17 @@ sub test_gettags
         {
             $errlist .= "No tag entries for \"$file\". Tag reader not present?\n";
         }
-        elsif (!$taglist->get($file)->key_exists("TITLE"))
+        elsif (!$taglist->get($file)->key_exists("TIT2"))
         {
-            $errlist .= "no \"TITLE\" entry for $file.\n";
+            $errlist .= "no \"TIT2\" entry for $file.\n";
         }
         else
         {
             my $fname = lc(basename($file));
-            #print STDERR "fname is \"$fname\", tag value is: \"" . $taglist->get($file)->get_value("TITLE") . "\"\n";
-            if ($fname ne $taglist->get($file)->get_value("TITLE"))
+            #print STDERR "fname is \"$fname\", tag value is: \"" . $taglist->get($file)->get_value("TIT2") . "\"\n";
+            if ($fname ne $taglist->get($file)->get_value("TIT2"))
             {
-                $errlist .= "Bad TITLE for \"$file\" (is \"" . $taglist->get($file)->get_value("TITLE") . "\")\n";
+                $errlist .= "Bad TIT2 for \"$file\" (is \"" . $taglist->get($file)->get_value("TIT2") . "\")\n";
             }
         }
     }

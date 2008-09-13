@@ -175,7 +175,7 @@ sub get_source_from_dirs
     my @dirs = map {Idval::Common::expand_tilde($_) }  @_;
 
     #local $srclist = {};
-    $srclist = Idval::Collection->new({source => 'STORED DATA CACHE'});
+    $srclist = Idval::Collection->new({source => 'gettags command'});
     my $wanted = make_wanted($providers, $config);
 
     Idval::FileIO::idv_find($wanted, @dirs);
@@ -190,26 +190,26 @@ sub get_source_from_dirs
 sub get_source_from_file
 {
     my $dat_file = shift;
-    my $data_store = shift;
     my $reclist;
 
-    if ($dat_file)
-    {
-        my $dat = Idval::DataFile->new($dat_file);
-        $reclist = $dat->get_reclist();
-        return $reclist;
-    }
-    elsif ($data_store)
-    {
-        $reclist = eval {retrieve(Idval::Common::expand_tilde($data_store))};
-        croak "Tag info cache is corrupted; you will need to regenerate it (with 'gettags'):\n$@\n" if $@;
-        #print Dumper($reclist);
-        return Idval::Collection->new({contents => $reclist});
-    }
-    else
-    {
-        croak "No data source specified.";
-    }
+    my $dat = Idval::DataFile->new($dat_file);
+    $reclist = $dat->get_reclist();
+    return $reclist;
+}
+
+sub get_source_from_cache
+{
+    my $data_store = shift;
+    my $dat_file_name = shift;
+    my $reclist;
+
+    $reclist = eval {retrieve(Idval::Common::expand_tilde($data_store))};
+    croak "Tag info cache is corrupted; you will need to regenerate it (with 'gettags'):\n$@\n" if $@;
+    #print Dumper($reclist);
+    my $ds = Idval::Collection->new({contents => $reclist});
+    $ds->source($dat_file_name);
+
+    return $ds;
 }
 
 sub put_source_to_file
@@ -227,12 +227,21 @@ sub put_source_to_file
     # First (unless specifically told not to), opaquely to the data store
     if ($usecache)
     {
+        my $ds_base = Idval::Common::expand_tilde($data_store_file);
+        my $ds_bin = $ds_base . '.bin';
+        my $ds_dat = $ds_base . '.dat';
         # Make sure the path exists
-        my $path = dirname(Idval::Common::expand_tilde($data_store_file));
+        my $path = dirname($ds_bin);
         mkpath($path) unless -d $path;
-        #print "Storing data to ",  Idval::Common::expand_tilde($data_store_file), "\n";
-        #store($reclist, Idval::Common::expand_tilde($data_store_file));
-        store($datastore, Idval::Common::expand_tilde($data_store_file));
+
+        # Save both the binary cache and the equivalent readable file
+        $datastore->source('STORED DATA CACHE'); # First, adjust the SOURCE descriptor
+        store($datastore, $ds_bin);
+        my $out = Idval::FileIO->new($ds_dat, '>:utf8') or 
+            croak "Can't open $ds_dat for writing: $ERRNO\n";
+
+        print $out join("\n", @{$datastore->stringify()});
+        $out->close();
         #print "Finished storing data\n";
     }
 
@@ -242,6 +251,7 @@ sub put_source_to_file
         my $fname = $dat_file;
         my $out = Idval::FileIO->new($fname, '>:utf8') or croak "Can't open $fname for writing: $ERRNO\n";
 
+        $datastore->source($fname);
         print $out join("\n", @{$datastore->stringify()});
         $out->close();
     }

@@ -23,9 +23,11 @@ use Data::Dumper;
 use English '-no_match_vars';
 use Carp;
 use Memoize;
+use Scalar::Util;
 
 use Idval::Constants;
 use Idval::Common;
+use Idval::Validate;
 
 #
 # Given a list of selectors, constructs a Select object. This object, given a hash of key=>value pairs,
@@ -153,10 +155,11 @@ sub check_function
 
 sub passes
 {
-    my $funcname = $_[1];
+    my $selectors = $_[0];
+    my $funcname = $_[2];
     croak "Unknown function Idval::ValidateFuncs::$funcname" unless check_function($funcname);
     my $func = \&{"Idval::ValidateFuncs::$funcname"};
-    return (&$func(split(/,/, $_[0])) != 0 );
+    return (&$func($selectors, split(/,/, $_[1])) != 0 );
 }
 
 sub fails
@@ -167,7 +170,8 @@ sub fails
 sub get_compare_function
 {
     my $operand = shift;
-    my $func_type = shift;
+    my $compare_value = shift;
+    my $func_type = Scalar::Util::looks_like_number($compare_value) ? 'NUM' : 'STR';
 
     return $compare_function{$operand}->{FUNC}->{$func_type};
 }

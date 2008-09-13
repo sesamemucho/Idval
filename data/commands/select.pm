@@ -27,6 +27,7 @@ use English '-no_match_vars';;
 use Carp;
 
 use Idval::Collection;
+use Idval::Constants;
 use Idval::Record;
 use Idval::FileIO;
 use Idval::DoDots;
@@ -40,40 +41,83 @@ sub init
 
 sub select ## no critic (ProhibitBuiltinHomonyms)
 {
-    my $datastore = shift;
-    my $providers = shift;
-    my $outputfile = '-';
-    local @ARGV = @_;
-    my $result = GetOptions("output=s" => \$outputfile);
+    my $datastore  = shift;
+    my $providers  = shift;
+    my $outputfile = '';
+    my $selectfile = '';
+    my $quiet      = 0;
+    local @ARGV    = @_;
 
-    my $out = Idval::FileIO->new($outputfile, '>') or croak "Can't open $outputfile for writing: $ERRNO\n";
+    my $result = GetOptions('select=s' => \$selectfile,
+                            'output=s' => \$outputfile,
+                            'quiet'    => \$quiet,
+        );
 
-    # We want to add to the config object, but not pollute it for those who follow
-    # Storable::dclone doesn't work with regexps
-    my $config = Idval::Common::deep_copy(Idval::Common::get_common_object('config'));
+    my $config;
+    my $numrecs = 0;
 
-    my $selectfile = defined($ARGV[0]) ? $ARGV[0] : '';
-    croak "Need a select file." unless $selectfile;
-    # Now, make a new config object that incorporates the select file info.
-    $config->add_file($selectfile);
+    # User can either supply a select-file or pass in selectors
+    if (@ARGV)
+    {
+        my $selectors = join("\n", @ARGV);
+        $selectors =~ s/([{}])/\n$1\n/g; # Make sure all brackets are alone on their line
+        $selectors = "{\n" . $selectors . "\n}\n";
+        $config = Idval::Config->new($selectors);
+    }
+    elsif ($selectfile)
+    {
+        # Now, make a new config object that incorporates the select file info.
+        $config = Idval::Config->new($selectfile);
+    }
+    else
+    {
+        $config = Idval::Config->new("{\n}\n");
+    }
+
     my $select_coll = Idval::Collection->new();
 
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
         my $tag_record = $datastore->{RECORDS}->{$key};
-        my $select_p = $config->get_single_value('select', $tag_record);
-        if (($first == 0) and ($tag_record->get_value('ARTIST') eq 'John Hartford & Friends'))
+
+        if (($first == 0) and ($tag_record->get_value('FILE') =~ m{/home/big/Music/mm/tangier/92407.mp3}))
         {
             print "For record: ", Dumper($tag_record);
             print "config: ", Dumper($config);
             $first = 1;
         }
-        $select_coll->add($tag_record) if $select_p;
+        if ($first == 1)
+        {
+            $Idval::Config::DEBUG = 1;
+            $config->{DEBUG} = 1;
+        }
+
+        my $select_p = $config->selectors_matched($tag_record);
+        if ($first > 10)
+        {
+            $Idval::Config::DEBUG = 0;
+            $config->{DEBUG} = 0;
+        }
+        $first++;
+
+        if ($select_p)
+        {
+            $select_coll->add($tag_record);
+            $numrecs++;
+        }
     }
 
-    my $coll = $select_coll->stringify();
-    $out->print(join("\n", @{$coll}), "\n");
-    $out->close();
+    Idval::Common::get_logger->info_q($DBG_ALL, "Processed $numrecs records.\n") unless $quiet;
+
+    if ($outputfile)
+    {
+        $select_coll->source($outputfile);
+        my $coll = $select_coll->stringify();
+
+        my $out = Idval::FileIO->new($outputfile, '>') or croak "Can't open $outputfile for writing: $ERRNO\n";
+        $out->print(join("\n", @{$coll}), "\n");
+        $out->close();
+    }
     
     return $select_coll;
 }

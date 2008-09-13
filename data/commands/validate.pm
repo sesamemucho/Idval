@@ -58,6 +58,8 @@ sub validate
     my $selects = {config_group => 'idval_settings'};
 
     # As a special case, allow 'demo' as a cfg file name
+    $val_cfg->{DEBUG} = 1;
+    $Idval::Validate::DEBUG = 1;
     my $vcfg = Idval::Validate->new($cfgfile eq 'demo'
                                     ? $config->get_single_value('demo_validate_cfg', $selects)
                                     : $cfgfile);
@@ -98,12 +100,18 @@ sub each_item
 
     my @rectags = $tag_record->get_all_keys();
     my $lines = $tag_record->get_value('__LINES');
-    #print "val_cfg: ", Dumper($val_cfg);
-    my $varlist = $val_cfg->merge_blocks($tag_record);
+    #print STDERR "val_cfg: ", Dumper($val_cfg);
+    my $varlist = $val_cfg->get_gripes($tag_record);
 
     #print "For $key, got varlist: ", Dumper($varlist);
 
-    foreach my $gripe_item (@{$varlist})
+    my @sorted_gripes = map  { $_->[0] }
+                        sort { $a->[1] <=> $b->[1] }
+                        map  { [$_, $$_[1]] }
+                        @{$varlist};
+
+    #foreach my $gripe_item (@{$varlist})
+    foreach my $gripe_item (@sorted_gripes)
     {
         $gripe = $$gripe_item[0];
         $linenumber = $$gripe_item[1];

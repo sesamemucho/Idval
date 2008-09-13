@@ -93,7 +93,9 @@ sub _init
 sub str
 {
     my $self = shift;
+    my $title = shift;
 
+    print "$title\n" if $title;
     print "Logger settings:\n";
     printf "  log level:  %d\n", $self->accessor('LOGLEVEL');
     printf "  debug mask: 0x%0X\n", $self->accessor('DEBUGMASK');

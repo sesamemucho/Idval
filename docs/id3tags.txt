@@ -120,6 +120,34 @@ conversion tool will do this automatically?).
 
 * Tag support conclusions
 
+** Generally speaking, idval will give priority to id3v2 tags on
+   reading. Only if there is no id3v2 tag will idval try to determine
+   its value based on an id3v1 tag (if present).
+
+*** There will be an option to exactly read all v1 and v2 tags from an
+    mp3 file (v1 tag names will still be (possibly) translated).
+
+** On writing, idval will always write id3v1 tags from information in
+   id3v2 tags. That is, idval will write its (idval's) information to
+   the file in id3v2 tags, and will also write id3v1 tags as
+   appropriate and if desired.
+
+** idv3v2 encoding support
+   
+   Some id3v2 tags have encoding information attached to the tag.
+
+*** Following the id3v2 spec, text will be encoded either as iso-8859-1 or Unicode.
+
+**** Whenever a new data collection is created, the default encoding
+     will be set according to the current value of ${^UNICODE}. If the
+     data collection is read from an existing file, the default
+     encoding will be set to be the same as that of the data file.
+
+**** Currently, the whole file will be either one or the other.
+
+It shouldn't be too hard to do an escape-type thing as needed. This
+rule lets us avoid the '0%%' in front of every T*** field.
+
 ** For mp3 files, both types will always be written
 
 ** Tags supported by id3v1 will be translated (year, date => -year, etc.)

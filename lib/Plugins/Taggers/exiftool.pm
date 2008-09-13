@@ -96,24 +96,33 @@ sub read_tags
 
     return $retval if !$self->query('is_ok');
 
+    #print "exif: hi!\n";
     if (!exists($self->{WRITEABLE_TAGS}))
     {
         # This takes a while, so only do it (once) if we need it
         $self->{WRITEABLE_TAGS} = [Image::ExifTool::GetWritableTags()];
+        #print "Found ", scalar @{$self->{WRITEABLE_TAGS}}, " writable tags\n";
     }
 
     my $filename = $tag_record->get_value('FILE');
     my $exiftool = new Image::ExifTool;
+    #print "exif: new exiftool\n";
     my $vs = $self->{VISIBLE_SEPARATOR};
 
     # Extract meta information from an image
-    my $info = $exiftool->ImageInfo($filename, $self->{WRITEABLE_TAGS}, \%options);
+    #my $info = $exiftool->ImageInfo($filename, $self->{WRITEABLE_TAGS}, \%options);
+    my $info = $exiftool->ImageInfo($filename, \%options);
+    #my $success = $exiftool->ExtractInfo($filename);
+    #print "exif: after extractinfo\n";
+    #my $info = $exiftool->GetInfo();
+    #print "exif: got image info\n";
     #my $status = $exiftool->ExtractInfo($filename, $self->{WRITEABLE_TAGS}, \%options);
 
     # Get list of tags in the order they were found in the file
     #my @taglist = $exiftool->GetFoundTags('Alpha');
 
     my @taglist = $exiftool->GetTagList($info);
+    #print "exif: got tag list\n";
     foreach my $tag (@taglist)
     {
         # Get the value of a specified tag
@@ -124,6 +133,7 @@ sub read_tags
             $tag =~ s/ /\Q$vs\E/g;
             $tag_record->add_tag($tag, $value);
         }
+        #print "exif: tag \"$tag\"\n";
         # Can't deal with it otherwise
     }
 

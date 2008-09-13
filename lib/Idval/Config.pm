@@ -54,16 +54,7 @@ our $DEBUG = 0;
 our $USE_LOGGER = 1;
 #our $USE_LOGGER = 0;
 
-if ($USE_LOGGER)
-{
-    *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
-                                                  debugmask => $DBG_CONFIG,
-                                                  decorate => 1}) unless defined(*verbose{CODE});
-    *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
-                                                  debugmask => $DBG_CONFIG,
-                                                  decorate => 1}) unless defined(*chatty{CODE});
-}
-else
+if (! $USE_LOGGER)
 {
     *verbose = sub{ print @_; };
     *chatty = sub{ print @_; };
@@ -111,21 +102,18 @@ sub _init
 
     #$unmatched_selector_keys_ok = STRICT_MATCH unless defined($unmatched_selector_keys_ok);
     #$unmatched_selector_keys_ok = 0;
-#     *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
-#                                                   debugmask => $DBG_CONFIG,
-#                                                   decorate => 1}) unless defined(*verbose{CODE});
-#     *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
-#                                                   debugmask => $DBG_CONFIG,
-#                                                   decorate => 1}) unless defined(*chatty{CODE});
+    if ($USE_LOGGER)
+    {
+        *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
+                                                      debugmask => $DBG_CONFIG,
+                                                      from => 'BARFO',
+                                                      decorate => 1}) unless defined(*verbose{CODE});
 
-#      *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
-#                                                    debugmask => $DBG_CONFIG,
-#                                                    decorate => 1,
-#                                                  from=>'CHATTY'}) unless defined(*chatty{CODE});
+        *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
+                                                      debugmask => $DBG_CONFIG,
+                                                      decorate => 1}) unless defined(*chatty{CODE});
+    }
 
-#    $self->{OP_REGEX} = Idval::Select::get_op_regex();
-#    $self->{ASSIGN_OP_REGEX} = Idval::Select::get_assign_regex();
-#    $self->{CMP_OP_REGEX} = Idval::Select::get_cmp_regex();
     $self->{INITFILES} = [];
 #    $self->{TREE} = {};
     $self->{DEBUG} = $init_debug;
@@ -139,6 +127,8 @@ sub _init
     {
         $self->add_file($initfile);
     }
+
+    $self->{DEF_VARS} = $self->merge_blocks({config_group => 'idval_calculated_variables'});
 
     return;
 }
@@ -313,7 +303,8 @@ sub config_to_xml
             next;
         };
 
-        $line =~ m{^\s*([%[:alnum:]][\w%-]*)($assign_regex)(.*)\s*$}imx and do {
+        #$line =~ m{^\s*([%[:alnum:]][\w%-]*)($assign_regex)(.*)\s*$}imx and do {
+        $line =~ m{^\s*(\S+)\s*($assign_regex)(.*)\s*$}imx and do {
             my $name = $1;
             my $op = $2;
             $op =~ s/>/\&gt;/;
@@ -371,6 +362,7 @@ sub visit
         # Should we process this node?
         $status = &$subr($self, $node);
         #print ("visit ($level): subr returned ", defined($status) ? "\"$status\"" : "undefined", "\n");
+        return if $status == 2; # short-circuit finish
         if ($status)
         {
 #             # Don't allow 'select' as a regular key
@@ -423,7 +415,7 @@ sub merge_blocks
         my $noderef = shift;
 
         print "merge_blocks: noderef is: ", Dumper($noderef) if $self->{DEBUG};
-        return if ($self->evaluate($noderef, $selects) == 0);
+        return 0 if ($self->evaluate($noderef, $selects) == 0);
 
         print "merge_blocks: evaluate returned nonzero\n" if $self->{DEBUG};
         foreach my $key (sort keys %{$noderef})
@@ -491,6 +483,40 @@ sub merge_blocks
     return \%vars;
 }
 
+# For when we just want to know if some selector matched something
+sub match_blocks
+{
+    my $self = shift;
+    my $selects = shift;
+    my $tree = $self->{TREE};
+    my $match_status = 0;
+    my $result;
+
+    print("Start of match_blocks, selects: ", Dumper($selects)) if $self->{DEBUG};
+
+    my $visitor = sub {
+        my $self = shift;
+        my $noderef = shift;
+
+        print "match_blocks: noderef is: ", Dumper($noderef) if $self->{DEBUG};
+        my $eval_status = $self->evaluate($noderef, $selects);
+        return 0 if $eval_status == 0;
+        return 1 if $eval_status == 2;
+
+        # Otherwise, we got it - no need to check _anything_ else
+        $match_status = 1;
+        return 2;
+    };
+
+    $self->visit([$tree], 'top', 0, $visitor);
+    $result = $match_status;
+    $match_status = 0;
+
+    print("Result of match blocks is $result\n") if $self->{DEBUG};
+
+    return $result;
+}
+
 # See if the selector keys in $select_list match the selector keys in
 # the block ($noderef).
 # If the block doesn't have any selector keys, it always matches.
@@ -510,29 +536,49 @@ sub evaluate
     # If the block has no selector keys itself, then all matches should succeed
     if (not (exists($noderef->{'select'}) && ref($noderef->{'select'}) eq 'HASH'))
     {
-        print "Block has no selector keys, returning 1\n" if $DEBUG;
-        return 1;
+        print "Block has no selector keys, returning 2\n" if $DEBUG;
+        return 2;
     }
 
     my %selectors = %{$select_list};
 
     #return 0 unless %selectors;
 
-    # Automatically set up the type of the current system ('MSWin32', 'Linux', etc.),
-    # unless the caller wants to override it.
-    if (!exists $selectors{'system_type'})
-    {
-        $selectors{'system_type'} = Idval::Common::get_system_type();
-    }
-
   KEY_MATCH: foreach my $block_key (keys %{$noderef->{'select'}})
     {
+        if (exists ($self->{DEF_VARS}->{$block_key}))
+        {
+            no strict 'refs';
+            my $subr = $self->{DEF_VARS}->{$block_key};
+            $selectors{$block_key} = &$subr(\%selectors);
+            chatty ("Using ", $selectors{$block_key}, " for \"$block_key\"\n");
+            use strict;
+        }
+
         if ($block_key eq '%FILE_TIME%')
         {
             $selectors{$block_key} = Idval::FileIO::idv_get_mtime($selectors{FILE});
         }
 
         my $bstor = $noderef->{'select'}->{$block_key}; # Naming convenience
+        my $block_op = $bstor->{'op'};
+        my $block_value = $bstor->{'value'};
+        my $block_cmp_func = Idval::Select::get_compare_function($block_op, $block_value);
+
+        # A couple of special-case operators that need to be able to
+        # look at (possibly non-existing) selector keys.
+        if ($block_op eq 'passes' or $block_op eq 'fails')
+        {
+            print("Comparing \"selector list\" \"$block_key\" \"$block_op\" \"$block_value\" resulted in ",
+                  &$block_cmp_func(\%selectors, $block_key, $block_value) ? "True\n" : "False\n") if $DEBUG;
+
+            if (&$block_cmp_func(\%selectors, $block_key, $block_value))
+            {
+                return 1;
+            }
+
+            next KEY_MATCH;
+        }
 
         print "evaluate: 2 select_list: ", Dumper(\%selectors) if $DEBUG;
         print("Checking block selector \"$block_key\"\n") if $DEBUG;
@@ -558,9 +604,6 @@ sub evaluate
             my $arg_value_list = ref $selectors{$s_key} eq 'ARRAY' ? $selectors{$s_key} :
                 [$selectors{$s_key}];
 
-            my $block_op = $bstor->{'op'};
-            my $block_value = $bstor->{'value'};
-            my $block_cmp_func = Idval::Select::get_compare_function($block_op, 'STR');
             my $cmp_result = 0;
 
             # For any key, the passed_in selector may have a list of values that it can offer up to be matched.
@@ -641,6 +684,42 @@ sub value_exists
 
     my $vars = $self->merge_blocks($selects);
     return defined($vars->{$key});
+}
+
+sub selectors_matched
+{
+    my $self = shift;
+    my $selects = shift;
+
+    return $self->match_blocks($selects);
+}
+
+package Idval::Config::Methods;
+
+use strict;
+use Carp qw(cluck croak confess);
+use Config;
+
+use Idval::FileIO;
+
+sub get_system_type
+{
+    return $Config{osname};
+}
+
+sub get_mtime
+{
+    my $selectors = shift;
+
+    croak "No filename in selectors" unless exists $selectors->{FILE};
+    return Idval::FileIO::idv_get_mtime($selectors->{FILE});
+}
+
+sub get_file_age
+{
+    my $selectors = shift;
+
+    return time - Idval::FileIO::idv_get_mtime($selectors->{FILE});
 }
 
 1;

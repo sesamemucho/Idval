@@ -68,7 +68,7 @@ sub new
 }
 
 # Similar to Config.pm's evaluate, but sufficiently different
-sub evaluate
+sub val_evaluate
 {
     my $self = shift;
     my $noderef = shift;
@@ -79,23 +79,38 @@ sub evaluate
     my $is_regexp = 0;
     my @tags_matched = ();
 
-    print "in evaluate: ", Dumper($noderef) if $self->{DEBUG};
-    print "evaluate: 1 select_list: ", Dumper($select_list) if $self->{DEBUG};
+    print "in val_evaluate: ", Dumper($noderef) if $self->{DEBUG};
+    print "val_evaluate: 1 select_list: ", Dumper($select_list) if $self->{DEBUG};
     # If the block has no selector keys itself, then all matches should succeed
     if (not (exists($noderef->{'select'}) && ref($noderef->{'select'}) eq 'HASH'))
     {
-        print "Block has no selector keys, returning 1\n" if $self->{DEBUG};
-        return 1;
+        print "Block has no selector keys, returning 2\n" if $self->{DEBUG};
+        return 2;
     }
 
     my %selectors = %{$select_list};
 
     return 0 unless %selectors;
 
-    my $tags_to_ignore = $select_list->get_calculated_keys_re();
+    #my $tags_to_ignore = $select_list->get_calculated_keys_re();
+    my $tags_to_ignore = eval {$select_list->get_calculated_keys_re(); };
+    if ($@)
+    {
+        confess $@;
+    }
 
   KEY_MATCH: foreach my $block_key (keys %{$noderef->{'select'}})
     {
+        if (exists ($self->{DEF_VARS}->{$block_key}))
+        {
+            no strict 'refs';
+            my $subr = $self->{DEF_VARS}->{$block_key};
+            $selectors{$block_key} = &$subr(\%selectors);
+            print ("Using ", $selectors{$block_key}, " for \"$block_key\"\n");
+            chatty ("Using ", $selectors{$block_key}, " for \"$block_key\"\n");
+            use strict;
+        }
+
         if ($block_key eq '%FILE_TIME%')
         {
             $selectors{$block_key} = Idval::FileIO::idv_get_mtime($selectors{FILE});
@@ -103,7 +118,7 @@ sub evaluate
 
         my $bstor = $noderef->{'select'}->{$block_key}; # Naming convenience
 
-        print "evaluate: 2 select_list: ", Dumper(\%selectors) if $self->{DEBUG};
+        print "val_evaluate: 2 select_list: ", Dumper(\%selectors) if $self->{DEBUG};
         print("Checking block selector \"$block_key\"\n") if $self->{DEBUG};
 
         @s_key_list = $self->{ALLOW_KEY_REGEXPS} ? grep(/^$block_key$/, keys %selectors) :
@@ -156,20 +171,20 @@ sub evaluate
         }
     }
 
-    #print("evaluate returning $retval\n");
+    #print("val_evaluate returning $retval\n");
     return ($retval, \@tags_matched);
 }
 
 # The only variable we care about is the GRIPE
 # Use 'select' key to find out which tags matched, and so get the right line number
-sub merge_blocks
+sub get_gripes
 {
     my $self = shift;
     my $selects = shift;
     my $tree = $self->{TREE};
     my @gripelist;
 
-    print("Start of _merge_blocks, selects: ", Dumper($selects)) if $self->{DEBUG};
+    print("Start of _get_gripes, selects: ", Dumper($selects)) if $self->{DEBUG};
 
     my $visitor = sub {
         my $self = shift;
@@ -178,11 +193,11 @@ sub merge_blocks
         my $gripe = 'no gripe found?';
         my @match_tags = ();
 
-        print "merge_blocks: noderef is: ", Dumper($noderef) if $self->{DEBUG};
-        my ($retval, $matches) = $self->evaluate($noderef, $selects);
-        return if ($retval == 0);
+        print "get_gripes: noderef is: ", Dumper($noderef) if $self->{DEBUG};
+        my ($retval, $matches) = $self->val_evaluate($noderef, $selects);
+        return 0 if ($retval == 0);
 
-        print "merge_blocks: evaluate returned nonzero\n" if $self->{DEBUG};
+        print "get_gripes: val_evaluate returned nonzero\n" if $self->{DEBUG};
 
         # There might not be a GRIPE at this node (for instance, a top-level 'group')
         if(exists $noderef->{GRIPE})
@@ -225,12 +240,24 @@ sub merge_blocks
 package Idval::ValidateFuncs;
 
 use strict;
+use Carp qw(croak confess);
+use Data::Dumper;
 
 sub Check_Genre_for_id3v1
 {
     my $tagvalue = lc(shift);
 
     return Idval::Data::Genres::isNameValid($tagvalue);
+}
+
+sub Check_For_Existance
+{
+    #print "Args are: ", Dumper(@_);
+    #confess "Bye";
+    my $selectors = shift;
+    my $tagname = shift;
+    my $retval = exists $selectors->{$tagname};
+    return $retval;
 }
 
 =head1 VALIDATE
