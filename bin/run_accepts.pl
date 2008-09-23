@@ -9,7 +9,7 @@ use Test::Unit::TestRunner;
 use File::Glob ':glob';
 use File::Path;
 use FindBin;
-use lib ("$FindBin::Bin/../lib", "$FindBin::Bin/../tsts/accept");
+use lib ("$FindBin::Bin/../lib", "$FindBin::Bin/../t/accept");
 use Cwd qw(abs_path);
 
 # Get the top directory of the idv tree and make it look pretty
@@ -47,14 +47,49 @@ my @logger_args = Idval::Common::mkarglist(
     defined($options{'log_out'}) ? ('log_out' => $options{'log_out'}) : '',
     );
 
-Idval::Logger::_initialize_logger(@logger_args);
+Idval::Logger::initialize_logger(@logger_args);
 my $log = Idval::Logger::get_logger();
 #print STDERR $log->str(), "\n";
 
-my @pkgs = bsd_glob("$FindBin::Bin/../tsts/accept/*Test.pm");
+Idval::Common::register_common_object('options', \%options);
 
-# Uncomment and edit to debug individual packages.
-#debug_pkgs(qw/Test::Unit::TestCase/);
+my @exceptions;
+my @inclusions;
+foreach my $item (@ARGV)
+{
+    if ($item =~ m/^-(\S*)/)
+    {
+        push(@exceptions, $1);
+        next;
+    }
+
+    push(@inclusions, $item);
+}
+
+$inclusions[0] = '*' unless @inclusions;
+
+my @pkgs;
+my %candidates;
+my %bums;
+
+foreach my $item (@inclusions)
+{
+    map {$candidates{$_} = $_} bsd_glob("$FindBin::Bin/../t/accept/${item}Test.pm");
+}
+
+foreach my $item (@exceptions)
+{
+    map {$bums{$_} = $_} bsd_glob("$FindBin::Bin/../t/accept/${item}Test.pm");
+}
+
+foreach my $item (keys %candidates)
+{
+    delete $candidates{$item} if exists $bums{$item};
+}
+
+@pkgs = keys %candidates;
+
+die "No tests found for args \"+", join(' +', @inclusions), "\" \"-", join(' -', @exceptions), "\"\n" unless @pkgs;
 
 print "Get some coffee...\n";
 foreach my $pkg (@pkgs)
@@ -63,4 +98,4 @@ foreach my $pkg (@pkgs)
     $testrunner->start($pkg);
 }
 
-rmtree([$topdir . '/tsts/accept_data/ValidateTest/t']) unless $options{'no-delete'};
+rmtree([$topdir . '/t/accept_data/ValidateTest/t']) unless $options{'no-delete'};

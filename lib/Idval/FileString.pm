@@ -333,6 +333,11 @@ sub idv_clear_tree
     return;
 }
 
+sub idv_get_tree
+{
+    return $tree;
+}
+
 # sub idv_mkdir
 # {
 #     my $path = shift;
@@ -385,7 +390,7 @@ sub idv_test_isfile
 
     my ($status, $dpath) = _get_dir($name);
 
-    return ($status == 2) && ($dpath eq basename($name));
+    return (($status == 2) && ($dpath eq basename($name))) ? 1 : 0;
 }
 
 sub idv_test_exists
@@ -546,6 +551,7 @@ sub idv_add_file
 
     $dpath->{$filename} = $filedata;
 
+    #print STDERR "# Adding \"$filedata\" to \"$filename\"\n";
     return;
 }
 
@@ -560,6 +566,7 @@ sub idv_get_file
     croak "File \"$path\" not found\n" unless idv_test_isfile($path);
     my ($status, $dpath) = _get_dir($dirpath);
 
+    #print STDERR "idv_get_file: returning \"$dpath->{$filename}\"\n";
     return $dpath->{$filename};
 }
 

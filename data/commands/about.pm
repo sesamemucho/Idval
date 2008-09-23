@@ -245,7 +245,7 @@ sub about
         }
 
     }
-    return 0;
+    return $datastore;
 }
 
 sub set_pod_input

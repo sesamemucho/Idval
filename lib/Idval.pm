@@ -39,14 +39,14 @@ use Idval::Help;
 
 my @standard_options;
 my %options;
-my $VERSION;
+our $VERSION;
 our $AUTOLOAD;  ## no critic (ProhibitPackageVars)
 my $log;
 my $tempfiles = [];
 
 local $| = 1;
 
-$VERSION = 0.50;
+$VERSION = '0.7.0';
 
 @standard_options =
     (
@@ -428,7 +428,7 @@ sub set_pod_input
 
 =head1 NAME
 
-Idv.pl - Idval command interpreter
+Idval - Idval command interpreter
 
 =head1 SYNOPSIS
 

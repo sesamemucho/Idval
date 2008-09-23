@@ -1,0 +1,17 @@
+# Makemaker generated files and dirs.
+^MANIFEST\.
+^Makefile$
+^blib/
+^MakeMaker-\d
+
+# Temp, old and emacs backup files.
+~$
+\.old$
+^#.*#$
+^\.#
+
+# Development files
+^\.git
+^devbin
+^newconfig
+^spike

@@ -50,8 +50,9 @@ sub update
     my $new_datastore = eval {
         Idval::Ui::get_source_from_file($inputfile);};
 
-    #print "new datastore:", Dumper($new_datastore);
     croak($@) if $@;
+    #print STDERR "update: datastore:", Dumper($datastore);
+    #print STDERR "update: new datastore:", Dumper($new_datastore);
 
     my $typemap = Idval::Common::get_common_object('typemap');
     my $dotmap = $typemap->get_dot_map();
@@ -63,8 +64,8 @@ sub update
     my %prov_list;
     foreach my $key (sort keys %{$new_datastore->{RECORDS}})
     {
-        #print "in update with: ", Dumper($tag_record);
         $tag_record = $new_datastore->{RECORDS}->{$key};
+        print STDERR "in update with: ", Dumper($tag_record);
         $type = $tag_record->get_value('TYPE');
         $prov = $providers->get_provider('writes_tags', $type, 'NULL');
         $prov_list{$prov} = $prov;

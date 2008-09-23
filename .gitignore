@@ -5,3 +5,6 @@
 config.log
 config.status
 *.dvi
+MANIFEST
+*.bak
+Makefile

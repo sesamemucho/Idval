@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 use strict;
-
+#$Devel::Trace::TRACE = 0;   # Disable
 use Getopt::Long;
 use Test::Unit::Debug qw(debug_pkgs);
 use Test::Unit::TestRunner;
@@ -35,6 +35,8 @@ $options{'log_out'} = undef;
 my $opts = Getopt::Long::Parser->new();
 my $retval = $opts->getoptions(\%options, @standard_options);
 
+print "*** Remaining args: ", join(':', @ARGV), "\n\n\n";
+
 # We now know enough to fire up the error logger
 my @logger_args = Idval::Common::mkarglist(
     'level' => $options{'verbose'} - $options{'quiet'},
@@ -43,25 +45,62 @@ my @logger_args = Idval::Common::mkarglist(
     defined($options{'log_out'}) ? ('log_out' => $options{'log_out'}) : '',
     );
 
-Idval::Logger::_initialize_logger(@logger_args);
+Idval::Logger::initialize_logger(@logger_args);
 my $log = Idval::Logger::get_logger();
 print STDERR $log->str(), "\n";
 
+my @exceptions;
+my @inclusions;
+foreach my $item (@ARGV)
+{
+    if ($item =~ m/^-(\S*)/)
+    {
+        push(@exceptions, $1);
+        next;
+    }
+
+    push(@inclusions, $item);
+}
+
+$inclusions[0] = '*' unless @inclusions;
+
+my @pkgs;
+my %candidates;
+my %bums;
+
+foreach my $item (@inclusions)
+{
+    map {$candidates{$_} = $_} bsd_glob("$FindBin::Bin/../tsts/unit/${item}Test.pm");
+}
+
+foreach my $item (@exceptions)
+{
+    map {$bums{$_} = $_} bsd_glob("$FindBin::Bin/../tsts/unit/${item}Test.pm");
+}
+
+foreach my $item (keys %candidates)
+{
+    delete $candidates{$item} if exists $bums{$item};
+}
+
+@pkgs = keys %candidates;
+
+die "No tests found for args \"+", join(' +', @inclusions), "\" \"-", join(' -', @exceptions), "\"\n" unless @pkgs;
+
+
+#my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/CommandTest.pm");
 #my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/ConfigTest.pm");
 #my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/ConverterTest.pm");
 #my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/DataFileTest.pm");
-#my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/FileParseTest.pm");
+##my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/FileParseTest.pm");
 #my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/FileStringTest.pm");
 #my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/GraphTest.pm");
 #my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/ProviderTest.pm");
 #my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/RecordTest.pm");
-#my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/SelectTest.pm");
 #my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/TypeMapTest.pm");
-#my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/UiTest.pm");
 
 
-
-my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/*Test.pm");
+#my @pkgs = bsd_glob("$FindBin::Bin/../tsts/unit/*Test.pm");
 
 # Re-create the test data, if needed
 #system("perl $FindBin::Bin/mktree.pl -q");

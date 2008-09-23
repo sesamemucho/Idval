@@ -42,7 +42,7 @@ my %level_to_name = (-1 => 'SILENT',
     );
 
 END {
-    if (@warnings)
+    if (@warnings and $lo)
     {
         $lo->_log({level => $SILENT, debugmask => 0}, "The following warnings occurred:\n");
         $lo->_log({level => $SILENT, debugmask => 0}, @warnings);
