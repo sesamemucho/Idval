@@ -23,6 +23,7 @@ use POSIX;
 use Data::Dumper;
 use Carp;
 use Config;
+use File::Basename;
 use File::Spec;
 use FindBin;
 use Memoize;
@@ -105,39 +106,39 @@ sub mung_to_unix
     return $path;
 }
 
-# Called if user sets the top dir from the command line
-sub set_top_dir
-{
-    @top_dir_path = @_;
-
-    return;
-}
-
 sub get_top_dir
 {
     my @subdirs = @_;
-    my $got_it = 0;
+    my $top_dir = dirname($INC{'Idval/Common.pm'});
 
-    if (!@top_dir_path)
-    {
-        foreach my $dir (File::Spec->splitdir($FindBin::RealBin))
-        {
-            push(@top_dir_path, $dir);
-            if($dir eq 'idv')
-            {
-                $got_it = 1;
-                last;
-            }
-        }
-
-        if ($got_it == 0)
-        {
-            croak "Couldn't find top directory \"idv\" in $FindBin::RealBin\n";
-        }
-    }
-
-    return @subdirs ? File::Spec->catdir(@top_dir_path, @subdirs): File::Spec->catdir(@top_dir_path);
+    return @subdirs ? File::Spec->catdir($top_dir, @subdirs): $top_dir;
 }
+
+# sub get_top_dir
+# {
+#     my @subdirs = @_;
+#     my $got_it = 0;
+
+#     if (!@top_dir_path)
+#     {
+#         foreach my $dir (File::Spec->splitdir($FindBin::RealBin))
+#         {
+#             push(@top_dir_path, $dir);
+#             if($dir eq 'idv')
+#             {
+#                 $got_it = 1;
+#                 last;
+#             }
+#         }
+
+#         if ($got_it == 0)
+#         {
+#             croak "Couldn't find top directory \"idv\" in $FindBin::RealBin\n";
+#         }
+#     }
+
+#     return @subdirs ? File::Spec->catdir(@top_dir_path, @subdirs): File::Spec->catdir(@top_dir_path);
+# }
 
 sub expand_tilde
 {

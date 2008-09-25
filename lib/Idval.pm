@@ -16,7 +16,7 @@ package Idval;
 
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
-$Devel::Trace::TRACE = 0;
+
 use strict;
 use warnings;
 
@@ -24,7 +24,6 @@ use Data::Dumper;
 use File::Spec;
 use Carp;
 use Cwd;
-use Term::ReadLine;
 
 use Idval::Constants;
 use Idval::ServiceLocator;
@@ -53,8 +52,7 @@ $VERSION = '0.7.0';
      'help',
      'man',
      'Version',
-     'topdir=s',
-     'input=s',
+#     'input=s',
      'output=s',
      'print_to=s',
      'store!',
@@ -75,7 +73,7 @@ $VERSION = '0.7.0';
 $options{'help'} = '';
 $options{'man'} = '';
 $options{'version'} = '';
-$options{'input'} = '';
+#$options{'input'} = '';
 $options{'output'} = '';
 $options{'store'} = 1;
 $options{'sysconfig'} = '';
@@ -111,6 +109,7 @@ sub _init
     my @realargv = @ARGV;
     my @other_args = ();
 
+    print "Idval: realargv: ", Dumper(\@realargv);
     if (!defined($argref))
     {
         $argref = \@realargv;
@@ -120,11 +119,12 @@ sub _init
     {
         # We need to do our own argument parsing
         local @ARGV = @{$argref};
-
+        print "Idval: 1 ARGV: ", Dumper($argref);
         my $opts = Getopt::Long::Parser->new();
         $opts->configure("require_order", "no_ignore_case");
         #print "Standard options are: ", join("\n", @standard_options), "\n";
         my $retval = $opts->getoptions(\%options, @standard_options);
+        print "Idval: 2 ARGV: ", Dumper(\@ARGV);
         @other_args = (@ARGV);
     }
     else
@@ -163,8 +163,7 @@ sub _init
     #print_version()           if ($getopts{'version'});
 
     my $real_lib_top = Idval::Common::get_top_dir('lib');
-    Idval::Common::set_top_dir(File::Spec->rel2abs($options{'topdir'})) if exists($options{'topdir'});
-    my $data_dir = Idval::Common::get_top_dir('data');
+    my $data_dir = Idval::Common::get_top_dir('Data');
     unshift(@INC, $real_lib_top);
     unshift(@INC, Idval::Common::get_top_dir());
 
@@ -205,155 +204,6 @@ sub _init
     $log->chatty($DBG_PROVIDERS, "Remaining args: <", join(", ", @{$self->{REMAINING_ARGS}}), ">\n");
 
     return;
-}
-
-# Here we enter the command loop. If there are any arguments left in @ARGV,
-# this is taken as a command (followed by an implicit 'exit' command).
-sub cmd_loop
-{
-    my $self = shift;
-
-    my @args = @{$self->{REMAINING_ARGS}};
-    my $input_datafile = $self->{OPTIONS}->{'input'};
-
-    if (@args)
-    {
-        my $cmd = shift @args;
-        my $rtn = 'Idval::Scripts::' . $cmd;
-        no strict 'refs';
-        if ($cmd ne 'gettags')
-        {
-            my $read_rtn = 'Idval::Scripts::read';
-            $self->{DATASTORE} = &$read_rtn($self->datastore(),
-                                            $self->providers(),
-                                            $input_datafile);
-        }
-
-        $self->{DATASTORE} = &$rtn($self->datastore(),
-                                   $self->providers(),
-                                   @args);
-
-        if ($self->datastore())
-        {
-            my $store_rtn = 'Idval::Scripts::store';
-            no strict 'refs';
-            if ($options{'store'})
-            {
-                $self->{DATASTORE} = &$store_rtn($self->datastore(),
-                                                 $self->providers(),
-                                                 '');
-            }
-            if ($options{'output'})
-            {
-                $self->{DATASTORE} = &$store_rtn($self->datastore(),
-                                                 $self->providers(),
-                                                 $options{'output'});
-            }
-
-        }
-
-        use strict;
-    }
-    else
-    {
-        my $term = new Term::ReadLine 'IDValidator';
-        my $prompt = "idv: ";
-        my $OUT = $term->OUT || \*STDOUT;
-        my $line;
-        my @line_args;
-        my $temp_ds;
-        my $error_occurred;
-
-        while (defined ($line = $term->readline($prompt)))
-        {
-            chomp $line;
-
-            last if $line =~ /^\s*(q|quit|exit|bye)\s*$/i;
-            next if $line =~ /^\s*$/;
-
-            @line_args = @{Idval::Common::split_line($line)};
-
-            my $cmd_name = shift @line_args;
-            $log->chatty($DBG_PROVIDERS, "command name: \"$cmd_name\", line args: ", join(" ", @line_args), "\n");
-            my $rtn = 'Idval::Scripts::' . $cmd_name;
-            no strict 'refs';
-            eval { $temp_ds = &$rtn($self->datastore(), $self->providers(), @line_args); };
-            use strict;
-            $error_occurred = 0;
-            if ($@)
-            {
-                my $status = $!;
-                my $reason = $@;
-                if ($reason =~ /No script file found for command \"([^""]+)\"/)
-                {
-                    my $bogus = $1;
-                    print "Got unrecognized command \"$bogus\", with args ", join(",", @line_args), "\n";
-                    print "$@\n";
-                    $error_occurred = 1;
-                }
-                else
-                {
-                    print STDERR "Yipes\n";
-                    croak "Error in \"$cmd_name\": \"$status\", \"$reason\"\n";
-                }
-            }
-            next if $error_occurred;
-
-            $term->addhistory($line) if $line =~ /\S/;
-            $self->{DATASTORE} = $temp_ds if $temp_ds;
-        }
-    }
-
-    return;
-}
-
-# Note:
-# main::(-e:1):   0
-#   DB<1> $a = sub{my $x=shift; print "Hello \"$x\"\n";}
-
-#   DB<2> &$a(44)
-# Hello "44"
-
-#   DB<3> *barf{CODE} = $a
-# Can't modify glob elem in scalar assignment at (eval 7)[/usr/lib/perl5/5.8/perl5db.pl:628] line 2, at EOF
-
-#   DB<4> *barf = *a
-
-#   DB<5> barf(33)
-# Undefined subroutine &main::a called at (eval 9)[/usr/lib/perl5/5.8/perl5db.pl:628] line 2.
-
-#   DB<6> *barf = $a
-
-#   DB<7> barf(33)
-# Hello "33"
-
-
-sub process_command
-{
-    my $self = shift;
-    my $command_name = shift;
-
-    my $subr = "Idval::Scripts::$command_name";
-    #print "Calling: $subr ", join(" ", @_), "\n";
-    no strict 'refs';
-    my $datastore = &$subr(@_);
-    use strict;
-
-    return $datastore;
-}
-
-sub is_command_defined
-{
-    my $self = shift;
-    my $command_name = shift;
-
-    my $sub = "Idval::Scripts::$command_name";
-
-    no strict 'refs';
-    my $has = defined(*$sub);
-    use strict;
-
-    return $has;
 }
 
 sub config

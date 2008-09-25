@@ -69,7 +69,7 @@ sub _init
 
     foreach my $tagname (keys %{$argref})
     {
-        print STDERR "Record: Adding \"$tagname\" to new record.\n";
+        #print STDERR "Record: Adding \"$tagname\" to new record.\n";
         $self->add_tag($tagname, $argref->{$tagname});
     }
 

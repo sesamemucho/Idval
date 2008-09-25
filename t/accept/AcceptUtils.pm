@@ -82,7 +82,7 @@ sub mktree
 
     my $taglist = $idval->datastore();
     $taglist = Idval::Scripts::gettags($taglist, $idval->providers(), $testpath);
-    print STDERR "AU: taglist: ", Dumper($taglist);
+    #print STDERR "AU: taglist: ", Dumper($taglist);
     my ($fh, $fname) = tempfile();
     push(@tempfiles, $fname);
 
@@ -103,12 +103,12 @@ sub mktree
     }
 
     $taglist = Idval::Scripts::print($taglist, $idval->providers(), $fh);
-    print STDERR "AU: taglist 2: ", Dumper($taglist);
-    print STDERR "AU: xxx\n", qx{cat $fname};
-    print STDERR "ls -l $fname\n";
+    #print STDERR "AU: taglist 2: ", Dumper($taglist);
+    #print STDERR "AU: xxx\n", qx{cat $fname};
+    #print STDERR "ls -l $fname\n";
     #print "Updating tags:\n";
     $taglist = Idval::Scripts::update($taglist, $idval->providers(), $fname);
-    print STDERR "AU: taglist 3: ", Dumper($taglist);
+    #print STDERR "AU: taglist 3: ", Dumper($taglist);
     #$taglist = Idval::printlist($taglist, $idval->providers());
 
     return $taglist;

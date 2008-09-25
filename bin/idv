@@ -1,0 +1,11 @@
+#!/usr/bin/perl -w
+use strict;
+use warnings;
+
+use Idval::Interp;
+
+$| = 1;
+
+my $idv_interp = Idval::Interp->new(@ARGV);
+
+$idv_interp->cmd_loop();

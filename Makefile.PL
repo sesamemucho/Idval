@@ -1,16 +1,20 @@
-use strict;
-use warnings;
-use ExtUtils::MakeMaker;
+use inc::Module::Install;
+  
+# Define metadata
+name           'Idval';
+all_from       'lib/Idval.pm';
+  
+# Specific dependencies
+requires       'File::Spec'  => '0.80';
+test_requires  'Test::More'  => '0.42';
+recommends     'Text::CSV_XS'=> '0.50';
+recommends     'MP3::Tag'    => '0';
+recommends     'Image::ExifTool' => '0';
+requires       'XML::Simple' => '0';
+tests_recursive;
+include        'XML::Simple';
+install_script 'bin/idv';
 
-WriteMakefile(
-    NAME                => 'Idval',
-    AUTHOR              => 'Bob Forgey <rforgey@grumpydogconsulting.com>',
-    VERSION_FROM        => 'lib/Idval.pm',
-    ABSTRACT_FROM       => 'lib/Idval.pm',
-    PL_FILES            => {},
-    PREREQ_PM => {
-        'Test::More' => 0,
-    },
-    dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
-    clean               => { FILES => 'Idval-*' },
-);
+#TESTS => ['t/*.t', 't/lib/*.t'];
+  
+WriteAll;

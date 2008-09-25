@@ -118,9 +118,7 @@ sub _init
 #    $self->{TREE} = {};
     $self->{DEBUG} = $init_debug;
 #    $self->{USK_OK} = $unmatched_selector_keys_ok;
-    $self->{datadir} = Idval::Common::get_top_dir('data');
-    $self->{libdir} = Idval::Common::get_top_dir('lib');
-
+    $self->{datadir} = Idval::Common::get_top_dir('Data');
     $self->{HAS_YAML_SUPPORT} = 0;
 
     if ($initfile)
@@ -436,7 +434,6 @@ sub merge_blocks
                 $append = $value->{append};
                 $value = $value->{content};
                 $value =~ s/\%DATA\%/$self->{datadir}/gx;
-                $value =~ s/\%LIB\%/$self->{libdir}/gx;
             }
             elsif (ref $value eq 'ARRAY')
             {
@@ -447,7 +444,6 @@ sub merge_blocks
                 {
                     $newvalue = (ref $item eq 'HASH') ? $item->{content} : $item;
                     $newvalue =~ s/\%DATA\%/$self->{datadir}/gx;
-                    $newvalue =~ s/\%LIB\%/$self->{libdir}/gx;
 
                     push(@newlist, $newvalue);
                 }
@@ -456,7 +452,6 @@ sub merge_blocks
             else
             {
                 $value =~ s/\%DATA\%/$self->{datadir}/gx;
-                $value =~ s/\%LIB\%/$self->{libdir}/gx;
             }
 
             #print "merge_blocks: Adding \"$value\" to \"$key\"\n";
