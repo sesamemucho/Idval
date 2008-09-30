@@ -28,10 +28,6 @@ use Idval::Common;
 use Idval::Constants;
 use base qw(Idval::Converter);
 
-my $name = 'copy';
-#our $from = 'WAV';
-#our $to = 'MP3';
-
 Idval::Common::register_provider({provides=>'converts', name=>'copy', from=>'*', to=>'*'});
 
 sub new
@@ -68,7 +64,7 @@ sub convert
     $src = Idval::Common::mung_path($src);
 
     Idval::Common::get_logger->chatty($DBG_PROCESS, "Copying \"$src\" to \"$dest\"\n");
-    sleep(rand(10));
+    #sleep(rand(10));
     return copy($src, $dest);
 }
 

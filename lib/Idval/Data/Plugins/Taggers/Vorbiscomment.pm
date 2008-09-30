@@ -99,8 +99,6 @@ sub read_tags
     #print "\nGot tag:\n";
     #print join("\n", $tag_record->format_record());
 
-    $tag_record->commit_tags();
-
     return $retval;
 }
 

@@ -2,6 +2,7 @@ use inc::Module::Install;
   
 # Define metadata
 name           'Idval';
+license        'gpl';
 all_from       'lib/Idval.pm';
   
 # Specific dependencies
@@ -15,6 +16,6 @@ tests_recursive;
 include        'XML::Simple';
 install_script 'bin/idv';
 
-#TESTS => ['t/*.t', 't/lib/*.t'];
+#TESTS => ['t/*.t', 't/lib/*.t', 't/accept/*.t'];
   
 WriteAll;

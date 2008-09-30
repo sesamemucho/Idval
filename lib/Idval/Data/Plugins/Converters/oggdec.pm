@@ -17,7 +17,6 @@ package Idval::SysPlugins::OggDec;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
-#use Idval::Setup;
 use strict;
 use warnings;
 no warnings qw(redefine);
@@ -26,11 +25,7 @@ use Class::ISA;
 
 use base qw(Idval::Converter);
 
-my $name = 'oggdec';
-my $from = 'OGG';
-my $to = 'WAV';
-
-Idval::Common::register_provider({provides=>'converts', name=>$name, from=>$from, to=>$to, attributes=>'transcode'});
+Idval::Common::register_provider({provides=>'converts', name=>'oggdec', from=>'OGG', to=>'WAV', attributes=>'transcode'});
 
 sub new
 {

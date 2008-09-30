@@ -115,7 +115,7 @@ sub encode
     my $src = shift;
     my $path = shift;
 
-    my $extra_args = $self->{CONFIG}->get_single_value('extra_args', {'command_name' => 'flac_enc'});
+    my $extra_args = $self->{CONFIG}->get_single_value('extra_args', {'command_name' => $self->{NAME}});
 
     my @tags;
     foreach my $tagname ($tag_record->get_all_keys())

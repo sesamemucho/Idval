@@ -53,7 +53,7 @@ sub init
     $self->set_param('output_ext_map', {'WAV' => [qw( wav )]});
 
     my $config = Idval::Common::get_common_object('config');
-    $self->{VISIBLE_SEPARATOR} = $config->get_single_value('visible_separator', {'config_group' => 'idval_settings'});
+    #$self->{VISIBLE_SEPARATOR} = $config->get_single_value('visible_separator', {'config_group' => 'idval_settings'});
 
     $self->find_and_set_exe_path('timidity');
 

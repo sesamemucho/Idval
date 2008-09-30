@@ -49,16 +49,19 @@ croak "Need XML support (via XML::Simple)" unless $xml_req_msg eq 'Load OK';
 use constant STRICT_MATCH => 0;
 use constant LOOSE_MATCH  => 1;
 
+our %vars;
+
 our $DEBUG = 0;
 #our $DEBUG = 1;
-our $USE_LOGGER = 1;
+our $USE_LOGGER = 1 unless defined($USE_LOGGER);
 #our $USE_LOGGER = 0;
 
-if (! $USE_LOGGER)
-{
-    *verbose = sub{ print @_; };
-    *chatty = sub{ print @_; };
-}
+# if (! $USE_LOGGER)
+# {
+#     *verbose = sub{ print STDERR @_; };
+#     *chatty = sub{ print STDERR @_; };
+# }
+
 #*harfo  = Idval::Common::make_custom_logger({level => $CHATTY,
 #                                              debugmask => $DBG_CONFIG,
 #                                              decorate => 1}) unless defined(*harfo{CODE});
@@ -113,6 +116,13 @@ sub _init
                                                       debugmask => $DBG_CONFIG,
                                                       decorate => 1}) unless defined(*chatty{CODE});
     }
+    else
+    {
+        undef(*verbose);
+        undef(*chatty);
+        *verbose = sub{ print STDERR @_; };
+        *chatty = sub{ print STDERR @_; };
+    }
 
     $self->{INITFILES} = [];
 #    $self->{TREE} = {};
@@ -127,6 +137,10 @@ sub _init
     }
 
     $self->{DEF_VARS} = $self->merge_blocks({config_group => 'idval_calculated_variables'});
+    foreach my $key (keys %{$self->{DEF_VARS}})
+    {
+        delete $self->{DEF_VARS}->{$key} unless $key =~ m/^__/;
+    }
 
     return;
 }
@@ -402,29 +416,29 @@ sub merge_blocks
     my $self = shift;
     my $selects = shift;
     my $tree = $self->{TREE};
-    my %vars;
+    local %vars;
     my $match_status;
     my $match_id;
 
-    print("Start of _merge_blocks, selects: ", Dumper($selects)) if $self->{DEBUG};
+    chatty("Start of _merge_blocks, selects: ", Dumper($selects)) if $self->{DEBUG};
 
     my $visitor = sub {
         my $self = shift;
         my $noderef = shift;
 
-        print "merge_blocks: noderef is: ", Dumper($noderef) if $self->{DEBUG};
+        chatty("merge_blocks: noderef is: ", Dumper($noderef)) if $self->{DEBUG};
         return 0 if ($self->evaluate($noderef, $selects) == 0);
 
-        print "merge_blocks: evaluate returned nonzero\n" if $self->{DEBUG};
+        chatty("merge_blocks: evaluate returned nonzero\n") if $self->{DEBUG};
         foreach my $key (sort keys %{$noderef})
         {
-            print "merge_blocks: checking key $key\n" if $self->{DEBUG};
+            chatty("merge_blocks: checking key $key\n") if $self->{DEBUG};
             next if ($key eq 'group');
             next if ($key eq 'select');
 
             my $value = $noderef->{$key};
             my $append = 0;
-            print "ref of value is: ", ref $value, "\n" if $self->{DEBUG};
+            chatty("ref of value is: ", ref $value, "\n") if $self->{DEBUG};
             if (ref $value eq 'HASH')
             {
                 if (!exists($value->{append}))
@@ -454,7 +468,7 @@ sub merge_blocks
                 $value =~ s/\%DATA\%/$self->{datadir}/gx;
             }
 
-            #print "merge_blocks: Adding \"$value\" to \"$key\"\n";
+            chatty("merge_blocks: Adding \"$value\" to \"$key\"\n") if $self->{DEBUG};
             #print "value: ", Dumper($value);
             if ($append)
             {
@@ -473,7 +487,7 @@ sub merge_blocks
 
     $self->visit([$tree], 'top', 0, $visitor);
 
-    print("Result of merge blocks - VARS: ", Dumper(\%vars)) if $self->{DEBUG};
+    chatty("Result of merge blocks - VARS: ", Dumper(\%vars)) if $self->{DEBUG};
 
     return \%vars;
 }
@@ -487,13 +501,13 @@ sub match_blocks
     my $match_status = 0;
     my $result;
 
-    print("Start of match_blocks, selects: ", Dumper($selects)) if $self->{DEBUG};
+    chatty("Start of match_blocks, selects: ", Dumper($selects)) if $self->{DEBUG};
 
     my $visitor = sub {
         my $self = shift;
         my $noderef = shift;
 
-        print "match_blocks: noderef is: ", Dumper($noderef) if $self->{DEBUG};
+        chatty("match_blocks: noderef is: ", Dumper($noderef)) if $self->{DEBUG};
         my $eval_status = $self->evaluate($noderef, $selects);
         return 0 if $eval_status == 0;
         return 1 if $eval_status == 2;
@@ -507,7 +521,7 @@ sub match_blocks
     $result = $match_status;
     $match_status = 0;
 
-    print("Result of match blocks is $result\n") if $self->{DEBUG};
+    chatty("Result of match blocks is $result\n") if $self->{DEBUG};
 
     return $result;
 }
@@ -526,33 +540,36 @@ sub evaluate
     my $match = '';
     my $is_regexp = 0;
 
-    print "in evaluate: ", Dumper($noderef) if $DEBUG;
-    print "evaluate: 1 select_list: ", Dumper($select_list) if $DEBUG;
+    chatty("in evaluate: ", Dumper($noderef)) if $DEBUG;
+    chatty("evaluate: 1 select_list: ", Dumper($select_list)) if $DEBUG;
     # If the block has no selector keys itself, then all matches should succeed
     if (not (exists($noderef->{'select'}) && ref($noderef->{'select'}) eq 'HASH'))
     {
-        print "Block has no selector keys, returning 2\n" if $DEBUG;
+        chatty("Block has no selector keys, returning 2\n") if $DEBUG;
         return 2;
     }
 
-    my %selectors = %{$select_list};
+    # Add the variables that have been defined (so far) to the selector list.
+    # This lets us use variables defined previously in the configuration file
+    # in block selections.
+    # See ConfigTest.t:previously_defined_variable_can_be_used_as_selector()
+
+    my %selectors = (%{$select_list}, %vars);
 
     #return 0 unless %selectors;
 
   KEY_MATCH: foreach my $block_key (keys %{$noderef->{'select'}})
     {
+        # Certain variable names are interpreted as subroutines, and the
+        # result of the subroutine is used as the value of the variable.
         if (exists ($self->{DEF_VARS}->{$block_key}))
         {
+            chatty("Using \"$block_key\" as subroutine name\n");
             no strict 'refs';
             my $subr = $self->{DEF_VARS}->{$block_key};
             $selectors{$block_key} = &$subr(\%selectors);
             chatty ("Using ", $selectors{$block_key}, " for \"$block_key\"\n");
             use strict;
-        }
-
-        if ($block_key eq '%FILE_TIME%')
-        {
-            $selectors{$block_key} = Idval::FileIO::idv_get_mtime($selectors{FILE});
         }
 
         my $bstor = $noderef->{'select'}->{$block_key}; # Naming convenience
@@ -564,19 +581,17 @@ sub evaluate
         # look at (possibly non-existing) selector keys.
         if ($block_op eq 'passes' or $block_op eq 'fails')
         {
-            print("Comparing \"selector list\" \"$block_key\" \"$block_op\" \"$block_value\" resulted in ",
-                  &$block_cmp_func(\%selectors, $block_key, $block_value) ? "True\n" : "False\n") if $DEBUG;
+            chatty("Comparing \"selector list\" \"$block_key\" \"$block_op\" \"$block_value\" resulted in ",
+                   &$block_cmp_func(\%selectors, $block_key, $block_value) ? "True\n" : "False\n") if $DEBUG;
 
-            if (&$block_cmp_func(\%selectors, $block_key, $block_value))
-            {
-                return 1;
-            }
+            my $cmp_result = &$block_cmp_func(\%selectors, $block_key, $block_value);
 
+            $retval &&= $cmp_result;
             next KEY_MATCH;
         }
 
-        print "evaluate: 2 select_list: ", Dumper(\%selectors) if $DEBUG;
-        print("Checking block selector \"$block_key\"\n") if $DEBUG;
+        chatty("evaluate: 2 select_list: ", Dumper(\%selectors)) if $DEBUG;
+        chatty("Checking block selector \"$block_key\"\n") if $DEBUG;
 
 #        @s_key_list = ($block_key);
         @s_key_list = $self->{ALLOW_KEY_REGEXPS} ? grep(/^$block_key$/, keys %selectors) :
@@ -605,8 +620,8 @@ sub evaluate
             # A successful match for any of these values constitutes a successful match for the block selector.
             foreach my $value (@{$arg_value_list})
             {
-                print("Comparing \"$value\" \"$block_op\" \"$block_value\" resulted in ",
-                      &$block_cmp_func($value, $block_value) ? "True\n" : "False\n") if $DEBUG;
+                chatty("Comparing \"$value\" \"$block_op\" \"$block_value\" resulted in ",
+                       &$block_cmp_func($value, $block_value) ? "True\n" : "False\n") if $DEBUG;
 
                 $cmp_result ||= &$block_cmp_func($value, $block_value);
                 last if $cmp_result;

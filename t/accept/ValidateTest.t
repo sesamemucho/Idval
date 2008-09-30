@@ -87,8 +87,10 @@ sub validation_with_one_error : Test(1)
         GRIPE = Date is wrong!
 }
 EOF
+    my ($prov_p, $reason) = AcceptUtils::are_providers_present();
+    return $reason unless $prov_p;
+
     my $expected_result = ".+?:\\d+: error: For YEAR, Date is wrong!\n";
-    my $taglist = Idval::Scripts::about({}, $idval_obj->providers());
     my $test_result = run_validation_test($val_cfg);
     like($test_result, qr/$expected_result/);
     return;
@@ -96,8 +98,6 @@ EOF
 
 sub test_validation_showing_that_two_selectors_AND_together
 {
-    my $self = shift;
-
     my $val_cfg =<<EOF;
 {
         YEAR == 2006
@@ -105,23 +105,27 @@ sub test_validation_showing_that_two_selectors_AND_together
         GRIPE = Too new for old-time
 }
 EOF
+    my ($prov_p, $reason) = AcceptUtils::are_providers_present();
+    return $reason unless $prov_p;
+
     my $expected_result = ".+?:\\d+: error: For GENRE, Too new for old-time\n" .
     ".+?:\\d+: error: For YEAR, Too new for old-time\n";
-    my $test_result = $self->run_validation_test($val_cfg);
-    $self->assert_matches(qr/$expected_result/, $test_result);
+    my $test_result = run_validation_test($val_cfg);
+    like($test_result, qr/$expected_result/);
     return;
 }
 
 sub test_validation_showing_that_regexp_selectors_OR_together
 {
-    my $self = shift;
-
     my $val_cfg =<<EOF;
 {
         .* has Flac
         GRIPE = Grumble Flac
 }
 EOF
+    my ($prov_p, $reason) = AcceptUtils::are_providers_present();
+    return $reason unless $prov_p;
+
     # We expect 9 errors: one for each tag of ARTIST, ALBUM, and TITLE
     # in each flac file, since these are the tags that contain "Flac"
     # (note that this is case-sensitive).
@@ -139,21 +143,22 @@ EOF
 EOF
 
     my $test_result;
-    $test_result = $self->run_validation_test($val_cfg);
-    $self->assert_matches(qr/$expected_result/, $test_result);
+    $test_result = run_validation_test($val_cfg);
+    like($test_result, qr/$expected_result/);
     return;
 }
 
 sub test_validation_showing_that_regexp_selectors_OR_together_2
 {
-    my $self = shift;
-
     my $val_cfg =<<EOF;
 {
         A.* has Flac
         GRIPE = Grumble Flac
 }
 EOF
+    my ($prov_p, $reason) = AcceptUtils::are_providers_present();
+    return $reason unless $prov_p;
+
     # We expect 6 errors this time, since we are only looking at tags
     # that start with A: one for each tag of ARTIST and ALBUM in each
     # flac file, since these are the tags that contain "Flac" (note
@@ -169,15 +174,13 @@ EOF
 EOF
 
     my $test_result;
-    $test_result = $self->run_validation_test($val_cfg);
-    $self->assert_matches(qr/$expected_result/, $test_result);
+    $test_result = run_validation_test($val_cfg);
+    like($test_result, qr/$expected_result/);
     return;
 }
 
 sub test_validation_showing_that_ONLY_regexp_selectors_OR_together
 {
-    my $self = shift;
-
     my $val_cfg =<<EOF;
 {
         A.* has Flac
@@ -185,6 +188,9 @@ sub test_validation_showing_that_ONLY_regexp_selectors_OR_together
         GRIPE = Grumble Flac
 }
 EOF
+    my ($prov_p, $reason) = AcceptUtils::are_providers_present();
+    return $reason unless $prov_p;
+
     # We expect 2 errors this time, since we are only looking at tags
     # that start with A that contain "Flac" AND for YEAR == 2005
 
@@ -194,15 +200,13 @@ EOF
 EOF
 
     my $test_result;
-    $test_result = $self->run_validation_test($val_cfg);
-    $self->assert_matches(qr/$expected_result/, $test_result);
+    $test_result = run_validation_test($val_cfg);
+    like($test_result, qr/$expected_result/);
     return;
 }
 
 sub test_validation_showing_nested_config_blocks
 {
-    my $self = shift;
-
     my $val_cfg =<<EOF;
 {
     YEAR == 2005
@@ -212,6 +216,9 @@ sub test_validation_showing_nested_config_blocks
     }
 }
 EOF
+    my ($prov_p, $reason) = AcceptUtils::are_providers_present();
+    return $reason unless $prov_p;
+
     # We expect 2 errors this time, since we are only looking at tags
     # that start with A that contain "Flac" AND for YEAR == 2005
 
@@ -221,15 +228,13 @@ EOF
 EOF
 
     my $test_result;
-    $test_result = $self->run_validation_test($val_cfg);
-    $self->assert_matches(qr/$expected_result/, $test_result);
+    $test_result = run_validation_test($val_cfg);
+    like($test_result, qr/$expected_result/);
     return;
 }
 
 sub test_validation_with_bogus_pass_function
 {
-    my $self = shift;
-
     my $val_cfg =<<EOF;
 {
     A.* passes NO_Function_Here
@@ -241,10 +246,10 @@ EOF
 EOF
 
     my $test_result;
-    $test_result = $self->run_validation_test($val_cfg);
-    $self->assert_matches(qr/$expected_result/, $test_result);
+    my ($prov_p, $reason) = AcceptUtils::are_providers_present();
+    return $reason unless $prov_p;
+
+    $test_result = run_validation_test($val_cfg);
+    like($test_result, qr/$expected_result/);
     return;
 }
-
-
-1;

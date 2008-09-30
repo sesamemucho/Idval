@@ -16,12 +16,15 @@ use AcceptUtils;
 
 our $idval_obj;
 
- { Test::Class->runtests } # here's the magic!
+INIT {
+    Test::Class->runtests } # here's the magic!
 
 sub begin : Test(startup) {
     # your state for fixture here
     $idval_obj = Idval->new({'verbose' => 0,
                              'quiet' => 0});
+    #my ($prov_p, $reason) = AcceptUtils::are_providers_present();
+    #Test::Class->SKIP_CLASS($reason) unless $prov_p;
     return;
 }
 
@@ -44,6 +47,10 @@ sub get_tags : Test(1)
     my $self = shift;
     my $idval = $idval_obj;
     my $errlist = '';
+
+    my ($prov_p, $reason) = AcceptUtils::are_providers_present();
+
+    return $reason unless $prov_p;
 
     my @files = map{ AcceptUtils::get_audiodir("/sbeep$_") } qw(.flac .ogg .mp3);
     my $taglist = $idval->datastore();
@@ -76,5 +83,3 @@ sub get_tags : Test(1)
 
     return;
 }
-
-1;

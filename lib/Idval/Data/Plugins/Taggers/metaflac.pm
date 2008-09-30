@@ -96,10 +96,11 @@ sub read_tags
         $tag_record->add_to_tag($current_tag, "\n$line");
     }
 
+    my $md5sum = qx{$path --show-md5sum "$filename"};
+    $tag_record->add_tag('MD5SUM', $md5sum);
+
     #print "\nGot tag:\n";
     #print join("\n", $tag_record->format_record());
-
-    $tag_record->commit_tags();
 
     return $retval;
 }
@@ -118,6 +119,7 @@ sub write_tags
     my @taglist;
     foreach my $tagname ($tag_record->get_all_keys())
     {
+        next if $tagname eq 'MD5SUM'; # This is kept as a different kind of data item in a FLAC file.
         push(@taglist, $tag_record->get_value_as_arg('--set-tag=' . $tagname . '=', $tagname));
     }
 

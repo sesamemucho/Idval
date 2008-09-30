@@ -245,7 +245,9 @@ use Data::Dumper;
 
 sub Check_Genre_for_id3v1
 {
-    my $tagvalue = lc(shift);
+    my $selectors = shift;
+    my $tagname = shift;
+    my $tagvalue = lc($selectors->{$tagname});
 
     return Idval::Data::Genres::isNameValid($tagvalue);
 }

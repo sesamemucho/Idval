@@ -44,6 +44,72 @@ sub get_datadir
     return $datadir . $rest;
 }
 
+sub are_providers_present
+{
+    my $provs = Idval::Common::get_common_object('providers');
+
+    my $retval = 1;
+    my $reason = '';
+
+    if (!defined($provs->get_tagger('reads_tags', 'MP3')))
+    {
+        $retval = 0;
+        $reason .= "MP3 tag reader not found.\n";
+    }
+    else
+    {
+        #print STDERR "MP3 tag reader found\n";
+    }
+    if (!defined($provs->get_tagger('writes_tags', 'MP3')))
+    {
+        $retval = 0;
+        $reason .= "MP3 tag writer not found.\n";
+    }
+    else
+    {
+        #print STDERR "MP3 tag writer found\n";
+    }
+    if (!defined($provs->get_tagger('reads_tags', 'OGG')))
+    {
+        $retval = 0;
+        $reason .= "OGG tag reader not found.\n";
+    }
+    else
+    {
+        #print STDERR "OGG tag reader found\n";
+    }
+    if (!defined($provs->get_tagger('writes_tags', 'OGG')))
+    {
+        $retval = 0;
+        $reason .= "OGG tag writer not found.\n";
+    }
+    else
+    {
+        #print STDERR "OGG tag writer found\n";
+    }
+    if (!defined($provs->get_tagger('reads_tags', 'FLAC')))
+    {
+        $retval = 0;
+        $reason .= "FLAC tag reader not found.\n";
+    }
+    else
+    {
+        #print STDERR "FLAC tag reader found\n";
+    }
+    if (!defined($provs->get_tagger('writes_tags', 'FLAC')))
+    {
+        $retval = 0;
+        $reason .= "FLAC tag writer not found.\n";
+    }
+    else
+    {
+        #print STDERR "FLAC tag writer found\n";
+    }
+
+    #print STDERR "returning \"$retval\", \"$reason\"\n";
+    return ($retval, $reason);
+}
+
 sub mktree
 {
     my $datafile = shift;

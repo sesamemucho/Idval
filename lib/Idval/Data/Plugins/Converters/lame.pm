@@ -25,11 +25,6 @@ use Class::ISA;
 
 use base qw(Idval::Converter);
 
-my $name = 'lame';
-#our $from = 'WAV';
-#our $to = 'MP3';
-
-#Idval::Common::register_provider({provides=>'converts', name=>$name, from=>$from, to=>$to});
 Idval::Common::register_provider({provides=>'converts', name=>'lame_enc', from=>'WAV', to=>'MP3', attributes=>'transcode'});
 Idval::Common::register_provider({provides=>'converts', name=>'lame_dec', from=>'MP3', to=>'WAV', attributes=>'transcode'});
 

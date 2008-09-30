@@ -19,6 +19,7 @@ package Idval;
 
 use strict;
 use warnings;
+use 5.006;
 
 use Data::Dumper;
 use File::Spec;
@@ -278,34 +279,37 @@ sub set_pod_input
 
 =head1 NAME
 
-Idval - Idval command interpreter
+Idval - Toolkit for manipulating files with their metadata.
 
 =head1 SYNOPSIS
 
-sample [options] [file ...]
-
- Options:
-   -help            brief help message
-   -man             full documentation
-
-=head1 OPTIONS
-
-=over 8
-
-=item B<-help>
-
-Print a brief help message and exits.
-
-=item B<-man>
-
-Prints the manual page and exits.
-
-=back
-
 =head1 DESCRIPTION
 
-B<This program> will read the given input file(s) and do something
-useful with the contents thereof.
+Idval is a tool for manipulating files that contain metadata, such as
+mp3, flac, and other music files; jpeg and other exif image files; and
+any other kind of files that contain metadata.
+
+Two of the principles behind Idval are: 1) that the authoritative
+source for a media file's metadata is the media file itself, and 2)
+metadata should be presented in a form that's easy to handle with a
+text editor. 
+
+Keep a music collection in lossless FLAC format, and then convert to
+OGG or MP3 as needed for use with portable music players.
+
+The name "Idval" came from "ID Validation". Define rules for a valid
+set of ID tags, and Idval will show which tags break the rules. Edit
+the text file that represents the metadata and use Idval to correct
+the bad tags.
+
+
+
+Idval works by using "plugins". Idval plugins read metadata from
+files, write metadata to files, convert between file formats, and manipulate metadata XXX
+
+=head1 AUTHOR
+
+Bob Forgey <rforgey\@grumpydogconsulting.com>
 
 =cut
 

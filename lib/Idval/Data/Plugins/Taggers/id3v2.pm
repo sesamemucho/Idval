@@ -160,8 +160,6 @@ sub read_tags
         };
     }
 
-    $tag_record->commit_tags();
-
     return $retval;
 }
 

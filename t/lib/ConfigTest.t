@@ -1061,7 +1061,6 @@ EOF
 # Yep!
 sub no_back_adding_of_other_values : Test(1)
 {
-    #my $self = shift;
 
 my $cfg_file =<<EOF;
     {
@@ -1136,6 +1135,82 @@ sub get_immediate : Test(1)
     #is($obj->get_single_value('hubber', {foo => 'boo'}), 4);
 
     return;
+}
+
+sub previously_defined_variable_can_be_used_as_selector : Test(2)
+{
+
+my $cfg_file =<<EOF;
+   {
+    convert      = MP3
+    {
+        type        == ABC
+        convert      = MIDI
+    }
+    }
+
+    {
+        config_group == tag_mappings
+
+        argle = bargle
+
+        {
+           convert == MIDI
+
+           argle = gargle
+        }
+    }
+EOF
+
+    Idval::FileString::idv_add_file('/testdir/gt1.txt', $cfg_file);
+    my $obj = Idval::Config->new('/testdir/gt1.txt');
+
+    my $val = $obj->get_value('argle', {'config_group' => 'tag_mappings'});
+    is($val, 'bargle');
+
+    # When 'type' is 'ABC', then 'convert' is set to 'MIDI', and so the 'convert == MIDI' block is selected.
+    $val = $obj->get_value('argle', {'config_group' => 'tag_mappings', 'type' => 'ABC'});
+    is($val, 'gargle');
+}
+
+
+use Carp qw(cluck);
+sub pass_operator_1 : Test(1)
+{
+
+my $cfg_file =<<EOF;
+   myval = 2
+   {
+       AAA passes TestSub
+
+       myval = 3
+   }
+
+   {
+       BBB passes TestSub
+
+       myval = 4
+   }
+EOF
+    no strict 'refs';
+    *{'Idval::ValidateFuncs::TestSub'} = sub {
+        my $selectors = shift;
+        my $tagname = shift;
+    
+        return $tagname eq 'AAA';
+    };
+
+    Idval::FileString::idv_add_file('/testdir/gt1.txt', $cfg_file);
+    #$Idval::Config::USE_LOGGER = 0;
+    my $obj = Idval::Config->new('/testdir/gt1.txt');
+
+    #print "new config: ", Dumper($obj);
+    #$Idval::Config::DEBUG = 1;
+    #$obj->{DEBUG} = 1;
+    my $val = $obj->get_value('myval', {'AAA' => 'aaa aaa'});
+    is($val, 3);
+    #$Idval::Config::DEBUG = 0;
+    #$Idval::Config::USE_LOGGER = 1;
 }
 
 1;

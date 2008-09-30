@@ -121,8 +121,6 @@ sub read_tags
         $tag_record->add_to_tag($current_tag, "$line");
     }
 
-    $tag_record->commit_tags();
-
     return $retval;
 }
 

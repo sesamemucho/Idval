@@ -26,11 +26,7 @@ use Class::ISA;
 
 use base qw(Idval::Converter);
 
-my $name = 'oggenc';
-my $from = 'WAV';
-my $to = 'OGG';
-
-Idval::Common::register_provider({provides=>'converts', name=>$name, from=>$from, to=>$to, attributes=>'transcode'});
+Idval::Common::register_provider({provides=>'converts', name=>'oggenc', from=>'WAV', to=>'OGG', attributes=>'transcode'});
 
 sub new
 {
@@ -45,7 +41,7 @@ sub init
 {
     my $self = shift;
 
-    $self->set_param('name', $self->{NAME});
+    #$self->set_param('name', $self->{NAME});
     $self->set_param('filetype_map', {'WAV' => [qw{ wav }],
                                       'OGG' => [qw{ ogg }]});
     $self->set_param('classtype_map', {'MUSIC' => [qw( WAV OGG )]});
