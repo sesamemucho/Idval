@@ -24,7 +24,7 @@ no  warnings qw(redefine);
 use Class::ISA;
 use Carp;
 
-use base qw(Idval::Plugin);
+use base qw(Idval::Provider);
 
 my $req_status = eval {require Image::ExifTool};
 my $req_msg = !defined($req_status) ? "$!" : 

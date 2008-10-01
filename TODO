@@ -6,7 +6,7 @@ Done: Make Taggers use endpoints. The converters should make more use of
 
 The test audio data files, sbeep*.*, should have a special tag value. See GettagsTest.pm for more info.
 
-rename Providers.pm to ProviderMgr.pm
+#rename Providers.pm to ProviderMgr.pm
 rename Plugin.pm to Provider.pm
 
 rename Plugins/* to Providers/*

@@ -26,7 +26,7 @@ use Carp;
 
 use Idval::Constants;
 use Idval::Common;
-use base qw(Idval::Plugin);
+use base qw(Idval::Provider);
 
 sub new
 {

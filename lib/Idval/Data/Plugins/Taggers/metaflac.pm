@@ -24,7 +24,7 @@ no warnings qw(redefine);
 use Class::ISA;
 use Carp;
 
-use base qw(Idval::Plugin);
+use base qw(Idval::Provider);
 
 my $name = 'metaflac';
 my $type = 'FLAC';

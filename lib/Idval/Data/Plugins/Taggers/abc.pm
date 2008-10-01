@@ -26,7 +26,7 @@ use Data::Dumper;
 use Carp;
 
 use Idval::FileIO;
-use base qw(Idval::Plugin);
+use base qw(Idval::Provider);
 
 my $name = 'abc';
 my $type = 'ABC';

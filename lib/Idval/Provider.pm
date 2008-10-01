@@ -1,4 +1,4 @@
-package Idval::Plugin;
+package Idval::Provider;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 

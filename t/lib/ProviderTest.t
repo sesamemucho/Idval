@@ -212,7 +212,7 @@ sub add_UserPlugin3_up1
     my $plugin =<<'EOF';
 package Idval::UserPlugins::Up1;
 use Idval::Common;
-use base qw(Idval::Plugin);
+use base qw(Idval::Provider);
 no warnings qw(redefine);
 
 our $name = 'goober';
@@ -250,7 +250,7 @@ sub add_UserPlugin3_up2
     my $plugin =<<'EOF';
 package Idval::UserPlugins::Up2;
 use Idval::Common;
-use base qw(Idval::Plugin);
+use base qw(Idval::Provider);
 no warnings qw(redefine);
 
 our $name = 'tag_write2';
@@ -288,7 +288,7 @@ sub add_UserPlugin3_up3
     my $plugin =<<'EOF';
 package Idval::UserPlugins::Up3;
 use Idval::Common;
-use base qw(Idval::Plugin);
+use base qw(Idval::Provider);
 no warnings qw(redefine);
 
 our $name = 'tag_write3';
@@ -326,7 +326,7 @@ sub add_UserPlugin3_up4
     my $plugin =<<'EOF';
 package Idval::UserPlugins::Up4;
 use Idval::Common;
-use base qw(Idval::Plugin);
+use base qw(Idval::Provider);
 no warnings qw(redefine);
 
 our $name = 'tag_write4';

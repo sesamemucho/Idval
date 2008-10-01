@@ -25,7 +25,7 @@ use Class::ISA;
 use Carp;
 use Data::Dumper;
 
-use base qw(Idval::Plugin);
+use base qw(Idval::Provider);
 
 my $req_status = eval {require MP3::Tag};
 my $req_msg = !defined($req_status) ? "$!" :
