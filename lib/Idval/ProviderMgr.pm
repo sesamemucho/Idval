@@ -1,4 +1,4 @@
-package Idval::Providers;
+package Idval::ProviderMgr;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 

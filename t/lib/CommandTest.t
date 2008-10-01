@@ -11,7 +11,7 @@ use Data::Dumper;
 
 use TestUtils;
 use Idval::Config;
-use Idval::Providers;
+use Idval::ProviderMgr;
 use Idval::ServiceLocator;
 
 #my $tree1 = {'testdir' => {}};
@@ -59,7 +59,7 @@ sub get_converter : Test(1)
 
     my $fc = Idval::Config->new("/testdir/gt1.txt");
     #print STDERR "Hello 3 from test_get_converter\n";
-    $provs = Idval::Providers->new($fc);
+    $provs = Idval::ProviderMgr->new($fc);
     #print STDERR "provs is:", Dumper($provs);
     my $conv = $provs->_get_command('goober', '/testdir/Idval/up1.pm');
 

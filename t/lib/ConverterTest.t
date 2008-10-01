@@ -10,7 +10,7 @@ use Data::Dumper;
 
 use TestUtils;
 use Idval::Config;
-use Idval::Providers;
+use Idval::ProviderMgr;
 use Idval::ServiceLocator;
 
 #my $tree1 = {'testdir' => {}};
@@ -55,7 +55,7 @@ sub get_converter : Test(1)
     add_UserPlugin3_up1();
 
     my $fc = eval {Idval::Config->new("/testdir/gt1.txt")};
-    $provs = eval{Idval::Providers->new($fc)};
+    $provs = eval{Idval::ProviderMgr->new($fc)};
     my $conv = $provs->get_converter('WAV', 'FLAC');
 
     is($conv->query('name'), 'flacker');
@@ -68,7 +68,7 @@ sub get_converter : Test(1)
 #     my $self = shift;
 
 #     my $fc = FakeConfig->new("$testdir/Idval/UserPlugins3");
-#     my $prov = Idval::Providers->new($fc);
+#     my $prov = Idval::ProviderMgr->new($fc);
 
 #     my $conv = $prov->get_converter('FLAC', 'OGG');
 
@@ -82,7 +82,7 @@ sub get_converter : Test(1)
 #     my $self = shift;
 
 #     my $fc = FakeConfig->new("$testdir/Idval/UserPlugins3");
-#     my $prov = Idval::Providers->new($fc);
+#     my $prov = Idval::ProviderMgr->new($fc);
 
 #     my $conv = $prov->get_converter('WAV', 'OGG');
 

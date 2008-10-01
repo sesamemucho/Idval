@@ -73,7 +73,7 @@ sub validate
     #$val_cfg->{DEBUG} = 1;    # XXX
 
     $datastore->stringify();
-    $filename = $datastore->get_source();
+    $filename = $datastore->source();
 
     #print "datastore is: ", Dumper($datastore);
     foreach my $key (sort keys %{$datastore->{RECORDS}})

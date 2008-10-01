@@ -65,7 +65,7 @@ sub update
     foreach my $key (sort keys %{$new_datastore->{RECORDS}})
     {
         $tag_record = $new_datastore->{RECORDS}->{$key};
-        print STDERR "in update with: ", Dumper($tag_record);
+        #print STDERR "in update with: ", Dumper($tag_record);
         $type = $tag_record->get_value('TYPE');
         $prov = $providers->get_provider('writes_tags', $type, 'NULL');
         $prov_list{$prov} = $prov;

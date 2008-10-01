@@ -97,6 +97,7 @@ sub read_tags
     }
 
     my $md5sum = qx{$path --show-md5sum "$filename"};
+    chomp $md5sum;
     $tag_record->add_tag('MD5SUM', $md5sum);
 
     #print "\nGot tag:\n";

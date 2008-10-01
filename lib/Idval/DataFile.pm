@@ -159,7 +159,7 @@ sub parse_block
 
     if (!exists($hash{FILE}))
     {
-        croak "No FILE tag in tag data record \"", join("\n", @{$blockref}), "\"\n";
+        confess "No FILE tag in tag data record \"", join("\n", @{$blockref}), "\"\n";
     }
 
     my $rec = Idval::Record->new({FILE=>$hash{FILE}});
@@ -168,8 +168,10 @@ sub parse_block
     {
         # Make a guess
         my $filetype = $self->{TYPEMAP}->get_filetype_from_file($hash{FILE});
+        #print STDERR "DataFile: type guess from \"$hash{FILE}\" is \"$filetype\"\n";
         if ($filetype)
         {
+            #print STDERR "DataFile: Adding TYPE and CLASS to $hash{FILE}\n";
             $rec->add_tag('TYPE', $filetype);
             $rec->add_tag('CLASS', $self->{TYPEMAP}->get_class_from_filetype($filetype));
         }
@@ -177,6 +179,7 @@ sub parse_block
     elsif (!exists($hash{CLASS}))
     {
         # TYPE exists, but not CLASS, so fill it in
+        #print STDERR "DataFile: Adding TYPE to $hash{FILE}\n";
         $rec->add_tag('CLASS', $self->{TYPEMAP}->get_class_from_filetype($hash{TYPE}));
     }
     # A CLASS tag without a TYPE tag is anomalous, but don't deal with it here.
@@ -185,12 +188,12 @@ sub parse_block
     {
         # The key already exists, so don't add it
         next if ($key eq 'FILE');
-        #print STDERR "Adding key \"$key\", value \"$hash{$key}\"\n";
+        #print STDERR "DataFile: Adding key \"$key\", value \"$hash{$key}\"\n";
         $rec->add_tag($key, $hash{$key});
     }
 
-    $rec->commit_tags();
-    #print STDERR "Returning ", Dumper($rec);
+    #print STDERR "DataFile: hash is: ", Dumper(\%hash);
+    #print STDERR "DataFile: Returning ", Dumper($rec);
     return $rec;
 }
 

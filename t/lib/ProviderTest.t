@@ -10,7 +10,7 @@ use Data::Dumper;
 
 use TestUtils;
 use Idval::Constants;
-use Idval::Providers;
+use Idval::ProviderMgr;
 use Idval::Common;
 use Idval::Config;
 use Idval::ServiceLocator;
@@ -52,8 +52,8 @@ sub init : Test(2)
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nplugin_dir = /testdir/Idval\n\n");
     add_UserPlugin3_up1();
     my $fc = Idval::Config->new("/testdir/gt1.txt");
-    $provs = eval{Idval::Providers->new($fc)};
-    isa_ok($provs, 'Idval::Providers');
+    $provs = eval{Idval::ProviderMgr->new($fc)};
+    isa_ok($provs, 'Idval::ProviderMgr');
     is($provs->num_providers(), 1);
 
     return;
@@ -69,8 +69,8 @@ sub get_providers : Test(1)
     add_UserPlugin3_up3();
     add_UserPlugin3_up4();
     my $fc = Idval::Config->new("/testdir/gt1.txt");
-    $provs = eval{Idval::Providers->new($fc)};
-    print "Error from Idval::Providers->new: $@\n" if $@;
+    $provs = eval{Idval::ProviderMgr->new($fc)};
+    print "Error from Idval::ProviderMgr->new: $@\n" if $@;
     #print "test_get_providers: provs is: ", Dumper($provs);
     is($provs->num_providers(), 4);
 
@@ -87,7 +87,7 @@ sub get_packages : Test(2)
     add_UserPlugin3_up3();
     add_UserPlugin3_up4();
     my $fc = Idval::Config->new("/testdir/gt1.txt");
-    $provs = Idval::Providers->new($fc);
+    $provs = Idval::ProviderMgr->new($fc);
     is($provs->num_providers(), 4);
     is_deeply(['Idval::UserPlugins::Up1',
                'Idval::UserPlugins::Up2',
@@ -107,7 +107,7 @@ sub get_a_provider_1 : Test(1)
     add_UserPlugin3_up3();
     add_UserPlugin3_up4();
     my $fc = Idval::Config->new("/testdir/gt1.txt");
-    $provs = Idval::Providers->new($fc);
+    $provs = Idval::ProviderMgr->new($fc);
     my $writer = $provs->get_provider('writes_tags', 'OGG');
 
     is(ref $writer, 'Idval::UserPlugins::Up2');
@@ -128,7 +128,7 @@ sub get_a_provider_2 : Test(1)
     add_UserPlugin3_up3();
     add_UserPlugin3_up4();
     my $fc = Idval::Config->new("/testdir/gt1.txt");
-    $provs = Idval::Providers->new($fc);
+    $provs = Idval::ProviderMgr->new($fc);
     $item = $provs->get_provider('converts', 'FLAC', 'WAV');
     #Idval::Common::get_logger()->accessor('DEBUGMASK', $old_debug);
     #Idval::Common::get_logger()->accessor('LOGLEVEL', $old_level);
@@ -148,7 +148,7 @@ sub choose_provider_by_weight_in_config_file_1 : Test(1)
     add_UserPlugin3_up3();
     add_UserPlugin3_up4();
     my $fc = Idval::Config->new("/testdir/gt1.txt");
-    $provs = Idval::Providers->new($fc);
+    $provs = Idval::ProviderMgr->new($fc);
     my $writer = $provs->get_provider('writes_tags', 'MP3');
 
     is(ref $writer, 'Idval::UserPlugins::Up1');
@@ -168,7 +168,7 @@ sub choose_provider_by_weight_in_config_file_2 : Test(1)
     add_UserPlugin3_up4();
     my $fc = Idval::Config->new("/testdir/gt1.txt");
     #$Idval::Config::BlockReader::cfg_dbg = 1;
-    $provs = Idval::Providers->new($fc);
+    $provs = Idval::ProviderMgr->new($fc);
     #print STDERR Dumper($provs);
     my $writer = $provs->get_provider('writes_tags', 'MP3');
     #$Idval::Config::BlockReader::cfg_dbg = 0;
@@ -183,7 +183,7 @@ sub choose_provider_by_weight_in_config_file_2 : Test(1)
 #     #my $self = shift;
 
 #     my $fc = FakeConfig->new("$testdir/Idval/UserPlugins3");
-#     $provs = Idval::Providers->new($fc);
+#     $provs = Idval::ProviderMgr->new($fc);
 
 #     my $item = $prov->get_provider('converts', 'WAV', 'FLAC');
 
@@ -197,7 +197,7 @@ sub get_a_command_1 : Test(1)
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\ncommand_dir = /testdir/Idval\n\n");
     add_command_1();
     my $fc = Idval::Config->new("/testdir/gt1.txt");
-    $provs = Idval::Providers->new($fc);
+    $provs = Idval::ProviderMgr->new($fc);
     my $cmd = $provs->find_command('cmd1');
 
     is($cmd, 'Idval::UserPlugins::Cmd1::cmd1');

@@ -30,7 +30,7 @@ use Idval::Constants;
 use Idval::ServiceLocator;
 use Idval::Ui;
 use Idval::Config;
-use Idval::Providers;
+use Idval::ProviderMgr;
 use Idval::NewFH;
 use Idval::FileIO;
 use Idval::Common;
@@ -193,7 +193,7 @@ sub _init
     Idval::Common::register_common_object('tempfiles', $tempfiles);
     $self->{CONFIG} = $config;
     Idval::Common::register_common_object('config', $self->config());
-    $self->{PROVIDERS} = Idval::Providers->new($config);
+    $self->{PROVIDERS} = Idval::ProviderMgr->new($config);
     Idval::Common::register_common_object('providers', $self->providers());
     $self->{TYPEMAP} = Idval::TypeMap->new($self->providers());
     Idval::Common::register_common_object('typemap', $self->typemap());

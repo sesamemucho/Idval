@@ -25,6 +25,7 @@ sub _init
 
     $self->build_type_mapper($prov);
 
+    #print STDERR "TypeMap: FILETYPE map is: ", Dumper($self->{MAPPING}->{FILETYPE});
     return;
 }
 
@@ -209,10 +210,11 @@ sub get_filetype_from_file
     my $file = shift;
 
     my $vis_sep = $self->{VISIBLE_SEPARATOR};
-    my ($ext) = ($file =~ m/\.([^.]+)/);
+    my ($ext) = ($file =~ m/\.([^.]+)$/);
     $ext =~ s/\Q${vis_sep}\E.*$//;
     $ext = uc($ext);
 
+    #print STDERR "TypeMap::get_filetype_from_file: ext is \"$ext\"\n";
     return exists($self->{MAPPING}->{FILETYPE}->{REV}->{$ext}) ? $self->{MAPPING}->{FILETYPE}->{REV}->{$ext} : '';
 }
 

@@ -52,7 +52,7 @@ sub print ## no critic (ProhibitBuiltinHomonyms)
     my $out = ref $outputfile ? $outputfile :
         Idval::FileIO->new($outputfile, '>') or croak "Can't open $outputfile for writing: $ERRNO\n";
 
-    #print STDERR Dumper($datastore);
+    #print STDERR "print command: ", Dumper($datastore);
     my $coll = $datastore->stringify($full);
     $out->print(join("\n", @{$coll}), "\n");
     $out->close();
