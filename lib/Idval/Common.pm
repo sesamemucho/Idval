@@ -175,6 +175,27 @@ sub mkarglist
     return @retval;
 }
 
+# Like mkarglist, but make sure it works as a hash
+sub mkargref
+{
+    my %retlist;
+    my $arg;
+    my $key;
+    my $value;
+
+    for (my $i=0; $i<= $#_; $i+=2)
+    {
+        $key = $_[$i];
+        next if !defined($key);
+        next if $key =~ m/^\s*$/x;
+        $value = $_[$i+1];
+
+        $retlist{$key} = $value;
+    }
+
+    return \%retlist;
+}
+
 sub run
 {
     my $name = shift;

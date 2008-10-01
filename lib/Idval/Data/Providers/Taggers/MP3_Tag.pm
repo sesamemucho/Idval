@@ -1,4 +1,4 @@
-package Idval::SysPlugins::MP3_Tag;
+package Idval::Plugins::Taggers::MP3_Tag;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 

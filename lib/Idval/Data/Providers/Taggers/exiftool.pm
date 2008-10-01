@@ -1,4 +1,4 @@
-package Idval::SysPlugins::Taggers::Exiftool;
+package Idval::Plugins::Taggers::Exiftool;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 

@@ -12,6 +12,7 @@ use TestUtils;
 use Idval::Constants;
 use Idval::ProviderMgr;
 use Idval::Common;
+use Idval::Logger;
 use Idval::Config;
 use Idval::ServiceLocator;
 
@@ -49,7 +50,7 @@ sub after : Test(teardown) {
 
 sub init : Test(2)
 {
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nplugin_dir = /testdir/Idval\n\n");
+    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
     add_UserPlugin3_up1();
     my $fc = Idval::Config->new("/testdir/gt1.txt");
     $provs = eval{Idval::ProviderMgr->new($fc)};
@@ -63,7 +64,7 @@ sub get_providers : Test(1)
 {
     #my $self = shift;
 
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nplugin_dir = /testdir/Idval\n\n");
+    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
     add_UserPlugin3_up1();
     add_UserPlugin3_up2();
     add_UserPlugin3_up3();
@@ -81,7 +82,7 @@ sub get_packages : Test(2)
 {
     #my $self = shift;
 
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nplugin_dir = /testdir/Idval\n\n");
+    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
     add_UserPlugin3_up1();
     add_UserPlugin3_up2();
     add_UserPlugin3_up3();
@@ -89,10 +90,10 @@ sub get_packages : Test(2)
     my $fc = Idval::Config->new("/testdir/gt1.txt");
     $provs = Idval::ProviderMgr->new($fc);
     is($provs->num_providers(), 4);
-    is_deeply(['Idval::UserPlugins::Up1',
-               'Idval::UserPlugins::Up2',
-               'Idval::UserPlugins::Up3',
-               'Idval::UserPlugins::Up4'], $provs->get_packages());
+    is_deeply(['Idval::Plugins::Up1',
+               'Idval::Plugins::Up2',
+               'Idval::Plugins::Up3',
+               'Idval::Plugins::Up4'], $provs->get_packages());
 
     return;
 }
@@ -101,7 +102,7 @@ sub get_a_provider_1 : Test(1)
 {
     #my $self = shift;
 
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nplugin_dir = /testdir/Idval\n\n");
+    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
     add_UserPlugin3_up1();
     add_UserPlugin3_up2();
     add_UserPlugin3_up3();
@@ -110,7 +111,7 @@ sub get_a_provider_1 : Test(1)
     $provs = Idval::ProviderMgr->new($fc);
     my $writer = $provs->get_provider('writes_tags', 'OGG');
 
-    is(ref $writer, 'Idval::UserPlugins::Up2');
+    is(ref $writer, 'Idval::Plugins::Up2');
 
     return;
 }
@@ -122,7 +123,7 @@ sub get_a_provider_2 : Test(1)
 
     #my $old_level = Idval::Common::get_logger()->accessor('LOGLEVEL', $CHATTY);
     #my $old_debug = Idval::Common::get_logger()->accessor('DEBUGMASK', $DBG_GRAPH + $DBG_PROVIDERS);
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nplugin_dir = /testdir/Idval\n\n");
+    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
     add_UserPlugin3_up1();
     add_UserPlugin3_up2();
     add_UserPlugin3_up3();
@@ -139,19 +140,24 @@ sub get_a_provider_2 : Test(1)
 
 sub choose_provider_by_weight_in_config_file_1 : Test(1)
 {
-    #my $self = shift;
+    my $self = shift;
 
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nplugin_dir = /testdir/Idval\n" .
-        "{\ncommand_name = goober\nweight = 50\n}\n");
+    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n" .
+        "{\ncommand_name == goober\nweight = 50\n}\n");
     add_UserPlugin3_up1();
     add_UserPlugin3_up2();
     add_UserPlugin3_up3();
     add_UserPlugin3_up4();
     my $fc = Idval::Config->new("/testdir/gt1.txt");
+    #Idval::Logger::initialize_logger({log_out => 'STDERR'});
+    #my $old_level = Idval::Common::get_logger()->accessor('LOGLEVEL', $CHATTY);
+    #my $old_debug = Idval::Common::get_logger()->accessor('DEBUGMASK', $DBG_GRAPH + $DBG_PROVIDERS);
     $provs = Idval::ProviderMgr->new($fc);
     my $writer = $provs->get_provider('writes_tags', 'MP3');
+    #Idval::Common::get_logger()->accessor('DEBUGMASK', $old_debug);
+    #Idval::Common::get_logger()->accessor('LOGLEVEL', $old_level);
 
-    is(ref $writer, 'Idval::UserPlugins::Up1');
+    is(ref $writer, 'Idval::Plugins::Up1');
 
     return;
 }
@@ -160,7 +166,7 @@ sub choose_provider_by_weight_in_config_file_2 : Test(1)
 {
     #my $self = shift;
 
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nplugin_dir = /testdir/Idval\n" .
+    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n" .
         "{\ncommand_name == tag_write4\nweight = 50\n}\n");
     add_UserPlugin3_up1();
     add_UserPlugin3_up2();
@@ -173,7 +179,7 @@ sub choose_provider_by_weight_in_config_file_2 : Test(1)
     my $writer = $provs->get_provider('writes_tags', 'MP3');
     #$Idval::Config::BlockReader::cfg_dbg = 0;
 
-    is(ref $writer, 'Idval::UserPlugins::Up4');
+    is(ref $writer, 'Idval::Plugins::Up4');
 
     return;
 }
@@ -187,7 +193,7 @@ sub choose_provider_by_weight_in_config_file_2 : Test(1)
 
 #     my $item = $prov->get_provider('converts', 'WAV', 'FLAC');
 
-#     is('Idval::UserPlugins::Garfinkle', ref $item);
+#     is('Idval::Plugins::Garfinkle', ref $item);
 # }
 
 sub get_a_command_1 : Test(1)
@@ -200,7 +206,7 @@ sub get_a_command_1 : Test(1)
     $provs = Idval::ProviderMgr->new($fc);
     my $cmd = $provs->find_command('cmd1');
 
-    is($cmd, 'Idval::UserPlugins::Cmd1::cmd1');
+    is($cmd, 'Idval::Plugins::Cmd1::cmd1');
 
     return;
 }
@@ -210,7 +216,7 @@ sub get_a_command_1 : Test(1)
 sub add_UserPlugin3_up1
 {
     my $plugin =<<'EOF';
-package Idval::UserPlugins::Up1;
+package Idval::Plugins::Up1;
 use Idval::Common;
 use base qw(Idval::Provider);
 no warnings qw(redefine);
@@ -248,7 +254,7 @@ EOF
 sub add_UserPlugin3_up2
 {
     my $plugin =<<'EOF';
-package Idval::UserPlugins::Up2;
+package Idval::Plugins::Up2;
 use Idval::Common;
 use base qw(Idval::Provider);
 no warnings qw(redefine);
@@ -286,7 +292,7 @@ EOF
 sub add_UserPlugin3_up3
 {
     my $plugin =<<'EOF';
-package Idval::UserPlugins::Up3;
+package Idval::Plugins::Up3;
 use Idval::Common;
 use base qw(Idval::Provider);
 no warnings qw(redefine);
@@ -324,7 +330,7 @@ EOF
 sub add_UserPlugin3_up4
 {
     my $plugin =<<'EOF';
-package Idval::UserPlugins::Up4;
+package Idval::Plugins::Up4;
 use Idval::Common;
 use base qw(Idval::Provider);
 no warnings qw(redefine);
@@ -362,7 +368,7 @@ EOF
 sub add_command_1
 {
     my $plugin =<<'EOF';
-package Idval::UserPlugins::Cmd1;
+package Idval::Plugins::Cmd1;
 use Idval::Common;
 
 sub init

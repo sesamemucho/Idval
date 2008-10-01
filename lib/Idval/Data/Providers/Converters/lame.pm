@@ -1,4 +1,4 @@
-package Idval::SysPlugins::Lame;
+package Idval::Plugins::Converters::Lame;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 

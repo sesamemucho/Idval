@@ -1,4 +1,4 @@
-package Idval::SysPlugins::Converters::Flac;
+package Idval::Plugins::Converters::Flac;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 

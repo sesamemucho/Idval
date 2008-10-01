@@ -52,7 +52,7 @@ sub _init
     $self->{DEFAULT_SELECTS} = {'config_group' => 'idval_settings'};
     Idval::Common::register_common_object('providers', $self);
 
-    my $dirlist = $self->local_get_list_value('plugin_dir');
+    $self->{PROVIDER_DIRS} = $self->local_get_list_value('provider_dir');
     #print "dirlist is: ", join(":", @{$dirlist}), "\n";
     #print Dumper($config);
     $self->{COMMAND_DIRS} = $self->local_get_list_value('command_dir');
@@ -68,7 +68,8 @@ sub _init
                                                   decorate => 1}) unless defined(*verbose{CODE});
     *chatty = Idval::Common::make_custom_logger({level => $CHATTY,
                                                  debugmask => $DBG_PROVIDERS,
-                                                 decorate => 1}) unless defined(*chatty{CODE});
+                                                 decorate => 1,
+                                                }) unless defined(*chatty{CODE});
     *chatty_graph = Idval::Common::make_custom_logger({level => $CHATTY,
                                                  debugmask => $DBG_GRAPH,
                                                  decorate => 1}) unless defined(*chatty_graph{CODE});
@@ -78,7 +79,8 @@ sub _init
 
     map{$self->{GRAPH}->{$_} = Idval::Graph->new()} @provider_types;
 
-    $self->get_plugins($dirlist);
+    #$self->get_plugins($dirlist);
+    $self->find_all_providers();
 
     map{$self->{GRAPH}->{$_}->process_graph()} @provider_types;
 
@@ -574,6 +576,7 @@ sub register_provider
     #print "caller(2) is: ", caller(2), "\n";
     foreach my $argref (@_)
     {
+        chatty("register_provider: argref is: ", Dumper($argref));
         my $provides = lc($self->_get_arg($argref, 'provides'));
         my $name     = $self->_get_arg($argref, 'name');
         # If a weighting for this provider has been specified in a config file, use that value
@@ -706,6 +709,79 @@ sub get_plugins
     return;
 }
 
+sub _get_plugin
+{
+    my $self = shift;
+    my $plugin_name= shift;
+
+    my $fh = Idval::FileIO->new($plugin_name, "r");
+    confess "Bad filehandle: $! for item \"$plugin_name\"" unless defined $fh;
+
+    # Doing it this way instead of just "do ..." to allow for use
+    # of in-core files for testing (see FileString.pm)
+    my $plugin = "\n# line 1 \"" . File::Spec->canonpath($plugin_name) . "\"\n";
+    $plugin .= do { local $/ = undef; <$fh> };
+    $fh->close();
+
+    # Is this an Idval plugin?
+    if ($plugin !~ m/^\s*package\s+Idval::Plugin/mx)
+    {
+        verbose("Plugin candidate \"$plugin_name\" is not an Idval plugin: no \"package Idval::Plugin::...\"\n");
+        return;
+    }
+
+    #print "Plugin is \"$plugin\"\n" if $plugin_name eq "id3v2"; # or whatever...
+    #croak "Could not read plugin \"$plugin_name\"\n" unless $plugin;
+    chatty("Plugin $plugin_name\n");
+
+    no warnings 'redefine';
+    my $status = eval "$plugin";
+    #print STDERR "eval result is: $@\n" if $@;
+    if (defined $status)
+    {
+        chatty($DBG_STARTUP, "Status is <$status>\n");
+    }
+    else
+    {
+        info($DBG_STARTUP, "Error return from \"$plugin_name\"\n");
+    }
+    if (not ($status or $! or $@))
+    {
+        croak "Error reading \"$plugin_name\": Does it return a true value at the end of the file?\n";
+    }
+    else
+    {
+        croak "Error reading \"$plugin_name\":($!) ($@)" unless $status;
+    }
+
+    return;
+}
+
+sub find_all_providers
+{
+    my $self = shift;
+    my @namelist;
+    my $ext = $self->{COMMAND_EXT};
+
+    # We don't want to recurse to find providers, so don't use idv_find.
+    # We don't want to recurse, because it should be easy for users to
+    # write command scripts, and I don't want to make them put the
+    # commands in leaf directories, instead of, say, their home
+    # directories.
+    foreach my $cmd_dir (@{$self->{PROVIDER_DIRS}})
+    {
+        my @sources = Idval::FileIO::idv_glob("$cmd_dir/*.$ext",
+                                              $Idval::FileIO::GLOB_NOCASE | $Idval::FileIO::GLOB_TILDE);
+        chatty("ProviderMgr: in \"$cmd_dir\", candidates are: ", join(', ', @sources), "\n");
+        foreach my $source (@sources)
+        {
+            next if $source =~ m/\.?\.$/;
+            $self->_get_plugin($source);
+        }
+    }
+
+    return;
+}
 # sub get_command_cb
 # {
 #     return unless $_ =~ m/\.pm$/;

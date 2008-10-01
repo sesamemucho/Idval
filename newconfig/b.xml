@@ -1,12 +1,12 @@
 <config>
 <group>
 <config_group op="==" value="idval_settings"/>
-<plugin_dir value="LIB%/Plugins"/>
+<provider_dir value="LIB%/Plugins"/>
 </group>
 
 <group>
 <config_group op="==" value="idval_settings"/>
-<plugin_dir value="%LIB%/Plugins"/>
+<provider_dir value="%LIB%/Plugins"/>
 <command_dir value="%DATA%/commands"/>
 <command_extension value="pm"/>
 <data_store value="%DATA%/data_store.bin"/>

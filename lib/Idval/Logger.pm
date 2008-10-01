@@ -54,10 +54,15 @@ sub safe_get
     my $argref = shift;
     my $key = shift;
     my $default = shift;
-
-    return !exists $argref->{key}        ? $default
-          : $argref->{key}               ? $argref->{key}
-          :                                $default;
+    #print STDERR "\n--------\nargref: ", Dumper($argref);
+    #print STDERR "safe_get: key is \"$key\"\n";
+    #print STDERR "safe_get: exists key is \"", exists($argref->{$key}), "\"\n";
+    #print STDERR "safe_get: argref->key is: \"", $argref->{$key}, "\"\n" if exists($argref->{$key});
+    my $retval = !exists $argref->{$key}        ? $default
+               : $argref->{$key}                ? $argref->{$key}
+               :                                  $default;
+    #print STDERR "Returning \"$retval\"\n--------\n\n";
+    return $retval;
 }
 
 sub new
@@ -94,16 +99,19 @@ sub str
 {
     my $self = shift;
     my $title = shift;
+    my $io = shift || 'STDERR';
 
-    print "$title\n" if $title;
-    print "Logger settings:\n";
-    printf "  log level:  %d\n", $self->accessor('LOGLEVEL');
-    printf "  debug mask: 0x%0X\n", $self->accessor('DEBUGMASK');
-    printf "  show trace: %d\n", $self->accessor('SHOW_TRACE');
-    printf "  show time:  %d\n", $self->accessor('SHOW_TIME');
-    printf "  use xml:    %d\n", $self->accessor('USE_XML');
-    printf "  output:     %s\n", $self->accessor('LOG_OUT');
-    printf "  from:       %s\n", $self->accessor('FROM');
+    no strict 'refs';
+    print $io "$title\n" if $title;
+    print $io "Logger settings:\n";
+    printf $io "  log level:  %d\n", $self->accessor('LOGLEVEL');
+    printf $io "  debug mask: 0x%0X\n", $self->accessor('DEBUGMASK');
+    printf $io "  show trace: %d\n", $self->accessor('SHOW_TRACE');
+    printf $io "  show time:  %d\n", $self->accessor('SHOW_TIME');
+    printf $io "  use xml:    %d\n", $self->accessor('USE_XML');
+    printf $io "  output:     %s\n", $self->accessor('LOG_OUT');
+    printf $io "  from:       %s\n", $self->accessor('FROM');
+    use strict;
     return;
 }
 
@@ -116,9 +124,15 @@ sub set_fh
 
   NLOG:
     {
-        if ($name eq "STDOUT" or $name eq "STDERR")
+        if ($name eq "STDOUT")
         {
             $fh = *STDOUT{IO};
+            last NLOG;
+        }
+        
+        if ($name eq "STDERR")
+        {
+            $fh = *STDERR{IO};
             last NLOG;
         }
         
@@ -193,6 +207,7 @@ sub _log
     my $decorate = exists($argref->{decorate}) ? $argref->{decorate} : 1;
     my $call_depth = exists($argref->{call_depth}) ? $argref->{call_depth} : 1;
     my $isquery = exists($argref->{query}) ? $argref->{query} : 0;
+    my $from = exists($argref->{from}) ? $argref->{from} : $self->accessor("FROM");
     my $prepend = '';
 
     if ($isquery)
@@ -201,14 +216,16 @@ sub _log
         $level = $SILENT;
         $decorate = 0;
     }
-    
-    if (($self->accessor("FROM") eq 'BARFO') || ($_[0] =~ m/Well/))
+    #print STDERR "Hello from _log, fh is", Dumper($fh);
+    #print $fh "Hello 2 from _log\n";
+    if (($from eq 'BARFO') || ($_[0] =~ m/Well/))
     {
-        print "debugmask: $debugmask; stored value: $self->{DEBUGMASK}\n";
-        print "level: $level; stored value: $self->{LOGLEVEL}\n";
+        print STDERR "debugmask: $debugmask; stored value: $self->{DEBUGMASK}\n";
+        print STDERR "level: $level; stored value: $self->{LOGLEVEL}\n";
     }
 
     return unless $debugmask & $self->{DEBUGMASK};
+    return unless $self->ok($level);
 
     if ($self->{USE_XML})
     {
@@ -222,6 +239,7 @@ sub _log
     }
     else
     {
+        return unless $fh;
 
         if ($decorate)
         {
@@ -229,7 +247,7 @@ sub _log
             $prepend = $time . caller($call_depth) . ': ';
         }
 
-        print $fh ($prepend, @_) if ($fh and $self->ok($level));
+        print $fh ($prepend, @_);
     }
 
     if ($isquery)
@@ -343,7 +361,7 @@ sub make_custom_logger
     my $self = shift;
     my $argref = shift;
 
-    #print "Making custom logger with: ", Dumper($argref);
+    #print STDERR "Making custom logger with: ", Dumper($argref);
     return sub {
         return $self->_log($argref, @_)
     }
@@ -354,9 +372,9 @@ sub make_custom_logger
 
 sub initialize_logger
 {
-    #print "Got ", join(':', @_), "\n";
-    $lo = new Idval::Logger({@_});
+    my $argref = shift;
 
+    $lo = new Idval::Logger($argref);
     return;
 }
 
@@ -367,7 +385,7 @@ sub get_logger
 
 BEGIN {
     $lo_begin = Idval::Logger->new({development => 0,
-                             log_out => 'STDOUT'});
+                             log_out => 'STDERR'});
 }
 
 1;

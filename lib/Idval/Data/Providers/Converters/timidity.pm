@@ -1,4 +1,4 @@
-package Idval::SysPlugins::Timidity;
+package Idval::Plugins::Converters::Timidity;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 

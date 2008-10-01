@@ -60,9 +60,8 @@ sub run_validation_test
 
     my $taglist = AcceptUtils::mktree("$data_dir/val1.dat", "$data_dir/t/d1", $idval_obj);
 
-    #print "Validating:";
+    #print STDERR "Validating:";
     #$taglist = Idval::Scripts::validate($taglist, $idval_obj->providers(), $fname);
-    #print "Done\n";
     my $str_buf = 'nothing here';
 
     #my $oldout;
@@ -73,6 +72,7 @@ sub run_validation_test
 
     eval {$taglist = Idval::Scripts::validate($taglist, $idval_obj->providers(), $fname);};
     $eval_status = $@ if $@;
+    #print STDERR "Done\n";
     open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
 
     my $retval = $eval_status ? $eval_status : $str_buf;
@@ -87,6 +87,7 @@ sub validation_with_one_error : Test(1)
         GRIPE = Date is wrong!
 }
 EOF
+
     my ($prov_p, $reason) = AcceptUtils::are_providers_present();
     return $reason unless $prov_p;
 
@@ -96,7 +97,7 @@ EOF
     return;
 }
 
-sub test_validation_showing_that_two_selectors_AND_together
+sub test_validation_showing_that_two_selectors_AND_together : Test(1)
 {
     my $val_cfg =<<EOF;
 {
@@ -115,7 +116,7 @@ EOF
     return;
 }
 
-sub test_validation_showing_that_regexp_selectors_OR_together
+sub test_validation_showing_that_regexp_selectors_OR_together : Test(1)
 {
     my $val_cfg =<<EOF;
 {
@@ -148,7 +149,7 @@ EOF
     return;
 }
 
-sub test_validation_showing_that_regexp_selectors_OR_together_2
+sub test_validation_showing_that_regexp_selectors_OR_together_2 : Test(1)
 {
     my $val_cfg =<<EOF;
 {
@@ -179,7 +180,7 @@ EOF
     return;
 }
 
-sub test_validation_showing_that_ONLY_regexp_selectors_OR_together
+sub test_validation_showing_that_ONLY_regexp_selectors_OR_together : Test(1)
 {
     my $val_cfg =<<EOF;
 {
@@ -205,7 +206,7 @@ EOF
     return;
 }
 
-sub test_validation_showing_nested_config_blocks
+sub test_validation_showing_nested_config_blocks : Test(1)
 {
     my $val_cfg =<<EOF;
 {
@@ -233,7 +234,7 @@ EOF
     return;
 }
 
-sub test_validation_with_bogus_pass_function
+sub test_validation_with_bogus_pass_function : Test(1)
 {
     my $val_cfg =<<EOF;
 {

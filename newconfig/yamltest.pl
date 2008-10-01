@@ -45,7 +45,7 @@ my $b =<<EOF;
 ---
 -
   select: config_group == idval_settings
-  plugin_dir: "%LIB%/Plugins"
+  provider_dir: "%LIB%/Plugins"
   command_dir: "%DATA%/commands"
   command_extension: pm
   data_store: "%DATA%/data_store.bin"

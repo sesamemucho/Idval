@@ -1,12 +1,12 @@
 <config>
 <group>
 <select name="config_group" op="==" value="idval_settings"/>
-<set name="plugin_dir" value="LIB%/Plugins"/>
+<set name="provider_dir" value="LIB%/Plugins"/>
 </group>
 
 <group>
 <select name="config_group" op="==" value="idval_settings"/>
-<set name="plugin_dir" value="%LIB%/Plugins"/>
+<set name="provider_dir" value="%LIB%/Plugins"/>
 <set name="command_dir" value="%DATA%/commands"/>
 <set name="command_extension" value="pm"/>
 <set name="data_store" value="%DATA%/data_store.bin"/>

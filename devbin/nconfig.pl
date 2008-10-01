@@ -25,7 +25,7 @@ my $cfg_file =<<EOF;
     # Collect settings of use only to overall Idval configuration
     config_group == idval_settings
 
-    plugin_dir = %LIB%/Plugins
+    provider_dir = %LIB%/Plugins
     command_dir = %DATA%/commands
     command_extension = pm
     data_store   = %DATA%/data_store.bin
@@ -107,7 +107,7 @@ my $cfg_file =<<EOF;
     # Collect settings of use only to overall Idval configuration
     config_group == idval_settings
 
-    plugin_dir = %LIB%/Plugins
+    provider_dir = %LIB%/Plugins
     command_dir = %DATA%/commands
     command_extension = pm
     data_store   = %DATA%/data_store.bin
@@ -133,7 +133,7 @@ my $obj = Idval::NConfig->new('/testdir/gt1.txt', 0, 1);
 
 my $vars = $obj->merge_blocks({'config_group' => 'idval_settings'});
 
-# Should be just 'plugin_dir through 'visible_separator'
+# Should be just 'provider_dir through 'visible_separator'
 print "result of merge blocks with \{'config_group' => 'idval_settings'\}: ", Dumper($vars);
 }
 
@@ -178,7 +178,7 @@ my $cfg_file =<<EOF;
     # Collect settings of use only to overall Idval configuration
     config_group == idval_settings
 
-    plugin_dir = %LIB%/Plugins
+    provider_dir = %LIB%/Plugins
     command_dir = %DATA%/commands
     command_extension = pm
     data_store   = %DATA%/data_store.bin

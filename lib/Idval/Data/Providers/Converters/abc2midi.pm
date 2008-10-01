@@ -1,4 +1,4 @@
-package Idval::SysPlugins::Abc2midi;
+package Idval::Plugins::Converters::Abc2midi;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 

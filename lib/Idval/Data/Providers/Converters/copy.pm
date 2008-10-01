@@ -1,4 +1,4 @@
-package Idval::SysPlugins::Copy;
+package Idval::Plugins::Converters::Copy;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 

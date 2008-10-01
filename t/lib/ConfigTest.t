@@ -612,7 +612,7 @@ EOS
 # {
 #     #my $self = shift;
 
-#     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nplugin_dir = /testdir/Idval\n" .
+#     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n" .
 #                                     "{\ncommand_name = tag_write4\nweight = 300\n}\n");
 
 #     my $obj = Idval::Config->new('/testdir/gt1.txt');
@@ -805,7 +805,7 @@ sub merge_one_block : Test(1)
         # Collect settings of use only to overall Idval configuration
         config_group == idval_settings
 
-            plugin_dir = %DATA%/Plugins
+            provider_dir = %DATA%/Plugins
             command_dir = %DATA%/commands
             command_extension = pm
             data_store   = %DATA%/data_store.bin
@@ -829,7 +829,7 @@ EOF
         'command_extension' => 'pm',
                 'demo_validate_cfg' => "$datadir/val_demo.cfg",
         'command_dir' => "$datadir/commands",
-        'plugin_dir' => "$datadir/Plugins",
+        'provider_dir' => "$datadir/Plugins",
         'data_store' => "$datadir/data_store.bin",
         'visible_separator' => '%%'
     };
@@ -838,7 +838,7 @@ EOF
 
     my $vars = $obj->merge_blocks({'config_group' => 'idval_settings'});
 
-    # Should be just 'plugin_dir through 'visible_separator'
+    # Should be just 'provider_dir through 'visible_separator'
     #print "result of merge blocks with \{'config_group' => 'idval_settings'\}: ", Dumper($vars);
     is_deeply($vars, $result);
 }
@@ -895,7 +895,7 @@ sub get_values_including_sub_block : Test(1)
     # Collect settings of use only to overall Idval configuration
     config_group == idval_settings
 
-    plugin_dir = %DATA%/Plugins
+    provider_dir = %DATA%/Plugins
     command_dir = %DATA%/commands
     command_extension = pm
     data_store   = %DATA%/data_store.bin

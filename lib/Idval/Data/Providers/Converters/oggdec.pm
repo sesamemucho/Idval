@@ -1,4 +1,4 @@
-package Idval::SysPlugins::OggDec;
+package Idval::Plugins::Converters::OggDec;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 

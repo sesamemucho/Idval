@@ -52,7 +52,7 @@ sub get_converter : Test(1)
     my $self = shift;
 
     #print STDERR "Hello from test_get_converter\n";
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nplugin_dir = /testdir/Idval\n\n");
+    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
     #print STDERR "Hello 1 from test_get_converter\n";
     add_UserPlugin3_up1();
     #print STDERR "Hello 2 from test_get_converter\n";

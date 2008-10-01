@@ -51,7 +51,7 @@ sub get_converter : Test(1)
 {
     my $self = shift;
 
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nplugin_dir = /testdir/Idval\n\n");
+    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
     add_UserPlugin3_up1();
 
     my $fc = eval {Idval::Config->new("/testdir/gt1.txt")};
@@ -94,7 +94,7 @@ sub get_converter : Test(1)
 sub add_UserPlugin3_up1
 {
     my $plugin =<<'EOF';
-package Idval::UserPlugins::Up1;
+package Idval::Plugins::Up1;
 use Idval::Common;
 use base qw(Idval::Converter);
 no warnings qw(redefine);

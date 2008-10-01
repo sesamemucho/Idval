@@ -83,7 +83,7 @@ $options{'no-run'} = 0;
 $options{'xml'} = 0;
 $options{'verbose'} = 1;
 $options{'quiet'} = 0;
-$options{'debug'} = undef;
+#$options{'debug'} = undef;
 $options{'development'} = 0;
 $options{'log_out'} = '';
 $options{'print_to'} = '';
@@ -137,18 +137,16 @@ sub _init
     $self->{OPTIONS} = \%options;
 
     # We now know enough to fire up the error logger
-    my @logger_args = Idval::Common::mkarglist(
+    my $logger_args = Idval::Common::mkargref(
         'level' => $options{'verbose'} - $options{'quiet'},
-        defined($options{'debug'}) ? ('debugmask' => $options{'debug'}) : '',
-        $options{'development'} ? ('show_trace' => 1, 'show_time' => 1) : '',
+        defined($options{'debug'}) ? ('debugmask' => $options{'debug'}) : ('', ''),
+        $options{'development'} ? ('show_trace' => 1, 'show_time' => 1) : ('', ''),
         'log_out' => $options{'log_out'},
         'print_to' => $options{'print_to'},
         'xml' => $options{'xml'},
         );
-#         defined($options{'log_out'}) ? ('log_out' => $options{'log_out'}) : '',
-#         defined($options{'print_to'}) ? ('print_to' => $options{'print_to'}) : '',
 
-    Idval::Logger::initialize_logger(@logger_args);
+    Idval::Logger::initialize_logger($logger_args);
     $log = Idval::Common::get_logger();
 
     # Set up a common location for help info

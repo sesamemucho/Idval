@@ -1,4 +1,4 @@
-package Idval::SysPlugins::OggEnc;
+package Idval::Plugins::Converters::OggEnc;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
