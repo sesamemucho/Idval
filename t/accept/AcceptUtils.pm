@@ -51,7 +51,7 @@ sub are_providers_present
     my $retval = 1;
     my $reason = '';
 
-    if (!defined($provs->get_tagger('reads_tags', 'MP3')))
+    if (!defined($provs->get_provider('reads_tags', 'MP3', 'NULL')))
     {
         $retval = 0;
         $reason .= "MP3 tag reader not found.\n";
@@ -60,7 +60,7 @@ sub are_providers_present
     {
         #print STDERR "MP3 tag reader found\n";
     }
-    if (!defined($provs->get_tagger('writes_tags', 'MP3')))
+    if (!defined($provs->get_provider('writes_tags', 'MP3', 'NULL')))
     {
         $retval = 0;
         $reason .= "MP3 tag writer not found.\n";
@@ -69,7 +69,7 @@ sub are_providers_present
     {
         #print STDERR "MP3 tag writer found\n";
     }
-    if (!defined($provs->get_tagger('reads_tags', 'OGG')))
+    if (!defined($provs->get_provider('reads_tags', 'OGG', 'NULL')))
     {
         $retval = 0;
         $reason .= "OGG tag reader not found.\n";
@@ -78,7 +78,7 @@ sub are_providers_present
     {
         #print STDERR "OGG tag reader found\n";
     }
-    if (!defined($provs->get_tagger('writes_tags', 'OGG')))
+    if (!defined($provs->get_provider('writes_tags', 'OGG', 'NULL')))
     {
         $retval = 0;
         $reason .= "OGG tag writer not found.\n";
@@ -87,7 +87,7 @@ sub are_providers_present
     {
         #print STDERR "OGG tag writer found\n";
     }
-    if (!defined($provs->get_tagger('reads_tags', 'FLAC')))
+    if (!defined($provs->get_provider('reads_tags', 'FLAC', 'NULL')))
     {
         $retval = 0;
         $reason .= "FLAC tag reader not found.\n";
@@ -96,7 +96,7 @@ sub are_providers_present
     {
         #print STDERR "FLAC tag reader found\n";
     }
-    if (!defined($provs->get_tagger('writes_tags', 'FLAC')))
+    if (!defined($provs->get_provider('writes_tags', 'FLAC', 'NULL')))
     {
         $retval = 0;
         $reason .= "FLAC tag writer not found.\n";
