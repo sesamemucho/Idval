@@ -1,4 +1,4 @@
-package Idval::UserPlugins::Gettags;
+package Idval::Plugins::Command::Gettags;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
@@ -38,7 +38,7 @@ sub init
     return;
 }
 
-sub gettags
+sub main
 {
     my $datastore = shift;
     my $providers = shift;
@@ -61,7 +61,7 @@ sub gettags
 
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
-        #print "Checking \"$key\"\n";
+        #print STDERR "Checking \"$key\"\n";
         $tag_record = $datastore->{RECORDS}->{$key};
         $type = $tag_record->get_value('TYPE');
         $prov = $providers->get_provider('reads_tags', $type, 'NULL');
@@ -76,7 +76,6 @@ sub gettags
     Idval::DoDots::finish();
 
     map { $_->close() } values %prov_list;
-    #print STDERR Dumper($datastore);
     return $datastore;
 }
 

@@ -206,7 +206,8 @@ sub get_a_command_1 : Test(1)
     $provs = Idval::ProviderMgr->new($fc);
     my $cmd = $provs->find_command('cmd1');
 
-    is($cmd, 'Idval::Plugins::Cmd1::cmd1');
+    #is($cmd, 'Idval::Plugins::Cmd1::cmd1');
+    is($cmd, 'Idval::Plugins::Cmd1');
 
     return;
 }
@@ -375,7 +376,8 @@ sub init
 {
 }
 
-sub cmd1
+#sub cmd1
+sub main
 {
     my $datastore = shift;
     my $providers = shift;

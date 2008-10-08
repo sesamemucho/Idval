@@ -1,4 +1,4 @@
-package Idval::UserPlugins::Read;
+package Idval::Plugins::Command::Read;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
@@ -39,7 +39,7 @@ sub init
     return;
 }
 
-sub read ## no critic (ProhibitBuiltinHomonyms)
+sub main
 {
     my $datastore = shift;
     my $providers = shift;

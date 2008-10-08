@@ -1,5 +1,16 @@
 package Idval::Setup;
 
+use Filter::Simple;
+print STDERR "Hello from Idval::Setup\n";
+
+FILTER {
+    s/Joe/Jim/g;
+};
+
+1;
+
+
+
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
 # This file is part of Idval.
@@ -19,26 +30,28 @@ package Idval::Setup;
 #use strict;
 #use warnings;
 
-use Filter::Util::Call;
-#use File::Basename;
+# use Filter::Util::Call;
+# #use File::Basename;
 
-#my %providers;
+# #my %providers;
+# print STDERR "Hello from Idval::Setup\n";
 
-sub import
-{
-    my($type) = @_ ;
-    filter_add(bless []) ;
-}
+# sub import
+# {
+#     my($type) = @_ ;
+#     print STDERR "Importing setup, type is \"$type\"\n";
+#     filter_add(bless []) ;
+# }
 
-sub filter
-{
-    my($self) = @_ ;
-    my($status) ;
-    print STDERR "Filter:\n";
-    s/Joe/Jim/g
-        if ($status = filter_read()) > 0 ;
-    $status ;
-}
+# sub filter
+# {
+#     my($self) = @_ ;
+#     my($status) ;
+#     print STDERR "Filter:\n";
+#     s/Joe/Jim/g
+#         if ($status = filter_read()) > 0 ;
+#     $status ;
+# }
 
 # sub import
 # {

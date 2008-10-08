@@ -1,4 +1,4 @@
-package Idval::UserPlugins::Help;
+package Idval::Plugins::Command::Help;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
@@ -41,7 +41,7 @@ sub init
     return;
 }
 
-sub help
+sub main
 {
     my $datastore = shift;
     my $providers = shift;

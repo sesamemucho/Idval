@@ -32,6 +32,8 @@ use Idval::Common;
 use Idval::Converter;
 use Idval::Graph;
 use Idval::FileIO;
+use Idval::Provider;
+use Idval::Command;
 
 sub new
 {
@@ -57,7 +59,7 @@ sub _init
     #print Dumper($config);
     $self->{COMMAND_DIRS} = $self->local_get_list_value('command_dir');
     $self->{COMMAND_LIST} = {};
-    $self->{COMMAND_EXT}  = $self->local_get_single_value('command_extension');
+    $self->{COMMAND_EXT}  = $self->local_get_single_value('command_extension', 'pm');
 
     my @provider_types = qw{converts reads_tags writes_tags command};
     $self->{NUM_PROVIDERS} = 0;
@@ -81,6 +83,7 @@ sub _init
 
     #$self->get_plugins($dirlist);
     $self->find_all_providers();
+    $self->find_all_ncommands();
 
     map{$self->{GRAPH}->{$_}->process_graph()} @provider_types;
 
@@ -106,8 +109,9 @@ sub local_get_single_value
 {
     my $self = shift;
     my $item = shift;
+    my $default = shift || '';
 
-    return $self->{CONFIG}->get_single_value($item, $self->{DEFAULT_SELECTS});
+    return $self->{CONFIG}->get_single_value($item, $self->{DEFAULT_SELECTS}, $default);
 }
 
 sub num_providers
@@ -137,7 +141,7 @@ sub get_provider
     {
         confess "Invalid src \"$src\" or dest \"$dest\".";
     }
-    #print "Looking for provider type \"$prov_type\" src \"$src\" dest \"$dest\"\n";
+    #print STDERR "Looking for provider type \"$prov_type\" src \"$src\" dest \"$dest\"\n";
     my $path = $graph->get_best_path($src, $dest);
     #print STDERR "Converter graph is: ", Dumper($graph);
     #print STDERR "From $src to $dest. Path is: ", Dumper($path);
@@ -149,16 +153,19 @@ sub get_provider
             my ($converter, $name) = ($$cnvinfo[1] =~ m{^(.*)::([^:]+)}x);
             my $from = $$cnvinfo[0];
             my $to = $$cnvinfo[2];
+            my $endpoint = Idval::Provider::make_endpoint($from, $to);
             #print STDERR "cnvinfo is <", join(", ", @{$cnvinfo}), ">\n";
             #print STDERR "converter is <$converter>\n";
             #print STDERR "name is <$name>\n";
             #$cnv = $converter->new($config, $name);
-            $cnv = $self->{ALL_PROVIDERS}->{$prov_type}->{$converter}->{$name}->{"${from}:${to}"};
+            chatty("Looking up \{$prov_type\}->\{$converter\}->\{$name\}->\{$endpoint\}\n");
+            $cnv = $self->{ALL_PROVIDERS}->{$prov_type}->{$converter}->{$name}->{$endpoint};
+            #print STDERR "cnv is: ", Dumper($cnv) if $src eq 'about';
             push(@cnv_list, $cnv);
         }
     }
 
-    #print "Found ", scalar(@cnv_list), " providers for $dest -> $src\n";
+    #print STDERR "Found ", scalar(@cnv_list), " providers for $dest -> $src\n";
     if (scalar(@cnv_list) < 1)
     {
         $self->{LOG}->idv_warn("No \"$prov_type\" provider found for \"$src,$dest\"\n");
@@ -197,10 +204,11 @@ sub _get_providers
     foreach my $prov_type (@provider_types)
     {
         my $provider_id = $prov_type;
-
+        #print STDERR "_get_providers: For provider type \"$prov_type\"\n";
         # For each provider
         foreach my $conversion (keys %{$self->{GRAPH}->{$provider_id}->{EXTRACTED_PATHS}})
         {
+            #print STDERR "_get_providers: Checking conversion \"$conversion\"\n";
             my ($from, $to) = ($conversion =~ m/^([^.]+)\.([^.]+)$/x);
             #next if $from eq $to;
 
@@ -264,31 +272,45 @@ sub _add_provider
     my $weight     = $argref->{weight};
     my @attributes = split(',', $argref->{attributes});
 
+    my $added = 0;
     my $config = $self->{CONFIG};
     my $cnv;
+    my $endpoint = Idval::Provider::make_endpoint($src, $dest);
 
-    $cnv = $package->new($config, $name);
-    $cnv->set_param('attributes', $argref->{attributes});
-    $cnv->set_param('from', $src);
-    $cnv->set_param('to', $dest);
-    my $endpoint = $cnv->add_endpoint($src, $dest);
-
-    $self->{NUM_PROVIDERS}++;
-    $self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name}->{$endpoint} = $cnv;
-    if ($cnv->query('is_ok'))
+    if (!exists ($self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name}->{$endpoint}))
     {
-        #chatty("Adding \"$prov_type\" provider \"$name\" from package \"$package\". src: \"$src\", dest: \"$dest\", weight: \"$weight\"\n");
-        chatty("Adding \"$prov_type\" provider: From \"$src\", via \"${package}::$name\" to \"$dest\", weight: \"$weight\" ",
-               "attributes: \"", $argref->{attributes}, "\"\n");
-        $self->{GRAPH}->{$prov_type}->add_edge($src, $package . '::' . $name, $dest, $weight, @attributes);
-    }
-    else
-    {
-        my $status = $cnv->query('status') ? $cnv->query('status') : 'no status';
-        verbose("Provider \"$name\" is not ok: status is: $status\n");
+        if ($prov_type eq 'command')
+        {
+            $cnv = Idval::Command->new($config, $name, $package);
+        }
+        else
+        {
+            $cnv = $package->new($config, $name);
+        }
+
+        $cnv->set_param('attributes', $argref->{attributes});
+        $cnv->set_param('from', $src);
+        $cnv->set_param('to', $dest);
+        $cnv->add_endpoint($src, $dest);
+
+        $self->{NUM_PROVIDERS}++;
+        $self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name}->{$endpoint} = $cnv;
+        if ($cnv->query('is_ok'))
+        {
+            chatty("Adding \{$prov_type\}->\{$package\}->\{$name\}->\{$endpoint\}\n");
+            chatty("Adding \"$prov_type\" provider: From \"$src\", via \"${package}::$name\" to \"$dest\", weight: \"$weight\" ",
+                   "attributes: \"", $argref->{attributes}, "\"\n");
+            $self->{GRAPH}->{$prov_type}->add_edge($src, $package . '::' . $name, $dest, $weight, @attributes);
+            $added = 1;
+        }
+        else
+        {
+            my $status = $cnv->query('status') ? $cnv->query('status') : 'no status';
+            verbose("Provider \"$name\" is not ok: status is: $status\n");
+        }
     }
 
-    return;
+    return $added;
 }
 
 # A provider:
@@ -321,6 +343,8 @@ sub register_provider
         # otherwise, use what the provider says... otherwise, use 100
         my $weight   = $config_weight || $self->_get_arg($argref, 'weight', 100);
         my $attributes = $self->_get_arg($argref, 'attributes', '');
+        # If the caller has specified a package, use it (i.e., registering a command)
+        $package = $self->_get_arg($argref, 'package', $package);
 
         chatty("Adding \"$provides\" $package\n");
         $self->{LOADED_PACKAGES}->{$package}++;
@@ -357,106 +381,183 @@ sub register_provider
             next;
         };
 
+#         $provides eq 'command' and do {
+#             #print STDERR "Command registering: name is $name: $from to $to\n";
+#             $self->_add_provider({prov_type => $provides,
+#                                   package => $package,
+#                                   name => $name,
+#                                   src => $name,
+#                                   dest => 'NULL',
+#                                   weight => $weight,
+#                                   attributes => $attributes,});
+#             next;
+#         };
+
         carp "Unrecognized provider type \"$provides\" in ", Dumper($argref);
     }
 
     return;
 }
 
-sub get_plugin_cb
-{
-    my $plugin_name = $_;
+# sub get_plugin_cb
+# {
+#     my $plugin_name = $_;
 
-    return unless $plugin_name =~ m/\.pm$/x;
-    my $fh = Idval::FileIO->new($plugin_name, "r");
-    confess "Bad filehandle: $! for item \"$plugin_name\"" unless defined $fh;
+#     return unless $plugin_name =~ m/\.pm$/x;
+#     my $fh = Idval::FileIO->new($plugin_name, "r");
+#     confess "Bad filehandle: $! for item \"$plugin_name\"" unless defined $fh;
 
-    # Doing it this way instead of just "do ..." to allow for use
-    # of in-core files for testing (see FileString.pm)
-    my $plugin = "\n# line 1 \"" . File::Spec->canonpath($plugin_name) . "\"\n";
-    $plugin .= do { local $/ = undef; <$fh> };
-    $fh->close();
+#     # Doing it this way instead of just "do ..." to allow for use
+#     # of in-core files for testing (see FileString.pm)
+#     my $plugin = "\n# line 1 \"" . File::Spec->canonpath($plugin_name) . "\"\n";
+#     $plugin .= do { local $/ = undef; <$fh> };
+#     $fh->close();
 
-    #print "Plugin is \"$plugin\"\n" if $plugin_name eq "id3v2";
-#     croak "Could not read plugin \"$plugin_name\"\n" unless $plugin;
+#     #print "Plugin is \"$plugin\"\n" if $plugin_name eq "id3v2";
+# #     croak "Could not read plugin \"$plugin_name\"\n" unless $plugin;
 
-    #print STDERR "Plugin $plugin_name\n";
-    #my $status = do {eval "$plugin" };
-    ##my $status = do "$plugin_name";
-    #{
-      #  local $SIG{__WARN__} = sub { print "evaluating plugin \"$plugin_name\": $_[0]"; };
-        no warnings 'redefine';
-        my $status = eval "$plugin";
-        ###my $status = eval {$plugin};
-        #print STDERR "eval result is: $@\n" if $@;
-        if (defined $status)
-        {
-            chatty($DBG_STARTUP, "Status is <$status>\n");
-        }
-        else
-        {
-            info($DBG_STARTUP, "Error return from \"$plugin_name\"\n");
-        }
-        if (not ($status or $! or $@))
-        {
-            croak "Error reading \"$plugin_name\": Does it return a true value at the end of the file?\n";
-        }
-        else
-        {
-            croak "Error reading \"$plugin_name\":($!) ($@)" unless $status;
-        }
-    #}
+#     #print STDERR "Plugin $plugin_name\n";
+#     #my $status = do {eval "$plugin" };
+#     ##my $status = do "$plugin_name";
+#     #{
+#       #  local $SIG{__WARN__} = sub { print "evaluating plugin \"$plugin_name\": $_[0]"; };
+#         no warnings 'redefine';
+#         my $status = eval "$plugin";
+#         ###my $status = eval {$plugin};
+#         #print STDERR "eval result is: $@\n" if $@;
+#         if (defined $status)
+#         {
+#             chatty($DBG_STARTUP, "Status is <$status>\n");
+#         }
+#         else
+#         {
+#             info($DBG_STARTUP, "Error return from \"$plugin_name\"\n");
+#         }
+#         if (not ($status or $! or $@))
+#         {
+#             croak "Error reading \"$plugin_name\": Does it return a true value at the end of the file?\n";
+#         }
+#         else
+#         {
+#             croak "Error reading \"$plugin_name\":($!) ($@)" unless $status;
+#         }
+#     #}
 
-    return;
-}
+#     return;
+# }
 
-sub _get_plugin
+sub _load_plugin
 {
     my $self = shift;
-    my $plugin_name= shift;
+    my $filename = shift;
 
-    my $fh = Idval::FileIO->new($plugin_name, "r");
-    confess "Bad filehandle: $! for item \"$plugin_name\"" unless defined $fh;
+    return $self->{PLUGIN_LIST}->{$filename} if exists $self->{PLUGIN_LIST}->{$filename};
+
+    my $fh = Idval::FileIO->new($filename, "r");
+    confess "Bad filehandle: $! for item \"$filename\"" unless defined $fh;
+
 
     # Doing it this way instead of just "do ..." to allow for use
     # of in-core files for testing (see FileString.pm)
-    my $plugin = "\n# line 1 \"" . File::Spec->canonpath($plugin_name) . "\"\n";
+    my $plugin = "\n# line 1 \"" . File::Spec->canonpath($filename) . "\"\n";
     $plugin .= do { local $/ = undef; <$fh> };
     $fh->close();
 
+    my $package_name;
     # Is this an Idval plugin?
-    if ($plugin !~ m/^\s*package\s+Idval::Plugin/mx)
+    if ($plugin =~ m/^\s*package\s+(Idval::Plugin[:\w]+)/mx)
     {
-        verbose("Plugin candidate \"$plugin_name\" is not an Idval plugin: no \"package Idval::Plugin::...\"\n");
+        $package_name = $1;
+    }
+    else
+    {
+        verbose("Plugin candidate \"$filename\" is not an Idval plugin: no \"package Idval::Plugin::...\"\n");
         return;
     }
 
-    #print "Plugin is \"$plugin\"\n" if $plugin_name eq "id3v2"; # or whatever...
-    #croak "Could not read plugin \"$plugin_name\"\n" unless $plugin;
-    chatty("Plugin $plugin_name\n");
+
+    #print "Plugin is \"$plugin\"\n" if $filename eq "id3v2"; # or whatever...
+    #croak "Could not read plugin \"$filename\"\n" unless $plugin;
+    chatty("Plugin $filename\n");
 
     no warnings 'redefine';
+    # This call causes a Provider plugin to call 'register_provider'
     my $status = eval "$plugin";
-    #print STDERR "eval result is: $@\n" if $@;
+    #print STDERR "eval result for \"$package_name\" is: $@\n" if $@;
+    #print STDERR "eval result for \"$package_name\" is: \"$@\"; status is \"$status\"\n";
+#     if ($package_name eq 'Idval::Plugins::Command::Gettags')
+#     {
+#         print STDERR "package hash for Idval::Plugins::Command::Gettags is:", Dumper(\%Idval::Plugins::Command::Gettags::);
+#     }
     if (defined $status)
     {
         chatty($DBG_STARTUP, "Status is <$status>\n");
     }
     else
     {
-        info($DBG_STARTUP, "Error return from \"$plugin_name\"\n");
+        print STDERR "Error return from \"$filename\"\n";
+        info($DBG_STARTUP, "Error return from \"$filename\"\n");
     }
     if (not ($status or $! or $@))
     {
-        croak "Error reading \"$plugin_name\": Does it return a true value at the end of the file?\n";
+        croak "Error reading \"$filename\": Does it return a true value at the end of the file?\n";
     }
     else
     {
-        croak "Error reading \"$plugin_name\":($!) ($@)" unless $status;
+        croak "Error reading \"$filename\":($!) ($@)" unless $status;
     }
 
-    return;
+    $self->{PLUGIN_LIST}->{$filename} = $package_name;
+    return $package_name;
 }
+
+# sub _get_plugin
+# {
+#     my $self = shift;
+#     my $plugin_name= shift;
+
+#     my $fh = Idval::FileIO->new($plugin_name, "r");
+#     confess "Bad filehandle: $! for item \"$plugin_name\"" unless defined $fh;
+
+#     # Doing it this way instead of just "do ..." to allow for use
+#     # of in-core files for testing (see FileString.pm)
+#     my $plugin = "\n# line 1 \"" . File::Spec->canonpath($plugin_name) . "\"\n";
+#     $plugin .= do { local $/ = undef; <$fh> };
+#     $fh->close();
+
+#     # Is this an Idval plugin?
+#     if ($plugin !~ m/^\s*package\s+Idval::Plugin/mx)
+#     {
+#         verbose("Plugin candidate \"$plugin_name\" is not an Idval plugin: no \"package Idval::Plugin::...\"\n");
+#         return;
+#     }
+
+#     #print "Plugin is \"$plugin\"\n" if $plugin_name eq "id3v2"; # or whatever...
+#     #croak "Could not read plugin \"$plugin_name\"\n" unless $plugin;
+#     chatty("Plugin $plugin_name\n");
+
+#     no warnings 'redefine';
+#     my $status = eval "$plugin";
+#     #print STDERR "eval result is: $@\n" if $@;
+#     if (defined $status)
+#     {
+#         chatty($DBG_STARTUP, "Status is <$status>\n");
+#     }
+#     else
+#     {
+#         info($DBG_STARTUP, "Error return from \"$plugin_name\"\n");
+#     }
+#     if (not ($status or $! or $@))
+#     {
+#         croak "Error reading \"$plugin_name\": Does it return a true value at the end of the file?\n";
+#     }
+#     else
+#     {
+#         croak "Error reading \"$plugin_name\":($!) ($@)" unless $status;
+#     }
+
+#     return;
+# }
 
 sub find_all_providers
 {
@@ -477,7 +578,8 @@ sub find_all_providers
         foreach my $source (@sources)
         {
             next if $source =~ m/\.?\.$/;
-            $self->_get_plugin($source);
+            #$self->_get_plugin($source);
+            $self->_load_plugin($source);
         }
     }
 
@@ -486,90 +588,196 @@ sub find_all_providers
 
 # Command handling
 
+# sub _get_command_orig
+# {
+#     my $self = shift;
+#     my $name = shift;
+#     my $filename = shift;
+
+#     return $self->{COMMAND_LIST}->{$name} if exists $self->{COMMAND_LIST}->{$name};
+
+#     my $fh = Idval::FileIO->new($filename, "r");
+#     confess "Bad filehandle: $! for item \"$filename\"" unless defined $fh;
+
+#     my $plugin = do { local $/ = undef; <$fh> };
+#     $fh->close();
+
+#     croak "Could not read plugin \"$_\"\n" unless $plugin;
+
+#     # Find package name (if any)
+#     # This seems like a horrible hack, is there another way?
+#     my $pkg = "Idval::Scripts";
+#     my $found_an_init = 0;
+
+#     foreach my $line (split("\n", $plugin))
+#     {
+#         $line =~ m/package\s+([\w:]+)\s*;/x and do {
+#             $self->{LOG}->chatty($DBG_PROVIDERS, "Found package \"$1\"\n");
+#             $pkg = $1;
+#             next;
+#         };
+
+#         $line =~ m/sub\s+init\s*$/x and do {
+#             $found_an_init = 1;
+#             next;
+#         };
+
+#         $line =~ m/sub\s+$name\s*$/x and do {
+#             last;
+#         };
+#     }
+
+#     #my $full_name = $pkg . '::' . $name;
+#     my $full_name = $pkg;
+
+#     my $insert = "\n# line 1 \"$filename\"\n";
+#     $insert .= $pkg eq "Idval::Scripts" ? 'package Idval::Scripts;' : '';
+#     $insert .= "\n$plugin";
+#     #my $status = do {eval "$insert\n$plugin" };
+# #    my $status = do {eval {$insert} };
+
+#     #{
+#      #   local $SIG{__WARN__} = sub { print "evaluating plugin \"$full_name\": $_[0]"; };
+#         no warnings 'redefine';
+#         my $status = do {eval "$insert" };
+
+#         if (defined $status)
+#         {
+#             #print STDERR "Status is <$status>\n";
+#         }
+#         else
+#         {
+#             print STDERR "Error return from \"$full_name\"\n";
+#         }
+#         if (not ($status or $! or $@))
+#         {
+#             croak "Error reading \"$full_name\": Does it return a true value at the end of the file?\n";
+#         }
+#         else
+#         {
+#             croak "Error reading \"$full_name\":($!) ($@)" unless $status;
+#         }
+
+#     #}
+#     # The first time a command is encountered, if it has an "init" routine, call it
+#     if ((!exists $self->{COMMAND_LIST}->{$name}) && $found_an_init)
+#     {
+#         my $init_name = $pkg . '::init';
+#         no strict 'refs';
+#         &$init_name();
+#         use strict;
+#         $self->{COMMAND_LIST}->{$name} = $full_name;
+#     }
+
+#     return $full_name;
+# }
+
 sub _get_command
 {
     my $self = shift;
-    my $name = shift;
     my $filename = shift;
 
-    return $self->{COMMAND_LIST}->{$name} if exists $self->{COMMAND_LIST}->{$name};
+    my $package = $self->_load_plugin($filename);
+    confess("No package for \"$filename\" command???") unless defined($package);
+    my $init_name = $package . '::init';
 
-    my $fh = Idval::FileIO->new($filename, "r");
-    confess "Bad filehandle: $! for item \"$filename\"" unless defined $fh;
-
-    my $plugin = do { local $/ = undef; <$fh> };
-    $fh->close();
-
-    croak "Could not read plugin \"$_\"\n" unless $plugin;
-
-    # Find package name (if any)
-    # This seems like a horrible hack, is there another way?
-    my $pkg = "Idval::Scripts";
-    my $found_an_init = 0;
-
-    foreach my $line (split("\n", $plugin))
+    # Things to do the first time a command is encountered
+    if (!exists $self->{COMMAND_LIST}->{$filename})
     {
-        $line =~ m/package\s+([\w:]+)\s*;/x and do {
-            $self->{LOG}->chatty($DBG_PROVIDERS, "Found package \"$1\"\n");
-            $pkg = $1;
-            next;
-        };
-
-        $line =~ m/sub\s+init\s*$/x and do {
-            $found_an_init = 1;
-            next;
-        };
-
-        $line =~ m/sub\s+$name\s*$/x and do {
-            last;
-        };
-    }
-
-    my $full_name = $pkg . '::' . $name;
-
-    my $insert = "\n# line 1 \"$filename\"\n";
-    $insert .= $pkg eq "Idval::Scripts" ? 'package Idval::Scripts;' : '';
-    $insert .= "\n$plugin";
-    #my $status = do {eval "$insert\n$plugin" };
-#    my $status = do {eval {$insert} };
-
-    #{
-     #   local $SIG{__WARN__} = sub { print "evaluating plugin \"$full_name\": $_[0]"; };
-        no warnings 'redefine';
-        my $status = do {eval "$insert" };
-
-        if (defined $status)
-        {
-            #print STDERR "Status is <$status>\n";
-        }
-        else
-        {
-            print STDERR "Error return from \"$full_name\"\n";
-        }
-        if (not ($status or $! or $@))
-        {
-            croak "Error reading \"$full_name\": Does it return a true value at the end of the file?\n";
-        }
-        else
-        {
-            croak "Error reading \"$full_name\":($!) ($@)" unless $status;
-        }
-
-    #}
-    # The first time a command is encountered, if it has an "init" routine, call it
-    if ((!exists $self->{COMMAND_LIST}->{$name}) && $found_an_init)
-    {
-        my $init_name = $pkg . '::init';
+        # The first time a command is encountered, if it has an "init" routine, call it
         no strict 'refs';
-        &$init_name();
+        my $pkghash = "${package}::";
+        if (exists(${$pkghash}{'init'}))
+        {
+            &$init_name();
+            $self->{COMMAND_LIST}->{$filename} = $package;
+        }
         use strict;
-        $self->{COMMAND_LIST}->{$name} = $full_name;
     }
 
-    return $full_name;
+    return $package;
+}
+
+sub _get_ncommand
+{
+    my $self = shift;
+    my $filename = shift;
+
+    my $package = $self->_load_plugin($filename);
+    if ($package)
+    {
+        my $name = basename(lc($filename), '.pm');
+
+        #print STDERR "Command registering \"$filename\" into \"$package\": name is $name: $name to NULL\n";
+        my $added = $self->_add_provider({prov_type => 'command',
+                                          package => $package,
+                                          name => $name,
+                                          src => $name,
+                                          dest => 'NULL',
+                                          weight => 100,
+                                          attributes => '',});
+    }
+
+#     confess("No package for \"$filename\" command???") unless defined($package);
+#     my $init_name = $package . '::init';
+
+#     # Things to do the first time a command is encountered
+#     if (!exists $self->{COMMAND_LIST}->{$filename})
+#     {
+#         # The first time a command is encountered, if it has an "init" routine, call it
+#         no strict 'refs';
+#         my $pkghash = "${package}::";
+#         if (exists(${$pkghash}{'init'}))
+#         {
+#             &$init_name();
+#             $self->{COMMAND_LIST}->{$filename} = $package;
+#         }
+#         use strict;
+#     }
+
+    return $package;
 }
 
 sub find_command
+{
+    my $self = shift;
+    my $name = shift;
+    my $filename = '';
+    my $ext = $self->{COMMAND_EXT};
+
+    # We don't want to recurse to find commands, so don't use idv_find.
+    # We don't want to recurse, because it should be easy for users to
+    # write command scripts, and I don't want to make them put the
+    # commands in leaf directories, instead of, say, their home
+    # directories.
+    #print STDERR "COMMAND_DIRS: ", join(",", @{$self->{COMMAND_DIRS}}), ",  name is \"$name\"\n";
+    foreach my $cmd_dir (@{$self->{COMMAND_DIRS}})
+    {
+        #print STDERR "Looking for \"$cmd_dir/$name.$ext\"\n";
+        my @sources = Idval::FileIO::idv_glob("$cmd_dir/$name.$ext",
+                                              $Idval::FileIO::GLOB_NOCASE | $Idval::FileIO::GLOB_TILDE);
+        #print STDERR "sources: ", join(",", @sources), "\n";
+        if (@sources)
+        {
+            $filename = $sources[0];
+            if (scalar @sources >= 2)
+            {
+                $self->{LOG}->idv_warn("Multiple script files found for command ",
+                                       "\"$name\": \"", join("\"\n\t\"", @sources),
+                                       "\". Picking the first one.\n");
+            }
+            last;
+        }
+    }
+
+    confess("No script file found for command \"$name\" in directories\n\t\"",
+          join("\", \"", @{$self->{COMMAND_DIRS}}), "\"\n") if not $filename;
+
+
+    return $self->_get_command($filename);
+}
+
+sub find_ncommand
 {
     my $self = shift;
     my $name = shift;
@@ -602,7 +810,7 @@ sub find_command
           join("\", \"", @{$self->{COMMAND_DIRS}}), "\"\n") if not $filename;
 
 
-    return $self->_get_command($name, $filename);
+    return $self->_get_ncommand($filename);
 }
 
 sub find_all_commands
@@ -624,13 +832,40 @@ sub find_all_commands
         {
             my $name = basename(lc($source), '.pm');
 
-            $self->_get_command($name, $source);
+            $self->_get_command($source);
 
             push(@namelist, $name);
         }
     }
 
     return @namelist;
+}
+
+sub find_all_ncommands
+{
+    my $self = shift;
+    my @namelist;
+    my $ext = $self->{COMMAND_EXT};
+
+    confess "NO ext?" unless $ext;
+    # We don't want to recurse to find commands, so don't use idv_find.
+    # We don't want to recurse, because it should be easy for users to
+    # write command scripts, and I don't want to make them put the
+    # commands in leaf directories, instead of, say, their home
+    # directories.
+    foreach my $cmd_dir (@{$self->{COMMAND_DIRS}})
+    {
+        my @sources = Idval::FileIO::idv_glob("$cmd_dir/*.$ext",
+                                              $Idval::FileIO::GLOB_NOCASE | $Idval::FileIO::GLOB_TILDE);
+        foreach my $source (@sources)
+        {
+            my $name = basename(lc($source), '.pm');
+            #print STDERR "ProviderMgr: source is \"$source\" (ext is \"$ext\")\n";
+            $self->_get_ncommand($source);
+        }
+    }
+
+    return;
 }
 
 

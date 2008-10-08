@@ -1,4 +1,4 @@
-package Idval::UserPlugins::Update;
+package Idval::Plugins::Command::Update;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
@@ -38,7 +38,7 @@ sub init
     return;
 }
 
-sub update
+sub main
 {
     my $datastore = shift;
     my $providers = shift;

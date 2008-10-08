@@ -1,4 +1,4 @@
-package Idval::UserPlugins::Select;
+package Idval::Plugins::Command::Select;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
@@ -39,7 +39,7 @@ sub init
     #set_pod_input();
 }
 
-sub select ## no critic (ProhibitBuiltinHomonyms)
+sub main
 {
     my $datastore  = shift;
     my $providers  = shift;

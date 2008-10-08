@@ -127,6 +127,7 @@ sub cmd_loop
             no strict 'refs';
             eval { $temp_ds = &$rtn($datastore, $providers, @line_args); };
             use strict;
+            #print STDERR "Interp: return is: ", Dumper($temp_ds);
             $error_occurred = 0;
             if ($@)
             {
@@ -149,6 +150,7 @@ sub cmd_loop
 
             $term->addhistory($line) if $line =~ /\S/;
             $self->{DATASTORE} = $temp_ds if $temp_ds;
+            $datastore = $temp_ds;
         }
     }
 

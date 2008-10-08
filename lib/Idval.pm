@@ -237,6 +237,7 @@ package Idval::Scripts;
 use Carp;
 use Idval::Common;
 use Idval::Constants;
+use Data::Dumper;
 
 our $AUTOLOAD;
 
@@ -256,10 +257,13 @@ sub AUTOLOAD  ## no critic (RequireFinalReturn)
 
     $log->chatty($DBG_PROVIDERS, "In autoload; rtn is \"$rtn\"\n");
 
-    my $subr = $providers->find_command($name);
-
+    #my $subr = $providers->find_command($name);
+    #$subr .= '::main';
+    my $subr = $providers->get_provider('command', $name, 'NULL');
+    #print STDERR "autoload: subr is: ", Dumper($subr);
     no strict 'refs';
-    *$rtn = $subr;              # For next time, so we don't go through AUTOLOAD again
+    #*$rtn = $subr;              # For next time, so we don't go through AUTOLOAD again
+    *$rtn = sub {$subr->main(@_);};
 
     goto &$rtn;
 

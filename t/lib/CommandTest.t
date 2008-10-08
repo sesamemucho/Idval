@@ -61,7 +61,7 @@ sub get_converter : Test(1)
     #print STDERR "Hello 3 from test_get_converter\n";
     $provs = Idval::ProviderMgr->new($fc);
     #print STDERR "provs is:", Dumper($provs);
-    my $conv = $provs->_get_command('goober', '/testdir/Idval/up1.pm');
+    my $conv = $provs->_get_command('/testdir/Idval/goober.pm');
 
     ok($conv);
 
@@ -73,7 +73,7 @@ sub get_converter : Test(1)
 sub add_UserPlugin3_up1
 {
     my $plugin =<<'EOF';
-package Idval::UserPlugins::Up1;
+package Idval::Plugins::Up1;
 use Idval::Common;
 use base qw(Idval::Provider);
 no warnings qw(redefine);
@@ -86,7 +86,7 @@ sub init
     return;
 }
 
-sub goober
+sub main
 {
     my $self = shift;
     my $datastore = shift;
@@ -97,7 +97,7 @@ sub goober
 1;
 EOF
 
-    Idval::FileString::idv_add_file('/testdir/Idval/up1.pm', $plugin);
+    Idval::FileString::idv_add_file('/testdir/Idval/goober.pm', $plugin);
 
     return;
 }

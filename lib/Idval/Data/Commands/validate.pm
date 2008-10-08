@@ -1,4 +1,4 @@
-package Idval::UserPlugins::Validate;
+package Idval::Plugins::Command::Validate;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
@@ -47,7 +47,7 @@ sub init
     return;
 }
 
-sub validate
+sub main
 {
     my $datastore = shift;
     my $providers = shift;

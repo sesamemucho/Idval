@@ -95,12 +95,21 @@ sub create_records
 
 # endpoints are for use by the 'about' command
 
+# make_endpoint is a class method; it does not need an object
+sub make_endpoint
+{
+    my $from = uc shift;
+    my $to = uc shift;
+
+    return $from . ':' . $to;
+}
+
 sub has_endpoint
 {
     my $self = shift;
     my $from = uc shift;
     my $to = uc shift;
-    my $endpoint = $from . ':' . $to;
+    my $endpoint = make_endpoint($from, $to);
 
     return exists ($self->{ENDPOINTS}->{PAIRS}->{$endpoint});
 }
@@ -110,7 +119,7 @@ sub add_endpoint
     my $self = shift;
     my $from = uc shift;
     my $to = uc shift;
-    my $endpoint = $from . ':' . $to;
+    my $endpoint = make_endpoint($from, $to);
 
     $self->{ENDPOINT}->{PAIR} = $endpoint;
     $self->{ENDPOINT}->{SRC} = $from;

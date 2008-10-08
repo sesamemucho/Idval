@@ -1,4 +1,4 @@
-package Idval::UserPlugins::About;
+package Idval::Plugins::Command::About;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
@@ -39,7 +39,7 @@ sub init
     return;
 }
 
-sub about
+sub main
 {
     my $datastore = shift;
     my $providers = shift;
@@ -113,15 +113,15 @@ sub about
                 my ($from, $to) = split(':', $endpoint);
                 $converters_by_type{$from}->{$to} = $item;
             }
-            $providers_by_name{$item->query('name')}{'PROV'} = $item;
-            $providers_by_name{$item->query('name')}{'TYPE'} = 'Converter';
+            $providers_by_name{$item->{NAME}}{'PROV'} = $item;
+            $providers_by_name{$item->{NAME}}{'TYPE'} = 'Converter';
         }
 
         # Find readers
         foreach my $item ($providers->_get_providers('reads_tags'))
         {
-            $providers_by_name{$item->query('name')}{'PROV'} = $item;
-            $providers_by_name{$item->query('name')}{'TYPE'} = 'Reader';
+            $providers_by_name{$item->{NAME}}{'PROV'} = $item;
+            $providers_by_name{$item->{NAME}}{'TYPE'} = 'Reader';
             foreach my $type ($item->get_source())
             {
                 $readers_by_type{$type} = $item;
@@ -131,8 +131,8 @@ sub about
         # Find writer
         foreach my $item ($providers->_get_providers('writes_tags'))
         {
-            $providers_by_name{$item->query('name')}{'PROV'} = $item;
-            $providers_by_name{$item->query('name')}{'TYPE'} = 'Writer';
+            $providers_by_name{$item->{NAME}}{'PROV'} = $item;
+            $providers_by_name{$item->{NAME}}{'TYPE'} = 'Writer';
             foreach my $type ($item->get_source())
             {
                 $writers_by_type{$type} = $item;
@@ -146,9 +146,9 @@ sub about
             foreach my $converter_to_type (sort keys %{$converters_by_type{$converter_from_type}})
             {
                 $provider = $converters_by_type{$converter_from_type}->{$converter_to_type};
-                $provider_paths{$provider->query('name')} = $provider->query('path');
+                $provider_paths{$provider->{NAME}} = $provider->query('path');
                 my $infoline = "\tConverts from: $converter_from_type to $converter_to_type using " .
-                    $provider->query('name');
+                    $provider->{NAME};
                 $infoline .= $provider->query('is_ok') ? "" : "   (NOT ACTIVE)";
                 push(@msgs, $infoline);
             }
@@ -159,16 +159,16 @@ sub about
         foreach my $reader_type (sort keys %readers_by_type)
         {
             $provider = $readers_by_type{$reader_type};
-            $provider_paths{$provider->query('name')} = $provider->query('path');
-            silent_q("\tReads tags from: $reader_type using ", $provider->query('name'), "\n");
+            $provider_paths{$provider->{NAME}} = $provider->query('path');
+            silent_q("\tReads tags from: $reader_type using ", $provider->{NAME}, "\n");
         }
 
         silent_q("Writes:\n");
         foreach my $writer_type (sort keys %writers_by_type)
         {
             $provider = $writers_by_type{$writer_type};
-            $provider_paths{$provider->query('name')} = $provider->query('path');
-            silent_q("\tWrites tags to: $writer_type using ", $provider->query('name'), "\n");
+            $provider_paths{$provider->{NAME}} = $provider->query('path');
+            silent_q("\tWrites tags to: $writer_type using ", $provider->{NAME}, "\n");
         }
 
         silent_q("Types:\n");

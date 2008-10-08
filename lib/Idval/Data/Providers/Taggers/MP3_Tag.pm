@@ -194,7 +194,8 @@ sub read_tags
                             elsif ($frame eq 'GEOB' or
                                    $frame eq 'PRIV' or
                                    $frame eq 'APIC' or
-                                   $frame eq 'NCON'
+                                   $frame eq 'NCON' or
+                                   $frame eq 'PIC'
                                   )
                             {
                                 $valstr = '%placeholder%';

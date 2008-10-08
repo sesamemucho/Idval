@@ -1,4 +1,4 @@
-package Idval::UserPlugins::Store;
+package Idval::Plugins::Command::Store;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
@@ -36,7 +36,7 @@ sub init
     return;
 }
 
-sub store
+sub main
 {
     local @ARGV = @_;
 
@@ -50,8 +50,8 @@ sub store
     my $providers = shift;
     my $outputfile = shift || '';
 
-    confess "Bad \"datastore\"\n" unless ref $datastore eq 'Idval::Collection';
-    confess "Bad \"providers\"\n" unless ref $providers eq 'Idval::Providers';
+    confess "Bad \"datastore\" (ref is \"", ref $datastore , "\"\n" unless ref $datastore eq 'Idval::Collection';
+    confess "Bad \"providers\" (ref is \"", ref $providers , "\"\n" unless ref $providers eq 'Idval::ProviderMgr';
 
     # Let's write out the data as required
     Idval::Ui::put_source_to_file({datastore => $datastore,

@@ -6,6 +6,14 @@ Done: Make Taggers use endpoints. The converters should make more use of
 
 The test audio data files, sbeep*.*, should have a special tag value. See GettagsTest.pm for more info.
 
+Ugh: I've re-made a requirement that a Command must have a package
+name that starts with 'Idval::Plugin::'. This was so that Idval
+plugins could co-exist with other .pm files. Since commands are
+searched for by name in specified directories, remove this requirement
+for commands (insert an appropriate package def if not present) for
+ease of command creation.
+
+
 #rename Providers.pm to ProviderMgr.pm
 #rename Plugin.pm to Provider.pm
 
@@ -20,14 +28,14 @@ Commands are Plugins         ""
 
 #Plugins have .pm extensions
 #Plugins have 'package Idval::Plugin::.....'
-The package name is purely for internal record-keeping. A command is put into the package 'Idval::Script'.
-Plugins are searched for in each of 'plugin_directories'. No
-recursion! An Idval plugin is identified by an extension of '.pm' and
-a package name of 'Idval::Plugin::....'. This allows us to use '.pm'
-extensions and not be mixed up with regular Perl modules.
+#The package name is purely for internal record-keeping. A command is put into the package 'Idval::Script'.
+#Plugins are searched for in each of 'plugin_directories'. No
+#recursion! An Idval plugin is identified by an extension of '.pm' and
+#a package name of 'Idval::Plugin::....'. This allows us to use '.pm'
+#extensions and not be mixed up with regular Perl modules.
 
 
-Commands are identified (in, say, idv) by the lower-cased file name
-The routine in a Command to be executed must be named 'main'
+#Commands are identified (in, say, idv) by the lower-cased file name
+#The routine in a Command to be executed must be named 'main'
 
 

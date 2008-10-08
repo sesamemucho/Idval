@@ -1,4 +1,4 @@
-package Idval::UserPlugins::Diff;
+package Idval::Plugins::Command::Diff;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
@@ -41,7 +41,7 @@ sub init
     return;
 }
 
-sub diff
+sub main
 {
 
     my $datastore = shift;

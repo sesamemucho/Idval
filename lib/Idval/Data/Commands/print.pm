@@ -1,4 +1,4 @@
-package Idval::UserPlugins::Print;
+package Idval::Plugins::Command::Print;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
@@ -35,7 +35,7 @@ sub init
     return;
 }
 
-sub print ## no critic (ProhibitBuiltinHomonyms)
+sub main
 {
     my $datastore = shift;
     my $providers = shift;

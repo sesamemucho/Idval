@@ -1,4 +1,4 @@
-package Idval::UserPlugins::Sync;
+package Idval::Plugins::Command::Sync;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
@@ -66,7 +66,7 @@ sub init
     return;
 }
 
-sub sync
+sub main
 {
     my $datastore = shift;
     my $providers = shift;
