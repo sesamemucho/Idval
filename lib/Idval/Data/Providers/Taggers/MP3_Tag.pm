@@ -74,15 +74,28 @@ sub init
     $self->set_param('status', $req_msg);
 
     my $config = Idval::Common::get_common_object('config');
+    $self->{CONFIG} = $config;
     $self->{VISIBLE_SEPARATOR} = $config->get_single_value('visible_separator', {'config_group' => 'idval_settings'});
-    $self->{MELD_MP3_TAGS} = $config->get_single_value('meld_mp3_tags', {'config_group' => 'idval_settings'}, 1);
     $self->{EXACT_TAGS} = 0;
     $self->{IS_ENCODABLE_REGEXP} = qr/^(?:T...|WXXX|IPLS|USLT|SYLT|COMM|GEOB|APIC|USER|OWNE|COMR)$/;
+
+    # Forward mapping is ID3v1 to ID3v2
+    # Reverse mapping is ID3v2 to ID3v1
+    $self->{FWD_MAPPING} = $config->merge_blocks({'config_group' => 'tag_mappings',
+                                                  'type' => 'MP3'
+                                                 });
+
+    $self->{REV_MAPPING} = map { $self->{FWD_MAPPING}->{$_} => $_ } keys %{$self->{FWD_MAPPING}};
 
     $self->{DEBUG} = 0;
     return;
 }
 
+#
+# If a file has V1 but no V2, use V1 tags to create V2 tags
+# If a file has V1 and also V2, use V2 tags and fill in with V1 tags (if needed)
+# This ends up being: add all V1 found, then add all V2 (overwriting any V1 tags)
+#
 sub read_tags
 {
     my $self = shift;
@@ -115,23 +128,24 @@ sub read_tags
 
     if (exists $mp3->{ID3v1})
     {
+        print STDERR "MP3: Yes to ID3v1\n";
         ($title, $artist, $album, $year, $comment, $track, $genre) = $mp3->{ID3v1}->all;
-        if ($exact_tags)
-        {
-            $tag_record->add_tag('TITLE', $title);
-            $tag_record->add_tag('TRACK', $track);
-            $tag_record->add_tag('ARTIST', $artist);
-            $tag_record->add_tag('ALBUM', $album);
-            $tag_record->add_tag('COMMENT', $comment);
-            $tag_record->add_tag('YEAR', $year);
-            $tag_record->add_tag('GENRE', $genre);
-        }
+
+        $tag_record->add_tag($self->{FWD_MAPPING}->{'TITLE'}, $title);
+        $tag_record->add_tag($self->{FWD_MAPPING}->{'TRACK'}, $track);
+        $tag_record->add_tag($self->{FWD_MAPPING}->{'ARTIST'}, $artist);
+        $tag_record->add_tag($self->{FWD_MAPPING}->{'ALBUM'}, $album);
+        $tag_record->add_tag($self->{FWD_MAPPING}->{'COMMENT'}, $comment);
+        $tag_record->add_tag($self->{FWD_MAPPING}->{'YEAR'}, $year);
+        $tag_record->add_tag($self->{FWD_MAPPING}->{'GENRE'}, $genre);
     }
 
     my $frameIDs_hash = {};
 
+    print STDERR "\nMP3: File \"$filename\"\n";
     if (exists $mp3->{ID3v2})
     {
+        print STDERR "MP3: Yes to ID3v2 2 2 2 2\n";
         if (!exists($self->{SUPPORTED_TAGS}))
         {
             $self->{SUPPORTED_TAGS} = $mp3->{ID3v2}->supported_frames();
@@ -164,8 +178,15 @@ sub read_tags
                 #my ($info_item, $name, @rest) = $mp3->{ID3v2}->get_frame($frame);
                 my ($info_item, $name, @rest) = $mp3->{ID3v2}->get_frame($frame, 'array_nokey');
                 print "<<<<GOT AN ARRAY>>>\n" if $dbg and scalar @rest;
-                print "Frame $frame, info_item: ", Dumper($info_item) if $dbg;
-                print "Frame $frame, rest: ", Dumper(\@rest) if $dbg;
+                if ($frame eq 'PIC' or $frame eq 'APIC')
+                {
+                    print "Got $frame, bad idea to look too closely...\n";
+                }
+                else
+                {
+                    print "Frame $frame, info_item: ", Dumper($info_item) if $dbg;
+                    print "Frame $frame, rest: ", Dumper(\@rest) if $dbg;
+                }
                 if (!defined($name))
                 {
                     $tagvalues[0] = '%placeholder%';
@@ -183,7 +204,14 @@ sub read_tags
                     {
                         if (ref $info)
                         {
-                            print "MP3_Tag: info for frame \"$frame\" is: ", Dumper($info) if $dbg;
+                            if ($frame eq 'PIC' or $frame eq 'APIC')
+                            {
+                                print "Got $frame, bad idea to look too closely...\n";
+                            }
+                            else
+                            {
+                                print "MP3_Tag: info for frame \"$frame\" is: ", Dumper($info) if $dbg;
+                            }
                             if ($frame eq 'TXXX' and $$info[1] =~ m/^idv-(.*)/)
                             {
                                 # This was a tag that was wrapped into a TXXX tag.
@@ -266,6 +294,8 @@ sub write_tags
 
     my $temp_rec = Idval::Record->new({Record=>$tag_record});
 
+    my $write_id3v1_tags = $self->{CONFIG}->get_single_value('write_id3v1_tags', $temp_rec, 1);
+
     my $mp3 = MP3::Tag->new($filename);
     $mp3->get_tags();
 
@@ -273,27 +303,25 @@ sub write_tags
     my %id3v1_tags;
 
     #print "MP3_Tag, processing \"$filename\"\n";
-    foreach my $id3v1_key (qw(title track artist album comment year genre))
-    {
-        if ($temp_rec->key_exists(uc $id3v1_key))
-        {
-            $has_id3v1++;
-            $id3v1_tags{$id3v1_key} = $temp_rec->shift_value(uc $id3v1_key);
-        }
-    }
 
-    if ($has_id3v1)
+    if ($write_id3v1_tags)
     {
+        my $tag;
+        my $id3v1_subr;
+
         my $id3v1 = exists($mp3->{ID3v1}) ? $mp3->{ID3v1} : $mp3->new_tag("ID3v1");
-        foreach my $id3v1_key (keys %id3v1_tags)
+
+        foreach my $id3v1_key (qw(TITLE TRACK ARTIST ALBUM COMMENT YEAR GENRE))
         {
-            $id3v1->artist( exists($id3v1_tags{$id3v1_key}) ? $id3v1_tags{$id3v1_key} : '') if $id3v1_key eq 'artist';
-            $id3v1->album(  exists($id3v1_tags{$id3v1_key}) ? $id3v1_tags{$id3v1_key} : '') if $id3v1_key eq 'album';
-            $id3v1->comment(exists($id3v1_tags{$id3v1_key}) ? $id3v1_tags{$id3v1_key} : '') if $id3v1_key eq 'comment';
-            $id3v1->genre(  exists($id3v1_tags{$id3v1_key}) ? $id3v1_tags{$id3v1_key} : '') if $id3v1_key eq 'genre';
-            $id3v1->title(  exists($id3v1_tags{$id3v1_key}) ? $id3v1_tags{$id3v1_key} : '') if $id3v1_key eq 'title';
-            $id3v1->track(  exists($id3v1_tags{$id3v1_key}) ? $id3v1_tags{$id3v1_key} : '') if $id3v1_key eq 'track';
-            $id3v1->year(   exists($id3v1_tags{$id3v1_key}) ? $id3v1_tags{$id3v1_key} : '') if $id3v1_key eq 'year';
+            # The information is stored as a id3v2 tag, so get the corresponding id3v2 tag name
+            $tag = $self->{REV_MAPPING}->{$id3v1_key};
+
+            $id3v1_subr = lc $id3v1_key;
+
+            # A bit of trickiness; the id3v1 object uses method accessors with the same name
+            # as the ID3v1 tag.
+            # Don't use Idval::Record::shift_value(), because we want to always write out the id3v2 tag
+            $id3v1->$id3v1_subr($temp_rec->get_first_value($tag));
         }
 
         $id3v1->write_tag();
@@ -413,9 +441,9 @@ sub write_tags
 #     }
 
     $id3v2->write_tag();
-    # Now, we should be left with all the tags that weren't ID3v1 or ID3v2
+    # Now, we should be left with all the tags that weren't ID3v1 or ID3v2 (shouldn't be any)
 
-    #print "Tags left: ", join(":", $temp_rec->format_record()), "\n";
+    print STDERR "MP3: Tags left: ", join(":", $temp_rec->format_record()), "\n";
 
     return 0;
 }

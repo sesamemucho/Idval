@@ -48,14 +48,12 @@ sub main
     my $providers = shift;
     local @ARGV = @_;
     my $outputfile = '-';
-    my $inputfile = '';
     my $config = Idval::Common::get_common_object('config');
 
     my $opts = Getopt::Long::Parser->new();
-    my $retval = $opts->getoptions('outputfile=s' => \$outputfile,
-                                   'inputfile=s'  => \$inputfile,
-        );
+    my $retval = $opts->getoptions('outputfile=s' => \$outputfile);
 
+    my $inputfile = shift @ARGV;
     croak "Need an input file for diff\n" unless $inputfile;
 
     my $input_reclist = Idval::Ui::get_source_from_file($inputfile,
@@ -70,9 +68,9 @@ sub main
     my @input_recs = sort keys %{$input_reclist};
     my @ds_recs = sort keys %{$datastore};
 
-    #print STDERR "Files in input not in ds:\n", join("\n", sort keys %{$input_not_ds}), "\n\n";
-    #print STDERR "Files in input and in ds:\n", join("\n", sort keys %{$input_and_ds}), "\n\n";
-    #print STDERR "Files in ds not in input:\n", join("\n", sort keys %{$ds_not_input}), "\n\n";
+    print STDERR "Files in input not in ds:\n", join("\n", sort keys %{$input_not_ds}), "\n\n";
+    print STDERR "Files in input and in ds:\n", join("\n", sort keys %{$input_and_ds}), "\n\n";
+    print STDERR "Files in ds not in input:\n", join("\n", sort keys %{$ds_not_input}), "\n\n";
 
     $out->print("Deleted records:\n");
     foreach my $key (sort keys %{$ds_not_input})

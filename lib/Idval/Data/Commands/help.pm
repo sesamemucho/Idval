@@ -20,7 +20,7 @@ package Idval::Plugins::Command::Help;
 use strict;
 use warnings;
 
-use Carp;
+use Carp qw(cluck croak);
 use Data::Dumper;
 use Getopt::Long;
 use Pod::Usage;
@@ -55,18 +55,23 @@ sub main
     my $name = 'help';
     my $help_file = Idval::Common::get_common_object('help_file');
 
-    my @cmd_list = $providers->find_all_commands();
-    my $cmd_abbrev = abbrev map {lc $_} @cmd_list;
+    my %cmd_info;
+    foreach my $cmd ($providers->_get_providers('command'))
+    {
+        $cmd_info{$cmd->{NAME}} = $cmd;
+    }
+    #my $cmd_abbrev = abbrev map {lc $_} keys %cmd_info;
     my $cmd_name = $name;
 
     if (@ARGV)
     {
         $name = lc (shift @ARGV);
+        $cmd = $providers->get_command($name);
         
-        croak "Unrecognized command name \"$name\"\n" unless exists($cmd_abbrev->{$name});
-        $cmd_name = $cmd_abbrev->{$name};
+        croak "Unrecognized command name \"$name\"\n" unless defined($cmd);
+        $cmd_name = $cmd->{NAME};
+        $cmd = $cmd_info{$cmd_name};
         croak "No help information for command name \"$name\"\n" unless defined($help_file->man_info($cmd_name));
-        $cmd = $providers->find_command($cmd_name);
     
         if ($verbose)
         {
@@ -88,8 +93,7 @@ sub main
     {
  
        silent_q("\nAvailable commands:\n");
-       my @cmd_list = $providers->find_all_commands();
-       foreach my $cmd_name (@cmd_list) {
+       foreach my $cmd_name (sort keys %cmd_info) {
            my $gsd = $help_file->get_short_description($cmd_name);
            silent_q("  ", $help_file->get_short_description($cmd_name), "\n");
        }

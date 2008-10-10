@@ -23,8 +23,8 @@ use warnings;
 use Data::Dumper;
 use Carp;
 
-#use Idval::Constants;
-#use Idval::Common;
+use Idval::Constants;
+use Idval::Common;
 
 
 #
@@ -56,7 +56,13 @@ sub init
 
     $self->{CMD_PKG} = $cmd_pkg;
 
-    print STDERR "Idval::Command creating object from \"$cmd_pkg\"\n";
+    *chatty = Idval::Common::make_custom_logger({level => $CHATTY,
+                                                 debugmask => $DBG_PROVIDERS,
+                                                 decorate => 1,
+                                                }) unless defined(*chatty{CODE});
+
+    chatty("Idval::Command creating object from \"$cmd_pkg\"\n");
+
     # The first time a command is encountered, if it has an "init" routine, call it
     no strict 'refs';
     my $pkghash = "${cmd_pkg}::";

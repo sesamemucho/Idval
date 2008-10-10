@@ -97,6 +97,13 @@ sub get_keys
     return sort keys %{$self->{RECORDS}};
 }
 
+sub get_diff_keys
+{
+    my $self = shift;
+
+    return $self->get_keys();
+}
+
 sub stringify
 {
     my $self = shift;

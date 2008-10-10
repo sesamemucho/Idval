@@ -1,0 +1,93 @@
+# Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
+
+# This file is part of Idval.
+
+# Idval is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# Idval is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License
+# along with Idval.  If not, see <http://www.gnu.org/licenses/>.
+
+=head1 NAME
+
+Devel.pod - Information about Idval for developers
+
+=head1 DESCRIPTION
+
+This document is a collection of information about how Idval works.
+
+=head1 OPERATION
+
+The processing is started when an Idval object is created. Idval
+    creates a L<Logger|Idval::Logger> object based on input arguments,
+    and then creates a help object to manage online help information.
+
+Idval sets up its configuration from two different files. The first is
+    the system configuration file, which must always exist and which
+    should not be edited. The second file, the user configuration
+    file, should contain customizations. See L<Idval::Config> for more
+    information about configuration files.
+
+Most of the action occurs when Idval creates the ProviderMgr
+    object. This causes Idval to load up its plugins. There are two
+    overall kinds of plugins: providers and commands. The providers
+    consist of three types: converters, tag readers, and tag writers.
+    Providers are more tightly integrated and 'formal' than Commands.
+    See the following sections for more information:
+
+=over
+
+=item L<WRITING CONVERTER PLUGINS>
+
+=item L<WRITING TAG READER PLUGINS>
+
+=item L<WRITING TAG WRITER PLUGINS>
+
+=item L<WRITING COMMAND PLUGINS>
+
+=back
+    Providers have the following requirements:
+
+=over
+
+=item *
+
+Must be written as a Perl class.
+
+=item *
+
+There must be a package name, and it must start with Idval::Plugin.
+
+=item *
+
+Must register itself with ProviderMgr using the
+    Idval::Common::register_provider() routine.
+
+=item *
+
+Must supply routines according to its type.
+
+=over
+
+=item converters must supply a I<convert> method.
+
+=item tag readers must supply a I<read_tags> method.
+
+=item tag writers must supply a I<write_tags> method.
+
+=back
+
+=back
+
+must be written as Perl classes and must register
+    themselves with the ProviderMgr. Commands do not have these requirements
+
+
+=cut

@@ -232,6 +232,14 @@ sub get_all_keys
     return grep {!/^(:?FILE|CLASS|TYPE|__LINES|__NEXT_LINE)$/x} sort keys %{$self};
 }
 
+# refactoring...
+sub get_diff_keys
+{
+    my $self = shift;
+
+    return $self->get_all_keys();
+}
+
 sub key_exists
 {
     my $self = shift;
@@ -311,6 +319,8 @@ sub format_record
     return @output;
 }
 
+
+XXX ADAPT TO ARRAY-REF VALUES!
 sub diff
 {
     my $self = shift;

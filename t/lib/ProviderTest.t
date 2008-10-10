@@ -196,18 +196,24 @@ sub choose_provider_by_weight_in_config_file_2 : Test(1)
 #     is('Idval::Plugins::Garfinkle', ref $item);
 # }
 
-sub get_a_command_1 : Test(1)
+sub get_a_command_1 : Test(2)
 {
     #my $self = shift;
 
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\ncommand_dir = /testdir/Idval\n\n");
     add_command_1();
     my $fc = Idval::Config->new("/testdir/gt1.txt");
+    #my $old_level = Idval::Common::get_logger()->accessor('LOGLEVEL', $CHATTY);
+    #my $old_debug = Idval::Common::get_logger()->accessor('DEBUGMASK', $DBG_GRAPH + $DBG_PROVIDERS);
     $provs = Idval::ProviderMgr->new($fc);
-    my $cmd = $provs->find_command('cmd1');
+    my @cmds = $provs->_get_providers('command');
+    #Idval::Common::get_logger()->accessor('DEBUGMASK', $old_debug);
+    #Idval::Common::get_logger()->accessor('LOGLEVEL', $old_level);
+
+    is(scalar(@cmds), 1);
 
     #is($cmd, 'Idval::Plugins::Cmd1::cmd1');
-    is($cmd, 'Idval::Plugins::Cmd1');
+    isa_ok($cmds[0], 'Idval::Command');
 
     return;
 }

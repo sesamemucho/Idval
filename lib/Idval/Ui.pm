@@ -145,13 +145,14 @@ sub make_wanted
     
     my @exts = map { '\.' . lc($_) } keys %type_list;
 
-    #print STDERR "exts: ", join(",", @exts), ">\n";
+    #print STDERR "UI: exts: ", join(",", @exts), ">\n";
     return sub {
+        #print STDERR "UI: file is \"$_\"\n";
         return if -d $_;
 #         my $rec;
         #my($filename, $junk, $suffix) = fileparse($_, @exts);
         my($filename, $junk, $suffix) = fileparse(basename($_), @exts);
-        #print STDERR "name is $_, Suffix is: <$suffix>\n";
+        #print STDERR "UI: name is $_, Suffix is: <$suffix>\n";
         return unless $suffix;  # It wasn't one of the ones we were looking for
 
         $suffix = substr($suffix, 1); # Remove the '.'
@@ -273,7 +274,7 @@ sub get_rec_diffs
     my %a_and_b;
     my %b_not_a;
 
-    foreach my $item ($rec_a->get_all_keys())
+    foreach my $item ($rec_a->get_diff_keys())
     {
         if ($rec_b->key_exists($item))
         {
@@ -285,7 +286,7 @@ sub get_rec_diffs
         }
     }
 
-    foreach my $item ($rec_b->get_all_keys())
+    foreach my $item ($rec_b->get_diff_keys())
     {
         if (! $rec_a->key_exists($item))
         {
