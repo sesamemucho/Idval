@@ -94,7 +94,8 @@ sub main
     {
 
         my ($rec_input_not_ds, $rec_input_and_ds, $rec_ds_not_input) = 
-            $input_reclist->get_value($key)->diff($datastore->get_value($key));
+            $datastore->get_value($key)->diff($input_reclist->get_value($key));
+            #$input_reclist->get_value($key)->diff($datastore->get_value($key));
 
         $change_string = '';
 

@@ -154,6 +154,23 @@ sub get_value
     return $self->{$tagname};
 }
 
+# Return a string representing the tag value, whatever type it is
+# Sort of like a baby Data::Dumper
+sub get_flattened_value
+{
+    my $self = shift;
+    my $tagname = shift;
+    my $value = $self->get_value($tagname);
+    my $retval = $value;
+
+    if (ref $value eq 'ARRAY')
+    {
+        $retval = '[' . join(', ', @{$value}) . ']';
+    }
+
+    return $retval;
+}
+
 sub get_first_value
 {
     my $self = shift;
@@ -297,11 +314,13 @@ sub format_record
             push(@output, "$tag = $value");
             foreach my $value (@values)
             {
+                $value =~ s/(\r\n|\n|\r)/$1  /g;
                 push(@output, "$tag += $value");
             }
         }
         else
         {
+            $tag_value =~ s/(\r\n|\n|\r)/$1  /g;
             push(@output, "$tag = $tag_value");
         }
         $lines{$tag} = $start_line++ if defined $start_line;
@@ -319,8 +338,6 @@ sub format_record
     return @output;
 }
 
-
-XXX ADAPT TO ARRAY-REF VALUES!
 sub diff
 {
     my $self = shift;
@@ -334,8 +351,8 @@ sub diff
 
     foreach my $tag (sort keys %{$self_and_other})
     {
-        $this_val = $self->get_value($tag);
-        $other_val = $other->get_value($tag);
+        $this_val = $self->get_flattened_value($tag);
+        $other_val = $other->get_flattened_value($tag);
         if ($this_val ne $other_val)
         {
             $common_diffs{$tag} = [$this_val, $other_val];

@@ -88,43 +88,55 @@ sub parse
             $collection->{ID3_ENCODING} = $1;
             next;
         };
-
     }
 
-    my $accumulate_line = '';
-    my @block = ();
-    while(defined($line = <$fh>))
-    {
-        chomp $line;
-        next if $line =~ m/^\#/x;
-        if (($line =~ m/^\s*$/x) || eof)
-        {
-            push(@block, $accumulate_line) if $accumulate_line;
-            push(@block, $line) if (eof && $line);
-            $collection->add($self->parse_block(\@block)) if @block;
-            @block = ();
-            $accumulate_line = '';
-            next;
-        }
-
-        if ($line =~ m/^\ \ (.*)/x)
-        {
-            $accumulate_line .= "\n" . $1;
-        }
-        else
-        {
-            push(@block, $accumulate_line) if $accumulate_line;
-            $accumulate_line = $line;
-        }
-    }
-
+    my $str = do { local $/; <$fh> };
     $fh->close();
+
+    # Split the file up into blocks. Each block (of tag definitions)
+    # must start with a 'FILE ='.
+    my @blocks = ($str =~ m{(^FILE\s*=.*?)(?=^FILE\s*=|\z)}gms);
+
+    # Now massage each block so we have one tag definition per item
+    foreach my $block (@blocks)
+    {
+        my $accumulate_line = '';
+        my @tagdefs = ();
+        $block =~ s/\n\r/\n/g;
+        $block =~ s/\r//g;
+        foreach my $line (split(/\n/, $block))
+        {
+            chomp $line;
+            next if $line =~ m/^\#/mx;
+
+            if ($line =~ m/^ ?$/)
+            {
+                push(@tagdefs, $accumulate_line) if $accumulate_line;
+                $accumulate_line = '';
+                next;
+            }
+
+            if ($line =~ m/^  (.*)/)
+            {
+                $accumulate_line .= "\n" . $1;
+            }
+            else
+            {
+                push(@tagdefs, $accumulate_line) if $accumulate_line;
+                $accumulate_line = $line;
+            }
+        }
+        push(@tagdefs, $accumulate_line) if $accumulate_line;
+
+        $collection->add($self->parse_tagdefs(\@tagdefs));
+    }
 
     $self->{BLOCKS} = $collection;
     return $collection;
 }
 
-sub parse_block
+#sub parse_block
+sub parse_tagdefs
 {
     my $self = shift;
     my $blockref = shift;
@@ -153,6 +165,7 @@ sub parse_block
         }
         else
         {
+            $line =~ s/\r/\<CR\>/g;
             croak "Unrecognized line in tag data file: \"$line\"\n";
         }
     }
