@@ -30,7 +30,25 @@ use Data::Dumper;
 use File::Spec;
 use File::Basename;
 use File::Find;
-use IO::String;
+
+BEGIN {
+    eval "use IO::String;";
+    if ($@)
+    {
+        warn "Perl module \"IO::String\" has not been installed. Idv will work, but you won't be able to run the self-tests\n";
+        package IO::String;
+        sub new
+        {
+            my $class = shift;
+            my $self = {};
+            bless($self, ref($class) || $class);
+            $self->_init(@_);
+            return $self;
+        }
+        package Idval::FileString;
+    }
+};
+    
 
 use base qw(IO::String);
 
