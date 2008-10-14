@@ -77,7 +77,7 @@ sub init
     $self->{CONFIG} = $config;
     $self->{VISIBLE_SEPARATOR} = $config->get_single_value('visible_separator', {'config_group' => 'idval_settings'});
     $self->{EXACT_TAGS} = 0;
-    $self->{IS_ENCODABLE_REGEXP} = qr/^(?:T...|WXXX|IPLS|USLT|SYLT|COMM|GEOB|APIC|USER|OWNE|COMR)$/;
+    $self->{IS_ENCODABLE_REGEXP} = qr/^(?:T...|WXXX|IPLS|USLT|SYLT|COMM|GEOB|APIC|USER|OWNE|COMR)$/o;
 
     # Forward mapping is ID3v1 to ID3v2
     # Reverse mapping is ID3v2 to ID3v1
@@ -113,7 +113,7 @@ sub read_tags
     #print "MP3_Tag: filename is \"$filename\"\n";
     #if ($filename eq q{/home/big/Music/mm/Hip-Hop Classics/Music/Nice and Smooth - Funky for you.mp3})
     #{
-    #    $dbg = 1;
+    #   $dbg = 1;
     #}
 
     if (!exists $self->{ID3_ENCODING})
@@ -292,6 +292,11 @@ sub write_tags
     my $vs = $self->{VISIBLE_SEPARATOR};
     my $filename = $tag_record->get_name();
 
+    if (!exists $self->{ID3_ENCODING})
+    {
+        $self->{ID3_ENCODING_TYPE} = Idval::Common::get_common_object('id3_encoding') eq 'iso-8859-1' ? 0 : 1;
+    }
+
     my $temp_rec = Idval::Record->new({Record=>$tag_record});
 
     my $write_id3v1_tags = $self->{CONFIG}->get_single_value('write_id3v1_tags', $temp_rec, 1);
@@ -369,7 +374,10 @@ sub write_tags
                     $framename = $txxx_index > 0 ? sprintf("TXXX%02d", $txxx_index) : 'TXXX';
                 }
 
-                @frameargs = ($tagvalue =~ m/\Q$vs\E/) ? split(/\Q$vs\E/, $tagvalue) : ($tagvalue);
+                @frameargs = ($tagvalue =~ m/\Q$vs\E/)                       ? split(/\Q$vs\E/, $tagvalue)
+                           # There may be a default, implicit, encoding. If so, add it back in.
+                           : ($tagname =~ $self->{IS_ENCODABLE_REGEXP})      ? split(/\Q$vs\E/, $self->{ID3_ENCODING} . $self->{VISIBLE_SEPARATOR} . $tagvalue)
+                           : ($tagvalue);
                 print "Args for $framename are ", Dumper(\@frameargs) if $dbg;
             }
             else
