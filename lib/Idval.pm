@@ -120,12 +120,10 @@ sub _init
     {
         # We need to do our own argument parsing
         local @ARGV = @{$argref};
-        print "Idval: 1 ARGV: ", Dumper($argref);
         my $opts = Getopt::Long::Parser->new();
         $opts->configure("require_order", "no_ignore_case");
         #print "Standard options are: ", join("\n", @standard_options), "\n";
         my $retval = $opts->getoptions(\%options, @standard_options);
-        print "Idval: 2 ARGV: ", Dumper(\@ARGV);
         @other_args = (@ARGV);
     }
     else
