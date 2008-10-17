@@ -238,10 +238,10 @@ sub put_source_to_file
         # Save both the binary cache and the equivalent readable file
         $datastore->source('STORED DATA CACHE'); # First, adjust the SOURCE descriptor
         store($datastore, $ds_bin);
-        my $out = Idval::FileIO->new($ds_dat, '>:utf8') or 
+        my $out = Idval::FileIO->new($ds_dat, '>') or 
             croak "Can't open $ds_dat for writing: $ERRNO\n";
 
-        print $out join("\n", @{$datastore->stringify()});
+        $out->print(join("\n", @{$datastore->stringify()}), "\n");
         $out->close();
         #print "Finished storing data\n";
     }
@@ -250,10 +250,20 @@ sub put_source_to_file
     if ($dat_file)
     {
         my $fname = $dat_file;
-        my $out = Idval::FileIO->new($fname, '>:utf8') or croak "Can't open $fname for writing: $ERRNO\n";
+        my $out = Idval::FileIO->new($fname, '>') or croak "Can't open $fname for writing: $ERRNO\n";
 
         $datastore->source($fname);
-        print $out join("\n", @{$datastore->stringify()});
+        my @outstrs = @{$datastore->stringify()};
+        my $ftag = '';
+        foreach my $line (@outstrs)
+        {
+            $ftag = $line if $line =~ m/^FILE/;
+            foreach my $char (split(//, $line))
+            {
+                print "Wide char in \"$line\" from \"$ftag\"\n" if ord($char) > 255;
+            }
+        }
+        $out->print(join("\n", @outstrs), "\n");
         $out->close();
     }
 

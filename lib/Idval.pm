@@ -110,7 +110,7 @@ sub _init
     my @realargv = @ARGV;
     my @other_args = ();
 
-    print "Idval: realargv: ", Dumper(\@realargv);
+    #print "Idval: realargv: ", Dumper(\@realargv);
     if (!defined($argref))
     {
         $argref = \@realargv;
@@ -201,7 +201,6 @@ sub _init
 
     $self->{REMAINING_ARGS} = [@other_args];
     $log->chatty($DBG_PROVIDERS, "Remaining args: <", join(", ", @{$self->{REMAINING_ARGS}}), ">\n");
-
     return;
 }
 

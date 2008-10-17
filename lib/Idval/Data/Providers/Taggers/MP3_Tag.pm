@@ -107,13 +107,20 @@ sub read_tags
 
     return $retval if !$self->query('is_ok');
 
+    # There is some kind of bad interaction between Encode and
+    # XML::Simple when there is a broken XML::SAX on the system. See
+    # the README file for XML::Simple for more about XML::SAX. The
+    # badness causes the first decode of UTF-16 to be bad. This seems
+    # to fix it...
+    my $found = Encode::decode('UTF-16', pack("H*", "fffe47007200"));
+
     my $exact_tags = $self->{EXACT_TAGS};
 
     my $filename = $tag_record->get_value('FILE');
     #print "MP3_Tag: filename is \"$filename\"\n";
     #if ($filename eq q{/home/big/Music/mm/Hip-Hop Classics/Music/Nice and Smooth - Funky for you.mp3})
     #{
-    #   $dbg = 1;
+    #  $dbg = 1;
     #}
 
     if (!exists $self->{ID3_ENCODING})
@@ -128,7 +135,7 @@ sub read_tags
 
     if (exists $mp3->{ID3v1})
     {
-        print STDERR "MP3: Yes to ID3v1\n";
+        #print STDERR "MP3: Yes to ID3v1\n";
         ($title, $artist, $album, $year, $comment, $track, $genre) = $mp3->{ID3v1}->all;
 
         $tag_record->add_tag($self->{FWD_MAPPING}->{'TITLE'}, $title);
@@ -142,10 +149,10 @@ sub read_tags
 
     my $frameIDs_hash = {};
 
-    print STDERR "\nMP3: File \"$filename\"\n";
+    #print STDERR "\nMP3: File \"$filename\"\n";
     if (exists $mp3->{ID3v2})
     {
-        print STDERR "MP3: Yes to ID3v2 2 2 2 2\n";
+        #print STDERR "MP3: Yes to ID3v2 2 2 2 2\n";
         if (!exists($self->{SUPPORTED_TAGS}))
         {
             $self->{SUPPORTED_TAGS} = $mp3->{ID3v2}->supported_frames();
@@ -180,7 +187,7 @@ sub read_tags
                 print "<<<<GOT AN ARRAY>>>\n" if $dbg and scalar @rest;
                 if ($frame eq 'PIC' or $frame eq 'APIC')
                 {
-                    print "Got $frame, bad idea to look too closely...\n";
+                    print "Got $frame, bad idea to look too closely...\n" if $dbg;
                 }
                 else
                 {
@@ -206,7 +213,7 @@ sub read_tags
                         {
                             if ($frame eq 'PIC' or $frame eq 'APIC')
                             {
-                                print "Got $frame, bad idea to look too closely...\n";
+                                print "Got $frame, bad idea to look too closely...\n" if $dbg;
                             }
                             else
                             {
