@@ -6,6 +6,9 @@ Done: Make Taggers use endpoints. The converters should make more use of
 
 The test audio data files, sbeep*.*, should have a special tag value. See GettagsTest.pm for more info.
 
+
+done:
+{
 Ugh: I've re-made a requirement that a Command must have a package
 name that starts with 'Idval::Plugin::'. This was so that Idval
 plugins could co-exist with other .pm files. Since commands are
@@ -37,5 +40,8 @@ Commands are Plugins         ""
 
 #Commands are identified (in, say, idv) by the lower-cased file name
 #The routine in a Command to be executed must be named 'main'
+}
+
+MP3::Tag is filling in id3v1 tags, even though I don't think I've asked it to. what to do?
 
 

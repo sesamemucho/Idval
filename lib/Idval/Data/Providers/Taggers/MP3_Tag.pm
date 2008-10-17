@@ -24,6 +24,7 @@ no  warnings qw(redefine);
 use Class::ISA;
 use Carp;
 use Data::Dumper;
+use Encode;
 
 use base qw(Idval::Provider);
 
@@ -85,8 +86,12 @@ sub init
                                                   'type' => 'MP3'
                                                  });
 
-    $self->{REV_MAPPING} = map { $self->{FWD_MAPPING}->{$_} => $_ } keys %{$self->{FWD_MAPPING}};
-
+    foreach my $key (keys %{$self->{FWD_MAPPING}})
+    {
+        $self->{REV_MAPPING}->{$self->{FWD_MAPPING}->{$key}} = $key;
+    }
+    #print "MP3_Tags FWD_MAPPING: ", Dumper($self->{FWD_MAPPING});
+    #print "MP3_Tags REV_MAPPING: ", Dumper($self->{REV_MAPPING});
     $self->{DEBUG} = 0;
     return;
 }
@@ -123,7 +128,7 @@ sub read_tags
     #  $dbg = 1;
     #}
 
-    if (!exists $self->{ID3_ENCODING})
+    if (!exists $self->{ID3_ENCODING_TYPE})
     {
         $self->{ID3_ENCODING_TYPE} = Idval::Common::get_common_object('id3_encoding') eq 'iso-8859-1' ? 0 : 1;
     }
@@ -295,11 +300,11 @@ sub write_tags
 
     return 0 if !$self->query('is_ok');
 
-    my $dbg = 0;
+    my $dbg = 1;
     my $vs = $self->{VISIBLE_SEPARATOR};
     my $filename = $tag_record->get_name();
 
-    if (!exists $self->{ID3_ENCODING})
+    if (!exists $self->{ID3_ENCODING_TYPE})
     {
         $self->{ID3_ENCODING_TYPE} = Idval::Common::get_common_object('id3_encoding') eq 'iso-8859-1' ? 0 : 1;
     }
@@ -326,7 +331,7 @@ sub write_tags
         foreach my $id3v1_key (qw(TITLE TRACK ARTIST ALBUM COMMENT YEAR GENRE))
         {
             # The information is stored as a id3v2 tag, so get the corresponding id3v2 tag name
-            $tag = $self->{REV_MAPPING}->{$id3v1_key};
+            $tag = $self->{FWD_MAPPING}->{$id3v1_key};
 
             $id3v1_subr = lc $id3v1_key;
 
@@ -362,6 +367,7 @@ sub write_tags
         $tag_index = -1;
         while ($tagvalue = $temp_rec->shift_value($tagname))
         {
+            #confess("Undefined value for tag \"$tagname\"") unless defined($tagvalue);
             $tag_index++;
             $framename = $tag_index > 0 ? sprintf("%s%02d", $tagname, $tag_index) : $tagname;
 
@@ -381,9 +387,10 @@ sub write_tags
                     $framename = $txxx_index > 0 ? sprintf("TXXX%02d", $txxx_index) : 'TXXX';
                 }
 
+                print "tagvalue: \"$tagvalue\" vs: \"$vs\" is_decodable: ", $self->{IS_ENCODABLE_REGEXP}, " id3_enc: ", $self->{ID3_ENCODING_TYPE}, "\n";
                 @frameargs = ($tagvalue =~ m/\Q$vs\E/)                       ? split(/\Q$vs\E/, $tagvalue)
                            # There may be a default, implicit, encoding. If so, add it back in.
-                           : ($tagname =~ $self->{IS_ENCODABLE_REGEXP})      ? split(/\Q$vs\E/, $self->{ID3_ENCODING} . $self->{VISIBLE_SEPARATOR} . $tagvalue)
+                           : ($tagname =~ $self->{IS_ENCODABLE_REGEXP})      ? split(/\Q$vs\E/, $self->{ID3_ENCODING_TYPE} . $vs . $tagvalue)
                            : ($tagvalue);
                 print "Args for $framename are ", Dumper(\@frameargs) if $dbg;
             }
@@ -455,6 +462,7 @@ sub write_tags
 #         }
 #     }
 
+    # XXX MP3::Tag is filling in id3v1 tags....
     $id3v2->write_tag();
     # Now, we should be left with all the tags that weren't ID3v1 or ID3v2 (shouldn't be any)
 
@@ -467,7 +475,7 @@ sub close
 {
     my $self = shift;
 
-    delete $self->{ID3_ENCODING} if exists $self->{ID3_ENCODING};
+    delete $self->{ID3_ENCODING_TYPE} if exists $self->{ID3_ENCODING_TYPE};
 }
 
 1;
