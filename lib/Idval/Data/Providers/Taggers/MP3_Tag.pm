@@ -76,9 +76,12 @@ sub init
 
     my $config = Idval::Common::get_common_object('config');
     $self->{CONFIG} = $config;
+
     $self->{VISIBLE_SEPARATOR} = $config->get_single_value('visible_separator', {'config_group' => 'idval_settings'});
-    $self->{EXACT_TAGS} = 0;
+    $self->{EXACT_TAGS} = $config->get_single_value('exact_tags', {'config_group' => 'idval_settings'});
+
     $self->{IS_ENCODABLE_REGEXP} = qr/^(?:T...|WXXX|IPLS|USLT|SYLT|COMM|GEOB|APIC|USER|OWNE|COMR)$/o;
+    map {$self->{HAS_LANGUAGE_DESC}->{$_} = $_} qw(USLT SYLT COMM USER);
 
     # Forward mapping is ID3v1 to ID3v2
     # Reverse mapping is ID3v2 to ID3v1
@@ -190,6 +193,12 @@ sub read_tags
                 #my ($info_item, $name, @rest) = $mp3->{ID3v2}->get_frame($frame);
                 my ($info_item, $name, @rest) = $mp3->{ID3v2}->get_frame($frame, 'array_nokey');
                 print "<<<<GOT AN ARRAY>>>\n" if $dbg and scalar @rest;
+                # Some language descriptors have NULs. Don't like.
+                if ((exists $self->{HAS_LANGUAGE_DESC}->{$frame}) && ($$info_item[1] eq "\x{0}\x{0}\x{0}") &&(!$exact_tags) )
+                {
+                    $$info_item[1] = 'XXX';
+                }
+
                 if ($frame eq 'PIC' or $frame eq 'APIC')
                 {
                     print "Got $frame, bad idea to look too closely...\n" if $dbg;
@@ -253,11 +262,15 @@ sub read_tags
                                 }
                                 print "MP3_Tag: 1 valstr is \"$valstr\"\n" if $dbg;
                                 $valstr .= join($self->{VISIBLE_SEPARATOR}, @{$info});
+                                # Sometimes, NULs will be in the tag
+                                $valstr =~ s/\x{0}//g unless $exact_tags;
                                 print "MP3_Tag: 2 valstr is \"$valstr\"\n" if $dbg;
                             }
                             else
                             {
                                 $valstr = join($self->{VISIBLE_SEPARATOR}, @{$info});
+                                # Sometimes, NULs will be in the tag
+                                $valstr =~ s/\x{0}//g unless $exact_tags;
                             }
 #                             #print "$name ($frame):\n";
 #                             my @vals = ();
