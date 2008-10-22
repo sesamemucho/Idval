@@ -258,6 +258,7 @@ sub deep_copy {
     {
         if (ref($this) =~ m/$item/)
         {
+            print "Deep copy: getting retsub for \"$item\"\n";
             my $ret_sub = $value_for{$item};
             return &$ret_sub($this);
         }
