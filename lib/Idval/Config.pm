@@ -142,22 +142,7 @@ sub _init
         delete $self->{DEF_VARS}->{$key} unless $key =~ m/^__/;
     }
 
-    #chatty("Calculated variables are: ", Dumper($self->{DEF_VARS}));
     return;
-}
-
-sub copy
-{
-    my $self = shift;
-    my @initfiles = @{$self->{INITFILES}};
-    my $firstfile = shift @initfiles;
-    my $newconfig = Idval::Config->new($firstfile);
-    foreach my $initfile (@initfiles)
-    {
-        $newconfig->add_file($initfile);
-    }
-
-    return $newconfig;
 }
 
 sub debug
@@ -743,6 +728,7 @@ sub get_mtime
 sub get_file_age
 {
     my $selectors = shift;
+
     return time - Idval::FileIO::idv_get_mtime($selectors->{FILE});
 }
 

@@ -53,9 +53,7 @@ sub main
                             'quiet'    => \$quiet,
         );
 
-    # We want to add to the config object, but not pollute it for those who follow
-    # Storable::dclone doesn't work with regexps
-    my $config = Idval::Common::get_common_object('config')->copy();
+    my $config;
     my $numrecs = 0;
 
     # User can either supply a select-file or pass in selectors
@@ -64,12 +62,16 @@ sub main
         my $selectors = join("\n", @ARGV);
         $selectors =~ s/([{}])/\n$1\n/g; # Make sure all brackets are alone on their line
         $selectors = "{\n" . $selectors . "\n}\n";
-        $config->add_file($selectors);
+        $config = Idval::Config->new($selectors);
     }
     elsif ($selectfile)
     {
         # Now, make a new config object that incorporates the select file info.
-        $config->add_file($selectfile);
+        $config = Idval::Config->new($selectfile);
+    }
+    else
+    {
+        $config = Idval::Config->new("{\n}\n");
     }
 
     my $select_coll = Idval::Collection->new();

@@ -76,7 +76,7 @@ sub main
     $Devel::Trace::TRACE = 1;
     # We want to add to the config object, but not pollute it for those who follow
     # Storable::dclone doesn't work with regexps
-    my $config = Idval::Common::get_common_object('config')->copy();
+    my $config = Idval::Common::deep_copy(Idval::Common::get_common_object('config'));
 
     my $typemap = Idval::Common::get_common_object('typemap');
     my $dotmap = $typemap->get_dot_map();

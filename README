@@ -21,42 +21,6 @@ To install this module, run the following commands:
 	make test
 	make install
 
-NOTES
-
-The presence of a broken XML::SAX module (see the README for XML::Simple) causes Encode::decode() to break!?!?
-
-Run the following script:
-
-use Data::Dumper;
-use Encode;
-use XML::Simple;
-my $xmltext =<<EOF;
-<config>
-<group>
-  <command_dir>%DATA%/Commands</command_dir>
-  <command_extension>pm</command_extension>
-</group>
-</config>
-EOF
- 
-my $tree = XML::Simple::XMLin($xmltext, keyattr => {select=>'name'}, forcearray => ['select']);
-my $found = Encode::decode('UTF-16', pack("H*", "fffe47007200"));
-print "found: ", Dumper($found);
-
-When broken XML::SAX is present, this will print
-
-could not find ParserDetails.ini in /usr/lib/perl5/vendor_perl/5.10/XML/SAX
-found: $VAR1 = "\x{fffd}\x{4700}\x{7200}";
-
-Encode::decode() thinks it's decoding UTF-2BE instead of UTF-16.
-
-When broken XML::SAX is removed (per XML::Simple README), it will print
-
-found: $VAR1 = 'Gr';
-
-
-
-
 SUPPORT AND DOCUMENTATION
 
 After installing, you can find documentation for this module with the
