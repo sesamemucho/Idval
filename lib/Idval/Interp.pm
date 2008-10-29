@@ -146,6 +146,7 @@ sub cmd_loop
                     croak "Error in \"$cmd_name\": \"$status\", \"$reason\"\n";
                 }
             }
+
             next if $error_occurred;
 
             $term->addhistory($line) if $line =~ /\S/;

@@ -74,7 +74,7 @@ sub convert
     $dest = Idval::Common::mung_path($dest);
     $src = Idval::Common::mung_path($src);
 
-    my $path = $self->query('path') . " ";
+    my $path = $self->query('path');
 
     if ($name eq 'flac_dec')
     {

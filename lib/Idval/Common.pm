@@ -209,12 +209,12 @@ sub run
     #$name = exe_name($name);
     if ($no_run)
     {
-        $log->quiet($DBG_PROCESS, "$name XXX $cmdargs\n");
+        $log->quiet($DBG_PROCESS, "$name $cmdargs\n");
         return 0;
     }
     else
     {
-        $log->verbose($DBG_PROCESS, "\"$name\" XXX $cmdargs\n");
+        $log->verbose($DBG_PROCESS, "\"$name\" $cmdargs\n");
         $retval = qx{"$name" $cmdargs 2>&1};
         $status = $?;
         if ($status)
@@ -258,6 +258,7 @@ sub deep_copy {
     {
         if (ref($this) =~ m/$item/)
         {
+            print "Deep copy: getting retsub for \"$item\"\n";
             my $ret_sub = $value_for{$item};
             return &$ret_sub($this);
         }

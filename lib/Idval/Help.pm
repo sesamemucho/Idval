@@ -70,14 +70,22 @@ sub _call_pod2usage
     my @sections = @_;
 
     my $usage = '';
+    my $temp_store = '';
 
     my $input = $self->man_info($name);
     return "$name: no information available" unless defined($input);
 
     open(my $INPUT, '<', \$input) || die "Can't open in-core filehandle for pod_input: $!\n";
+    open(my $TEMP, '>', \$temp_store) || die "Can't open in-core filehandle for temp_store: $!\n";
+    my $selector = new Pod::Select();
+    $selector->select(@sections);
+    $selector->parse_from_file($INPUT, $TEMP);
+    close $TEMP;
+    close $INPUT;
+
+    open($INPUT, '<', \$temp_store) || die "Can't open in-core filehandle for reading temp_store: $!\n";
     open(my $FILE, '>', \$usage) || die "Can't open in-core filehandle: $!\n";
     my $parser = new Pod::Text();
-    $parser->select(@sections);
     $parser->parse_from_filehandle($INPUT, $FILE);
     close $FILE;
     close $INPUT;

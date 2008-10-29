@@ -157,7 +157,6 @@ sub get_dest_filename
     foreach my $conv (@{$self->{CONVERTERS}})
     {
         $dest_name = $conv->get_dest_filename($rec, $dest_name, $dest_ext);
-        print "Smoosh: dest_name is: \"$dest_name\"\n";
     }
 
     return $dest_name;

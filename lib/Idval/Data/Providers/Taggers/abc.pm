@@ -61,7 +61,7 @@ sub init
     $self->{VISIBLE_SEPARATOR} = $config->get_single_value('visible_separator', {'config_group' => 'idval_settings'});
 
     $self->{FWD_MAPPING} = $config->merge_blocks({'config_group' => 'tag_mappings',
-                                                  'type' => 'ABC'
+                                                  'TYPE' => 'ABC'
                                                  });
 
     $self->{REV_MAPPING} = map { $self->{FWD_MAPPING}->{$_} => $_ } keys %{$self->{FWD_MAPPING}};

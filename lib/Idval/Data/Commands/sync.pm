@@ -76,7 +76,7 @@ sub main
     $Devel::Trace::TRACE = 1;
     # We want to add to the config object, but not pollute it for those who follow
     # Storable::dclone doesn't work with regexps
-    my $config = Idval::Common::deep_copy(Idval::Common::get_common_object('config'));
+    my $config = Idval::Common::get_common_object('config')->copy();
 
     my $typemap = Idval::Common::get_common_object('typemap');
     my $dotmap = $typemap->get_dot_map();
@@ -87,8 +87,10 @@ sub main
     #my $syncfile = defined($args[0]) ? $args[0] : '';
     #croak "Need a sync file." unless $syncfile;
     # Now, make a new config object that incorporates the sync file info.
+    #$config->{DEBUG} = 1;
     $config->add_file($syncfile);
-
+    #$config->{DEBUG} = 0;
+    #print "sync: ", Dumper($config);
     progress_init($progress_data, $datastore);
 
     foreach my $key (sort keys %{$datastore->{RECORDS}})
@@ -205,6 +207,7 @@ sub each_item
     my $dest_type = $config->get_single_value('convert', $tag_record);
     my $prov;
 
+    chatty("source type is \"$src_type\" dest type is \"$dest_type\"\n");
     if ($src_type eq $dest_type)
     {
         # Once we allow transcoding between files of the same type,
@@ -439,7 +442,7 @@ sub progress_print_title
 {
     my $this = shift;
 
-    progress("processed remaining  total  percent  elapsed  remaining   total\n");
+    progress("processed remaining  total  percent  elapsed  remaining    total\n");
     progress(sprintf("%5d %9d %9d %5.0f%%     %8s  %8s  %8s\n",
                      0,
                      $this->{total_number_to_process},
@@ -466,7 +469,7 @@ sub progress_print_line
     my $est_time = $elapsed_time / $safe_frac;
     my $est_time_remaining = $est_time - $elapsed_time;
 
-    progress(sprintf("%5d %9d %9d %5.0f%%     %8s %8s %8s\n",
+    progress(sprintf("%5d %9d %9d %5.0f%%     %8s  %8s %8s\n",
                      $this->{number_of_processed_records},
                      $this->{total_number_to_process} - $this->{number_of_processed_records},
                      $this->{total_number_to_process},
@@ -493,12 +496,12 @@ sub progress_format_time
     if ($hrs != 0)
     {
         $hrs = sprintf("%2d:", $hrs);
-        $mins = ($mins != 0) ? sprintf("%02d", $mins) : '   ';
+        $mins = ($mins != 0) ? sprintf("%02d", $mins) : '  ';
     }
     else
     {
         $hrs = '   ';
-        $mins = ($mins != 0) ? sprintf("%2d", $mins) : '   ';
+        $mins = ($mins != 0) ? sprintf("%2d", $mins) : '  ';
     }
     $secs = sprintf(":%02d", $secs);
 

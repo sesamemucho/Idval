@@ -54,6 +54,11 @@ sub init
 
     $self->find_and_set_exe_path();
 
+    # Forward mapping is OGG to ID3v2
+    # Reverse mapping is ID3v2 to OGG
+    $self->get_tagname_mappings(Idval::Common::get_common_object('config'),
+                                'OGG');
+
     return;
 }
 
@@ -63,6 +68,7 @@ sub read_tags
     my $tag_record = shift;
     my $line;
     my $current_tag;
+    my $tag_value;
     my $retval = 0;
 
     return 0 if !$self->query('is_ok');
@@ -89,7 +95,11 @@ sub read_tags
         if ($line =~ m/^(\S+)\s*=\s*(.*)/)
         {
             $current_tag = uc($1);
-            $tag_record->add_tag($current_tag, $2);
+            $tag_value = $2;
+            if (exists($self->{FWD_MAPPING}->{$current_tag}))
+            {
+                $tag_record->add_tag($self->{FWD_MAPPING}->{$current_tag}, $tag_value);
+            }
             next;
         }
 
@@ -113,15 +123,21 @@ sub write_tags
     my $path = $self->query('path');
 
     my @taglist;
+    my $vorbisname;
     foreach my $tagname ($tag_record->get_all_keys())
     {
-        push(@taglist, $tag_record->get_value_as_arg('-t ' . $tagname . '=', $tagname));
+        if(exists($self->{REV_MAPPING}->{$tagname}))
+        {
+            $vorbisname = $self->{REV_MAPPING}->{$tagname};
+            push(@taglist, $tag_record->get_value_as_arg('-t ' . $vorbisname . '=', $tagname));
+        }
     }
 
     my $status = Idval::Common::run($path,
+                                    Idval::Common::mkarglist(
                                     '-w',
-                                    @taglist,
-                                    $filename);
+                                        @taglist,
+                                        $filename));
 
     return $status;
 }

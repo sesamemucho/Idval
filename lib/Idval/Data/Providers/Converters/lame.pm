@@ -82,7 +82,7 @@ sub decode
     $dest = Idval::Common::mung_path($dest);
     $src = Idval::Common::mung_path($src);
 
-    my $path = $self->query('path') . " ";
+    my $path = $self->query('path');
     #print STDERR "OGG: $path --output=$dest $src\n";
     my $status = Idval::Common::run($path,
                                     Idval::Common::mkarglist(
@@ -112,23 +112,10 @@ sub encode
     $dest = Idval::Common::mung_path($dest);
     $src = Idval::Common::mung_path($src);
 
-    my $path = $self->query('path') . " ";
+    my $path = $self->query('path');
     #print STDERR "LAME: $path --output=$dest $src\n";
-#     my $status = Idval::Common::run($path,
-#                                     Idval::Common::mkarglist(
-#                                         "--quiet",
-#                                         "--add-id3v2",
-#                                         "--ignore-tag-errors",
-#                                         $tag_record->get_value_as_arg('--tt ', 'TITLE'),
-#                                         $tag_record->get_value_as_arg('--ta ', 'ARTIST'),
-#                                         $tag_record->get_value_as_arg('--tl ', 'ALBUM'),
-#                                         $tag_record->get_value_as_arg('--ty ', 'YEAR'),
-#                                         $tag_record->get_value_as_arg('--tc ', 'COMMENT'),
-#                                         $tag_record->get_value_as_arg('--tn ', 'TRACK'),
-#                                         $tag_record->get_value_as_arg('--tg ', 'GENRE'),
-#                                         $src,
-#                                         $dest));
 
+    # Punt the tag writing to the Tagger
     my $status = Idval::Common::run($path,
                                     Idval::Common::mkarglist(
                                         "--quiet",
@@ -138,7 +125,8 @@ sub encode
 
     if ($status == 0)
     {
-        $status = $self->{WRITER}->writes_tags($tag_record);
+        $tag_record->set_name($dest); # This is a copy, so we can play with it
+        $status = $self->{WRITER}->write_tags($tag_record);
     }
 
     return $status;

@@ -215,7 +215,6 @@ sub find_exe_path
 
     $exe = undef if !$exe;
     #croak("Could not find program \"$name\"\n") if !$exe;
-
     return $exe;
 }
 
@@ -231,6 +230,28 @@ sub find_and_set_exe_path
     $self->set_param('status', $path ? 'ok' : "Program \"$name\" not found.");
 
     return $path;
+}
+
+# The idval.cfg file has mappings to go from <whatever> tag names to id3v2 names.
+
+sub get_tagname_mappings
+{
+    my $self = shift;
+    my $config = shift;
+    my $type = shift;
+
+    # Forward mapping is XXX to ID3v2
+    # Reverse mapping is ID3v2 to XXX
+    $self->{FWD_MAPPING} = $config->merge_blocks({'config_group' => 'tag_mappings',
+                                                  'TYPE' => $type,
+                                                 });
+
+    foreach my $key (keys %{$self->{FWD_MAPPING}})
+    {
+        $self->{REV_MAPPING}->{$self->{FWD_MAPPING}->{$key}} = $key;
+    }
+
+    return;
 }
 
 # For any plugin that needs to clean up

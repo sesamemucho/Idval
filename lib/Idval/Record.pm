@@ -111,6 +111,8 @@ sub add_tag
     my $name = shift;
     my $value = shift;
 
+    confess "undefined tag name" unless defined($name);
+
     #$self->{TEMP}->{$name} = $value;
     if (ref $value eq 'ARRAY')
     {
@@ -272,7 +274,7 @@ sub get_value_as_arg
     my $key = shift;
 
     my $retval = '';
-    #print STDERR "Checking for key \"$key\": ", $self->key_exists($key) ? "yep" : 'nope', "\n";
+    #print STDERR "Record: Checking for key \"$key\": ", $self->key_exists($key) ? "yep" : 'nope', "\n";
     if($self->key_exists($key))
     {
         $retval = $flag . "\"" . $self->get_value($key) . "\"";

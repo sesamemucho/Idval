@@ -23,6 +23,7 @@ use warnings;
 no warnings qw(redefine);
 use Idval::Common;
 use Class::ISA;
+use Data::Dumper;
 
 use base qw(Idval::Converter);
 
@@ -48,6 +49,8 @@ sub init
 
     $self->find_and_set_exe_path();
 
+    $self->{PROVIDERS} = Idval::Common::get_common_object('providers');
+
     return;
 }
 
@@ -61,19 +64,22 @@ sub convert
 
     return 0 if !$self->query('is_ok');
 
-    my $path = $self->query('path') . " ";
-    print STDERR "OGG: $path --output=$dest $src\n";
+    if (!exists($self->{WRITER}))
+    {
+        $self->{WRITER} = $self->{PROVIDERS}->get_provider('writes_tags', 'OGG', 'NULL');
+    }
+
+    my $path = $self->query('path');
     my $status = Idval::Common::run($path,
                                     Idval::Common::mkarglist(
                                         "--output=$dest",
-                                        $tag_record->get_value_as_arg('--title ', 'TITLE'),
-                                        $tag_record->get_value_as_arg('--artist ', 'ARTIST'),
-                                        $tag_record->get_value_as_arg('--album ', 'ALBUM'),
-                                        $tag_record->get_value_as_arg('--date ', 'DATE'),
-                                        $tag_record->get_value_as_arg('--comment ', 'COMMENT'),
-                                        $tag_record->get_value_as_arg('--tracknum ', 'TRACKNUMBER'),
-                                        $tag_record->get_value_as_arg('--genre ', 'GENRE'),
                                         $src));
+
+    if ($status == 0)
+    {
+        $tag_record->set_name($dest); # This is a copy, so we can play with it
+        $status = $self->{WRITER}->write_tags($tag_record);
+    }
 
     return $status;
 }

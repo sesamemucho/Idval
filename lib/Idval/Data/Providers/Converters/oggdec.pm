@@ -60,7 +60,7 @@ sub convert
 
     return 0 if !$self->query('is_ok');
 
-    my $path = $self->query('path') . " ";
+    my $path = $self->query('path');
     #print STDERR "OGG: $path --output=$dest $src\n";
     my $status = Idval::Common::run($path,
                                     Idval::Common::mkarglist(

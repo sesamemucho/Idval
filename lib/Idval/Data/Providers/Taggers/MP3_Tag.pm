@@ -24,6 +24,7 @@ no  warnings qw(redefine);
 use Class::ISA;
 use Carp;
 use Data::Dumper;
+use Encode;
 
 use base qw(Idval::Provider);
 
@@ -75,18 +76,18 @@ sub init
 
     my $config = Idval::Common::get_common_object('config');
     $self->{CONFIG} = $config;
+
     $self->{VISIBLE_SEPARATOR} = $config->get_single_value('visible_separator', {'config_group' => 'idval_settings'});
-    $self->{EXACT_TAGS} = 0;
+    $self->{EXACT_TAGS} = $config->get_single_value('exact_tags', {'config_group' => 'idval_settings'});
+
     $self->{IS_ENCODABLE_REGEXP} = qr/^(?:T...|WXXX|IPLS|USLT|SYLT|COMM|GEOB|APIC|USER|OWNE|COMR)$/o;
+    map {$self->{HAS_LANGUAGE_DESC}->{$_} = $_} qw(USLT SYLT COMM USER);
 
     # Forward mapping is ID3v1 to ID3v2
     # Reverse mapping is ID3v2 to ID3v1
-    $self->{FWD_MAPPING} = $config->merge_blocks({'config_group' => 'tag_mappings',
-                                                  'type' => 'MP3'
-                                                 });
-
-    $self->{REV_MAPPING} = map { $self->{FWD_MAPPING}->{$_} => $_ } keys %{$self->{FWD_MAPPING}};
-
+    $self->get_tagname_mappings($config, 'MP3');
+    #print "MP3_Tags FWD_MAPPING: ", Dumper($self->{FWD_MAPPING});
+    #print "MP3_Tags REV_MAPPING: ", Dumper($self->{REV_MAPPING});
     $self->{DEBUG} = 0;
     return;
 }
@@ -107,16 +108,23 @@ sub read_tags
 
     return $retval if !$self->query('is_ok');
 
+    # There is some kind of bad interaction between Encode and
+    # XML::Simple when there is a broken XML::SAX on the system. See
+    # the README file for XML::Simple for more about XML::SAX. The
+    # badness causes the first decode of UTF-16 to be bad. This seems
+    # to fix it...
+    my $found = Encode::decode('UTF-16', pack("H*", "fffe47007200"));
+
     my $exact_tags = $self->{EXACT_TAGS};
 
     my $filename = $tag_record->get_value('FILE');
     #print "MP3_Tag: filename is \"$filename\"\n";
     #if ($filename eq q{/home/big/Music/mm/Hip-Hop Classics/Music/Nice and Smooth - Funky for you.mp3})
     #{
-       $dbg = 1;
+    #  $dbg = 1;
     #}
 
-    if (!exists $self->{ID3_ENCODING})
+    if (!exists $self->{ID3_ENCODING_TYPE})
     {
         $self->{ID3_ENCODING_TYPE} = Idval::Common::get_common_object('id3_encoding') eq 'iso-8859-1' ? 0 : 1;
     }
@@ -178,9 +186,15 @@ sub read_tags
                 #my ($info_item, $name, @rest) = $mp3->{ID3v2}->get_frame($frame);
                 my ($info_item, $name, @rest) = $mp3->{ID3v2}->get_frame($frame, 'array_nokey');
                 print "<<<<GOT AN ARRAY>>>\n" if $dbg and scalar @rest;
+                # Some language descriptors have NULs. Don't like.
+                if ((exists $self->{HAS_LANGUAGE_DESC}->{$frame}) && ($$info_item[1] eq "\x{0}\x{0}\x{0}") &&(!$exact_tags) )
+                {
+                    $$info_item[1] = 'XXX';
+                }
+
                 if ($frame eq 'PIC' or $frame eq 'APIC')
                 {
-                    print "Got $frame, bad idea to look too closely...\n";
+                    print "Got $frame, bad idea to look too closely...\n" if $dbg;
                 }
                 else
                 {
@@ -206,7 +220,7 @@ sub read_tags
                         {
                             if ($frame eq 'PIC' or $frame eq 'APIC')
                             {
-                                print "Got $frame, bad idea to look too closely...\n";
+                                print "Got $frame, bad idea to look too closely...\n" if $dbg;
                             }
                             else
                             {
@@ -241,11 +255,15 @@ sub read_tags
                                 }
                                 print "MP3_Tag: 1 valstr is \"$valstr\"\n" if $dbg;
                                 $valstr .= join($self->{VISIBLE_SEPARATOR}, @{$info});
+                                # Sometimes, NULs will be in the tag
+                                $valstr =~ s/\x{0}//g unless $exact_tags;
                                 print "MP3_Tag: 2 valstr is \"$valstr\"\n" if $dbg;
                             }
                             else
                             {
                                 $valstr = join($self->{VISIBLE_SEPARATOR}, @{$info});
+                                # Sometimes, NULs will be in the tag
+                                $valstr =~ s/\x{0}//g unless $exact_tags;
                             }
 #                             #print "$name ($frame):\n";
 #                             my @vals = ();
@@ -288,11 +306,11 @@ sub write_tags
 
     return 0 if !$self->query('is_ok');
 
-    my $dbg = 0;
+    my $dbg = 1;
     my $vs = $self->{VISIBLE_SEPARATOR};
     my $filename = $tag_record->get_name();
 
-    if (!exists $self->{ID3_ENCODING})
+    if (!exists $self->{ID3_ENCODING_TYPE})
     {
         $self->{ID3_ENCODING_TYPE} = Idval::Common::get_common_object('id3_encoding') eq 'iso-8859-1' ? 0 : 1;
     }
@@ -319,7 +337,7 @@ sub write_tags
         foreach my $id3v1_key (qw(TITLE TRACK ARTIST ALBUM COMMENT YEAR GENRE))
         {
             # The information is stored as a id3v2 tag, so get the corresponding id3v2 tag name
-            $tag = $self->{REV_MAPPING}->{$id3v1_key};
+            $tag = $self->{FWD_MAPPING}->{$id3v1_key};
 
             $id3v1_subr = lc $id3v1_key;
 
@@ -355,6 +373,7 @@ sub write_tags
         $tag_index = -1;
         while ($tagvalue = $temp_rec->shift_value($tagname))
         {
+            #confess("Undefined value for tag \"$tagname\"") unless defined($tagvalue);
             $tag_index++;
             $framename = $tag_index > 0 ? sprintf("%s%02d", $tagname, $tag_index) : $tagname;
 
@@ -374,9 +393,10 @@ sub write_tags
                     $framename = $txxx_index > 0 ? sprintf("TXXX%02d", $txxx_index) : 'TXXX';
                 }
 
+                print "tagvalue: \"$tagvalue\" vs: \"$vs\" is_decodable: ", $self->{IS_ENCODABLE_REGEXP}, " id3_enc: ", $self->{ID3_ENCODING_TYPE}, "\n";
                 @frameargs = ($tagvalue =~ m/\Q$vs\E/)                       ? split(/\Q$vs\E/, $tagvalue)
                            # There may be a default, implicit, encoding. If so, add it back in.
-                           : ($tagname =~ $self->{IS_ENCODABLE_REGEXP})      ? split(/\Q$vs\E/, $self->{ID3_ENCODING} . $self->{VISIBLE_SEPARATOR} . $tagvalue)
+                           : ($tagname =~ $self->{IS_ENCODABLE_REGEXP})      ? split(/\Q$vs\E/, $self->{ID3_ENCODING_TYPE} . $vs . $tagvalue)
                            : ($tagvalue);
                 print "Args for $framename are ", Dumper(\@frameargs) if $dbg;
             }
@@ -448,6 +468,7 @@ sub write_tags
 #         }
 #     }
 
+    # XXX MP3::Tag is filling in id3v1 tags....
     $id3v2->write_tag();
     # Now, we should be left with all the tags that weren't ID3v1 or ID3v2 (shouldn't be any)
 
@@ -460,7 +481,7 @@ sub close
 {
     my $self = shift;
 
-    delete $self->{ID3_ENCODING} if exists $self->{ID3_ENCODING};
+    delete $self->{ID3_ENCODING_TYPE} if exists $self->{ID3_ENCODING_TYPE};
 }
 
 1;
