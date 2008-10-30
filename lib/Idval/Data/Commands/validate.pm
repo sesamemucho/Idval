@@ -58,8 +58,8 @@ sub main
     my $selects = {config_group => 'idval_settings'};
 
     # As a special case, allow 'demo' as a cfg file name
-    $val_cfg->{DEBUG} = 1;
-    $Idval::Validate::DEBUG = 1;
+    #$val_cfg->{DEBUG} = 1;
+    #$Idval::Validate::DEBUG = 1;
     my $vcfg = Idval::Validate->new($cfgfile eq 'demo'
                                     ? $config->get_single_value('demo_validate_cfg', $selects)
                                     : $cfgfile);
@@ -69,13 +69,13 @@ sub main
     }
 
     $val_cfg = $vcfg;
-    #$Idval::Config::DEBUG=1;  # XXX
-    #$val_cfg->{DEBUG} = 1;    # XXX
+    $Idval::Config::DEBUG=1;  # XXX
+    $val_cfg->{DEBUG} = 1;    # XXX
 
     $datastore->stringify();
     $filename = $datastore->source();
 
-    #print "datastore is: ", Dumper($datastore);
+    #print STDERR "validate: datastore is: ", Dumper($datastore);
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
         $status = each_item($datastore, $key);

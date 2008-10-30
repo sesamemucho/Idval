@@ -11,6 +11,9 @@ use Data::Dumper;
 use FindBin;
 use File::Temp qw/ tempfile tempdir /;
 
+use Idval::Constants;
+use Idval::Logger;
+
 our $tempfiles;
 our $idval_obj;
 my $data_dir;
@@ -51,6 +54,8 @@ use AcceptUtils;
 sub run_validation_test
 {
     my $cfg = shift;
+    my $do_logging = shift || 0;
+
     my $eval_status;
 
     my ($fh, $fname) = tempfile();
@@ -70,9 +75,24 @@ sub run_validation_test
     open STDOUT, '>', \$str_buf or die "Can't redirect STDOUT: $!";
     select STDOUT; $| = 1;      # make unbuffered
 
+    my $old_level;
+    my $old_debug;
+    if ($do_logging)
+    {
+        Idval::Logger::initialize_logger({log_out => 'STDERR'});
+        my $old_level = Idval::Common::get_logger()->accessor('LOGLEVEL', $CHATTY);
+        my $old_debug = Idval::Common::get_logger()->accessor('DEBUGMASK', $DBG_CONFIG);
+    }
+
     eval {$taglist = Idval::Scripts::validate($taglist, $idval_obj->providers(), $fname);};
     $eval_status = $@ if $@;
-    #print STDERR "Done\n";
+
+    if ($do_logging)
+    {
+        Idval::Common::get_logger()->accessor('DEBUGMASK', $old_debug);
+        Idval::Common::get_logger()->accessor('LOGLEVEL', $old_level);
+    }
+
     open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
 
     my $retval = $eval_status ? $eval_status : $str_buf;
@@ -83,7 +103,7 @@ sub validation_with_one_error : Test(1)
 {
     my $val_cfg =<<EOF;
 {
-        YEAR == 2007
+        TYER == 2007
         GRIPE = Date is wrong!
 }
 EOF
@@ -91,8 +111,8 @@ EOF
     my ($prov_p, $reason) = AcceptUtils::are_providers_present();
     return $reason unless $prov_p;
 
-    my $expected_result = ".+?:\\d+: error: For YEAR, Date is wrong!\n";
-    my $test_result = run_validation_test($val_cfg);
+    my $expected_result = ".+?:\\d+: error: For TYER, Date is wrong!\n";
+    my $test_result = run_validation_test($val_cfg, 0);
     like($test_result, qr/$expected_result/);
     return;
 }
@@ -101,16 +121,16 @@ sub test_validation_showing_that_two_selectors_AND_together : Test(1)
 {
     my $val_cfg =<<EOF;
 {
-        YEAR == 2006
-        GENRE == Old-Time
+        TYER == 2006
+        TCON == Old-Time
         GRIPE = Too new for old-time
 }
 EOF
     my ($prov_p, $reason) = AcceptUtils::are_providers_present();
     return $reason unless $prov_p;
 
-    my $expected_result = ".+?:\\d+: error: For GENRE, Too new for old-time\n" .
-    ".+?:\\d+: error: For YEAR, Too new for old-time\n";
+    my $expected_result = ".+?:\\d+: error: For TCON, Too new for old-time\n" .
+    ".+?:\\d+: error: For TYER, Too new for old-time\n";
     my $test_result = run_validation_test($val_cfg);
     like($test_result, qr/$expected_result/);
     return;
@@ -127,20 +147,20 @@ EOF
     my ($prov_p, $reason) = AcceptUtils::are_providers_present();
     return $reason unless $prov_p;
 
-    # We expect 9 errors: one for each tag of ARTIST, ALBUM, and TITLE
+    # We expect 9 errors: one for each tag of ARTIST, TALB, and TIT2
     # in each flac file, since these are the tags that contain "Flac"
     # (note that this is case-sensitive).
 
     my $expected_result =<<EOF;
-.+?:\\d+: error: For ALBUM, Grumble Flac
-.+?:\\d+: error: For ARTIST, Grumble Flac
-.+?:\\d+: error: For TITLE, Grumble Flac
-.+?:\\d+: error: For ALBUM, Grumble Flac
-.+?:\\d+: error: For ARTIST, Grumble Flac
-.+?:\\d+: error: For TITLE, Grumble Flac
-.+?:\\d+: error: For ALBUM, Grumble Flac
-.+?:\\d+: error: For ARTIST, Grumble Flac
-.+?:\\d+: error: For TITLE, Grumble Flac
+.+?:\\d+: error: For TALB, Grumble Flac
+.+?:\\d+: error: For TIT2, Grumble Flac
+.+?:\\d+: error: For TPE1, Grumble Flac
+.+?:\\d+: error: For TALB, Grumble Flac
+.+?:\\d+: error: For TIT2, Grumble Flac
+.+?:\\d+: error: For TPE1, Grumble Flac
+.+?:\\d+: error: For TALB, Grumble Flac
+.+?:\\d+: error: For TIT2, Grumble Flac
+.+?:\\d+: error: For TPE1, Grumble Flac
 EOF
 
     my $test_result;
@@ -153,7 +173,7 @@ sub test_validation_showing_that_regexp_selectors_OR_together_2 : Test(1)
 {
     my $val_cfg =<<EOF;
 {
-        A.* has Flac
+        TALB|TPE1 has Flac
         GRIPE = Grumble Flac
 }
 EOF
@@ -161,17 +181,17 @@ EOF
     return $reason unless $prov_p;
 
     # We expect 6 errors this time, since we are only looking at tags
-    # that start with A: one for each tag of ARTIST and ALBUM in each
+    # that start with A: one for each tag of TPE1 and TALB in each
     # flac file, since these are the tags that contain "Flac" (note
     # that this is case-sensitive).
 
     my $expected_result =<<EOF;
-.+?:\\d+: error: For ALBUM, Grumble Flac
-.+?:\\d+: error: For ARTIST, Grumble Flac
-.+?:\\d+: error: For ALBUM, Grumble Flac
-.+?:\\d+: error: For ARTIST, Grumble Flac
-.+?:\\d+: error: For ALBUM, Grumble Flac
-.+?:\\d+: error: For ARTIST, Grumble Flac
+.+?:\\d+: error: For TALB, Grumble Flac
+.+?:\\d+: error: For TPE1, Grumble Flac
+.+?:\\d+: error: For TALB, Grumble Flac
+.+?:\\d+: error: For TPE1, Grumble Flac
+.+?:\\d+: error: For TALB, Grumble Flac
+.+?:\\d+: error: For TPE1, Grumble Flac
 EOF
 
     my $test_result;
@@ -184,8 +204,8 @@ sub test_validation_showing_that_ONLY_regexp_selectors_OR_together : Test(1)
 {
     my $val_cfg =<<EOF;
 {
-        A.* has Flac
-        YEAR == 2005
+        TALB|TPE1 has Flac
+        TYER == 2005
         GRIPE = Grumble Flac
 }
 EOF
@@ -193,16 +213,17 @@ EOF
     return $reason unless $prov_p;
 
     # We expect 2 errors this time, since we are only looking at tags
-    # that start with A that contain "Flac" AND for YEAR == 2005
+    # that start with TA that contain "Flac" AND for TYER == 2005
 
     my $expected_result =<<EOF;
-.+?:\\d+: error: For ARTIST, Grumble Flac
-.+?:\\d+: error: For ALBUM, Grumble Flac
+.+?:\\d+: error: For TALB, Grumble Flac
+.+?:\\d+: error: For TPE1, Grumble Flac
+.+?:\\d+: error: For TYER, Grumble Flac
 EOF
 
     my $test_result;
-    $test_result = run_validation_test($val_cfg);
-    like($test_result, qr/$expected_result/);
+    $test_result = run_validation_test($val_cfg, 0);
+    like($test_result, qr/^$expected_result$/);
     return;
 }
 
@@ -210,9 +231,9 @@ sub test_validation_showing_nested_config_blocks : Test(1)
 {
     my $val_cfg =<<EOF;
 {
-    YEAR == 2005
+    TYER == 2005
     {
-        A.* has Flac
+        TALB|TPE1 has Flac
         GRIPE = Grumble Flac
     }
 }
@@ -221,11 +242,11 @@ EOF
     return $reason unless $prov_p;
 
     # We expect 2 errors this time, since we are only looking at tags
-    # that start with A that contain "Flac" AND for YEAR == 2005
+    # that start with A that contain "Flac" AND for TYER == 2005
 
     my $expected_result =<<EOF;
-.+?:\\d+: error: For ALBUM, Grumble Flac
-.+?:\\d+: error: For ARTIST, Grumble Flac
+.+?:\\d+: error: For TALB, Grumble Flac
+.+?:\\d+: error: For TPE1, Grumble Flac
 EOF
 
     my $test_result;

@@ -306,7 +306,7 @@ sub write_tags
 
     return 0 if !$self->query('is_ok');
 
-    my $dbg = 1;
+    my $dbg = 0;
     my $vs = $self->{VISIBLE_SEPARATOR};
     my $filename = $tag_record->get_name();
 
@@ -325,7 +325,7 @@ sub write_tags
     my $has_id3v1 = 0;
     my %id3v1_tags;
 
-    #print "MP3_Tag, processing \"$filename\"\n";
+    #print STDERR "MP3_Tag, processing \"$filename\"\n";
 
     if ($write_id3v1_tags)
     {
@@ -364,12 +364,12 @@ sub write_tags
     my $tag_index;
     my $txxx_index = -1;
     my $framename;
-    #print "ID3v2:", Dumper($id3v2);
+    #print STDERR "ID3v2:", Dumper($id3v2);
 
   TAG_LOOP:
     foreach my $tagname ($temp_rec->get_all_keys())
     {
-        print "Checking \"$tagname\"\n" if $dbg;
+        print STDERR "Checking \"$tagname\"\n" if $dbg;
         $tag_index = -1;
         while ($tagvalue = $temp_rec->shift_value($tagname))
         {
@@ -377,7 +377,7 @@ sub write_tags
             $tag_index++;
             $framename = $tag_index > 0 ? sprintf("%s%02d", $tagname, $tag_index) : $tagname;
 
-            print "Tag name is \"$tagname\"\n" if $dbg;
+            print STDERR "Tag name is \"$tagname\"\n" if $dbg;
             if($tagvalue eq '%placeholder%') # Don't know how to handle; leave it be
             {
                 delete $frameIDs->{$framename};
@@ -393,12 +393,12 @@ sub write_tags
                     $framename = $txxx_index > 0 ? sprintf("TXXX%02d", $txxx_index) : 'TXXX';
                 }
 
-                print "tagvalue: \"$tagvalue\" vs: \"$vs\" is_decodable: ", $self->{IS_ENCODABLE_REGEXP}, " id3_enc: ", $self->{ID3_ENCODING_TYPE}, "\n";
+                #print STDERR "tagvalue: \"$tagvalue\" vs: \"$vs\" is_decodable: ", $self->{IS_ENCODABLE_REGEXP}, " id3_enc: ", $self->{ID3_ENCODING_TYPE}, "\n";
                 @frameargs = ($tagvalue =~ m/\Q$vs\E/)                       ? split(/\Q$vs\E/, $tagvalue)
                            # There may be a default, implicit, encoding. If so, add it back in.
                            : ($tagname =~ $self->{IS_ENCODABLE_REGEXP})      ? split(/\Q$vs\E/, $self->{ID3_ENCODING_TYPE} . $vs . $tagvalue)
                            : ($tagvalue);
-                print "Args for $framename are ", Dumper(\@frameargs) if $dbg;
+                print STDERR "Args for $framename are ", Dumper(\@frameargs) if $dbg;
             }
             else
             {
@@ -414,12 +414,12 @@ sub write_tags
             if (exists($frameIDs->{$framename}))
             {
                 delete $frameIDs->{$framename};
-                print "Tag $framename exists in file\n" if $dbg;
+                print STDERR "Tag $framename exists in file\n" if $dbg;
                 $id3v2->change_frame($framename, @frameargs);
             }
             else
             {
-                print "Tag $framename does not exist in file\n" if $dbg;
+                print STDERR "Tag $framename does not exist in file\n" if $dbg;
                 $id3v2->add_frame($framename, @frameargs);
             }
         }
@@ -428,22 +428,22 @@ sub write_tags
     # Handle the leftover tags (they were in the file, but not in the tag record, so they should be deleted)
     foreach my $frameID (keys %{$frameIDs})
     {
-        print "Removing $frameID\n" if $dbg;
+        print STDERR "Removing $frameID\n" if $dbg;
         $id3v2->remove_frame($frameID);
     }
 
 #     foreach my $tagname ($temp_rec->get_all_keys())
 #     {
-#         print "Checking \"$tagname\"\n";
+#         print STDERR "Checking \"$tagname\"\n";
 #         # Does it already exist in the file?
 #         if (exists($frameIDs->{$tagname}))
 #         {
-#             print "Tag $tagname exists in file\n";
+#             print STDERR "Tag $tagname exists in file\n";
 #             while ($tagvalue = $temp_rec->shift_value($tagname))
 #             {
 #                 next if $tagvalue eq '%placeholder%'; # Don't know how to handle; leave it be
 #                 @frameargs = ($tagvalue =~ m/\Q$vs\E/) ? split(/\Q$vs\E/, $tagvalue) : ($tagvalue);
-#                 print "Calling change_frame for $tagname with ", Dumper(\@frameargs);
+#                 print STDERR "Calling change_frame for $tagname with ", Dumper(\@frameargs);
 #                 $id3v2->change_frame($tagname, @frameargs);
 #             }
 #             next;
@@ -463,7 +463,7 @@ sub write_tags
 #         while ($tagvalue = $temp_rec->shift_value($tagname))
 #         {
 #             @frameargs = ($tagvalue =~ m/\Q$vs\E/) ? split(/\Q$vs\E/, $tagvalue) : ($tagvalue);
-#             print "Calling add_frame for $tagname with ", Dumper(\@frameargs);
+#             print STDERR "Calling add_frame for $tagname with ", Dumper(\@frameargs);
 #             $id3v2->add_frame($tagname, @frameargs);
 #         }
 #     }
@@ -471,8 +471,10 @@ sub write_tags
     # XXX MP3::Tag is filling in id3v1 tags....
     $id3v2->write_tag();
     # Now, we should be left with all the tags that weren't ID3v1 or ID3v2 (shouldn't be any)
-
-    print STDERR "MP3: Tags left: ", join(":", $temp_rec->format_record()), "\n";
+    # format_record, by default, doesn't print any calculated tags except for FILE (so tell it
+    # not to do even that). Note that there will always be a blank entry.
+    my @tags_left = $temp_rec->format_record({no_file => 1});
+    print STDERR "MP3: Tags left: <", join(":", @tags_left), ">\n" if scalar @tags_left > 1;
 
     return 0;
 }

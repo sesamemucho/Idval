@@ -241,14 +241,16 @@ sub set_name
 sub get_calculated_keys_re
 {
     my $self = shift;
-    return qr/(:?CLASS|TYPE|__LINES|__NEXT_LINE)/;
+    return qr/(:?FILE|CLASS|TYPE|__LINES|__NEXT_LINE)/;
 }
 
 # Actually, "get all keys, except for those that are calculated"
 sub get_all_keys
 {
     my $self = shift;
-    return grep {!/^(:?FILE|CLASS|TYPE|__LINES|__NEXT_LINE)$/x} sort keys %{$self};
+    my @retval = grep {!/^(:?FILE|CLASS|TYPE|__LINES|__NEXT_LINE)$/x} sort keys %{$self};
+    #print STDERR "Record: From (", join(',', sort keys %{$self}), "), returning (", join(',', @retval), ")\n";
+    return @retval;
 }
 
 # refactoring...
@@ -286,10 +288,15 @@ sub get_value_as_arg
 sub format_record
 {
     my $self = shift;
-    my $start_line = shift;
-    my $full = shift;
+    my $argref = shift;
 
-    my @output = ('FILE = ' . $self->get_name());
+    confess "Record::format_record: bogus arg_ref\n" if $argref and (ref $argref ne 'HASH');
+
+    my $start_line = exists $argref->{start_line} ? $argref->{start_line} : undef;
+    my $full       = exists $argref->{full} ? $argref->{full} : 0;
+    my $no_file    = exists $argref->{no_file} ? $argref->{no_file} : 0;
+
+    my @output = $no_file ? () : ('FILE = ' . $self->get_name());
     my %lines;
     my $tag_value;
 
@@ -313,8 +320,9 @@ sub format_record
         {
             my @values = (@{$tag_value}); # Make a copy
             my $value = shift @values;
+            confess "Uninitialized array value for tag \"$tag\"\n" if !defined($value);
             push(@output, "$tag = $value");
-            foreach my $value (@values)
+            foreach $value (@values)
             {
                 $value =~ s/(\r\n|\n|\r)/$1  /g;
                 push(@output, "$tag += $value");

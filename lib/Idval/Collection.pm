@@ -125,7 +125,7 @@ sub stringify
     {
         # The __LINE tag is used only in cmd_validate
         #$self->{RECORDS}->{$fname}->{__LINE} = $lineno; # Side effect!
-        @reclist = $self->{RECORDS}->{$fname}->format_record($lineno, $full);
+        @reclist = $self->{RECORDS}->{$fname}->format_record({start_line => $lineno, full => $full});
         push(@output, @reclist);
         #print "line $lineno for \"", $self->{RECORDS}->{$fname}->get_name(), "\"\n";
         #print "Lines for ", $self->{RECORDS}->{$fname}->get_name(), Dumper($self->{RECORDS}->{$fname}->{__LINES});

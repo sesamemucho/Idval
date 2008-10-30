@@ -79,12 +79,12 @@ sub val_evaluate
     my $is_regexp = 0;
     my @tags_matched = ();
 
-    print "in val_evaluate: ", Dumper($noderef) if $self->{DEBUG};
-    print "val_evaluate: 1 select_list: ", Dumper($select_list) if $self->{DEBUG};
+    chatty("in val_evaluate: ", Dumper($noderef)) if $self->{DEBUG};
+    chatty("val_evaluate: 1 select_list: ", Dumper($select_list)) if $self->{DEBUG};
     # If the block has no selector keys itself, then all matches should succeed
     if (not (exists($noderef->{'select'}) && ref($noderef->{'select'}) eq 'HASH'))
     {
-        print "Block has no selector keys, returning 2\n" if $self->{DEBUG};
+        chatty("Block has no selector keys, returning 2\n") if $self->{DEBUG};
         return 2;
     }
 
@@ -106,7 +106,6 @@ sub val_evaluate
             no strict 'refs';
             my $subr = $self->{DEF_VARS}->{$block_key};
             $selectors{$block_key} = &$subr(\%selectors);
-            print ("Using ", $selectors{$block_key}, " for \"$block_key\"\n");
             chatty ("Using ", $selectors{$block_key}, " for \"$block_key\"\n");
             use strict;
         }
@@ -118,22 +117,31 @@ sub val_evaluate
 
         my $bstor = $noderef->{'select'}->{$block_key}; # Naming convenience
 
-        print "val_evaluate: 2 select_list: ", Dumper(\%selectors) if $self->{DEBUG};
-        print("Checking block selector \"$block_key\"\n") if $self->{DEBUG};
+        verbose("val_evaluate: 2 select_list: ", Dumper(\%selectors)) if $self->{DEBUG};
 
         @s_key_list = $self->{ALLOW_KEY_REGEXPS} ? grep(/^$block_key$/, keys %selectors) :
             ($block_key);
-
         $is_regexp = $block_key =~ m/\W/;
+
+        verbose("Checking block selector \"$block_key\" (is_regexp = \"$is_regexp\")\n") if $self->{DEBUG};
+
+        my $key_list_loop_result = 0;
+
         foreach my $s_key (@s_key_list)
         {
+            chatty("Checking block selector key \"$s_key\"\n") if $self->{DEBUG};
             if (!exists($selectors{$s_key}))
             {
                 # The select list has nothing to match a required selector, so this must fail
+                chatty("Select list has nothing to match block selector key \"$s_key\", so return 0.\n") if $self->{DEBUG};
                 return 0;
             }
 
-            next if ($is_regexp && ($s_key =~ m/$tags_to_ignore/));
+            if ($is_regexp && ($s_key =~ m/$tags_to_ignore/))
+            {
+                chatty("Block selector key \"$s_key\" is a tag to ignore.\n") if $self->{DEBUG};
+                next;
+            }
 
             # Make sure arg_value is a list reference
             my $arg_value_list = ref $selectors{$s_key} eq 'ARRAY' ? $selectors{$s_key} :
@@ -148,30 +156,33 @@ sub val_evaluate
             # A successful match for any of these values constitutes a successful match for the block selector.
             foreach my $value (@{$arg_value_list})
             {
-                print("Comparing \"$value\" \"$block_op\" \"$block_value\" resulted in ",
-                      &$block_cmp_func($value, $block_value) ? "True\n" : "False\n") if $self->{DEBUG};
+                verbose("Comparing \"$s_key\" => \"$value\" \"$block_op\" \"$block_value\" resulted in ",
+                        &$block_cmp_func($value, $block_value) ? "True\n" : "False\n") if $self->{DEBUG};
 
                 $cmp_result ||= &$block_cmp_func($value, $block_value);
                 last if $cmp_result;
             }
 
-            if ($is_regexp)
-            {
-                $retval ||= $cmp_result;
-            }
-            else
-            {
-                $retval &&= $cmp_result;
-            }
+            # Regexp matches are ORed together. For example, if a
+            # block key is 'TALB|TPE1', then this loop should return
+            # TRUE if either TALB or TPE1 gets a match.
+            # Also note that, if the block key is not a regexp, this
+            # loop will execute exactly once.
+
+            $key_list_loop_result ||= $cmp_result;
 
             if ($cmp_result)
             {
                 push(@tags_matched, $s_key);
             }
+
+            chatty("accumulated retval is now \"$retval\"\n") if $self->{DEBUG};
         }
+
+        $retval &&= $key_list_loop_result;
     }
 
-    #print("val_evaluate returning $retval\n");
+    chatty("val_evaluate returning \"$retval\"\n") if $self->{DEBUG};
     return ($retval, \@tags_matched);
 }
 
@@ -184,7 +195,7 @@ sub get_gripes
     my $tree = $self->{TREE};
     my @gripelist;
 
-    print("Start of _get_gripes, selects: ", Dumper($selects)) if $self->{DEBUG};
+    chatty("Start of _get_gripes, selects: ", Dumper($selects)) if $self->{DEBUG};
 
     my $visitor = sub {
         my $self = shift;
@@ -193,11 +204,11 @@ sub get_gripes
         my $gripe = 'no gripe found?';
         my @match_tags = ();
 
-        print "get_gripes: noderef is: ", Dumper($noderef) if $self->{DEBUG};
+        chatty("get_gripes: noderef is: ", Dumper($noderef)) if $self->{DEBUG};
         my ($retval, $matches) = $self->val_evaluate($noderef, $selects);
         return 0 if ($retval == 0);
 
-        print "get_gripes: val_evaluate returned nonzero\n" if $self->{DEBUG};
+        chatty("get_gripes: val_evaluate returned nonzero\n") if $self->{DEBUG};
 
         # There might not be a GRIPE at this node (for instance, a top-level 'group')
         if(exists $noderef->{GRIPE})
@@ -232,7 +243,7 @@ sub get_gripes
         }
     }
 
-    print("Result of merge blocks - VARS: ", Dumper(\@retlist)) if $self->{DEBUG};
+    chatty("Result of merge blocks - VARS: ", Dumper(\@retlist)) if $self->{DEBUG};
 
     return \@retlist;
 }

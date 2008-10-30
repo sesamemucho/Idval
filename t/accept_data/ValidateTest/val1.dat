@@ -1,5 +1,6 @@
 # Simple dat file for validation test
 # filename     type      title            artist         album      track genre  year
+#                        TIT2             TPE1            TALB       TRCK  TCON  TYER
 
 flacs/fil01  | FLAC | First Flac File | Roberta Flac | Flac-A-Munga | 1 | Folk | 2005
 flacs/fil02  | FLAC | First Flac File | Roberta Flac | Flac-A-Munga | 2 | Old-Time | 2006

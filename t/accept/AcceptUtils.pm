@@ -27,6 +27,7 @@ my %startfiles = (
 my @tempfiles = ();
 
 END {
+    print STDERR "AU: deleting (", join(', ', @tempfiles), ")\n";
     unlink @tempfiles;
 }
 
@@ -130,12 +131,12 @@ sub mktree
 
         my $path = File::Spec->catfile($testpath, "$fname." . lc($type));
         $info{$path}->{TYPE} = uc($type);
-        $info{$path}->{TITLE} = $title;
-        $info{$path}->{ARTIST} = $artist;
-        $info{$path}->{ALBUM} = $album;
-        $info{$path}->{TRACK} = $tracknum;
-        $info{$path}->{GENRE} = $genre;
-        $info{$path}->{YEAR} = $date;
+        $info{$path}->{TIT2} = $title;
+        $info{$path}->{TPE1} = $artist;
+        $info{$path}->{TALB} = $album;
+        $info{$path}->{TRCK} = $tracknum;
+        $info{$path}->{TCON} = $genre;
+        $info{$path}->{TYER} = $date;
 
         # If the generated file exists and it is newer than the datafile (from which it was made),
         # make a new one
@@ -160,12 +161,12 @@ sub mktree
         $tag_record = $taglist->{RECORDS}->{$key};
     
         $tag_record->add_tag('TYPE', $info{$key}->{TYPE});
-        $tag_record->add_tag('TITLE', $info{$key}->{TITLE});
-        $tag_record->add_tag('ARTIST', $info{$key}->{ARTIST});
-        $tag_record->add_tag('ALBUM', $info{$key}->{ALBUM});
-        $tag_record->add_tag('TRACK', $info{$key}->{TRACK});
-        $tag_record->add_tag('GENRE', $info{$key}->{GENRE});
-        $tag_record->add_tag('YEAR', $info{$key}->{YEAR});
+        $tag_record->add_tag('TIT2', $info{$key}->{TIT2});
+        $tag_record->add_tag('TPE1', $info{$key}->{TPE1});
+        $tag_record->add_tag('TALB', $info{$key}->{TALB});
+        $tag_record->add_tag('TRCK', $info{$key}->{TRCK});
+        $tag_record->add_tag('TCON', $info{$key}->{TCON});
+        $tag_record->add_tag('TYER', $info{$key}->{TYER});
     }
 
     $taglist = Idval::Scripts::print($taglist, $idval->providers(), $fh);
