@@ -36,16 +36,20 @@ BEGIN {
     if ($@)
     {
         warn "Perl module \"IO::String\" has not been installed. Idv will work, but you won't be able to run the self-tests\n";
-        package IO::String;
-        sub new
-        {
-            my $class = shift;
-            my $self = {};
-            bless($self, ref($class) || $class);
-            $self->_init(@_);
-            return $self;
-        }
-        package Idval::FileString;
+        # I have to do it this way, otherwise I get complaints about IO::String redefining 'new'...
+        my $uhuhuh = 'IO::String';
+        eval qq{
+            package $uhuhuh;
+            sub new
+            {
+                my \$class = shift;
+                my \$self = {};
+                bless(\$self, ref(\$class) || \$class);
+                \$self->_init(@_);
+                return \$self;
+            }
+            package Idval::FileString;
+        };
     }
 };
     
