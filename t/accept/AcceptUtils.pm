@@ -27,7 +27,6 @@ my %startfiles = (
 my @tempfiles = ();
 
 END {
-    print STDERR "AU: deleting (", join(', ', @tempfiles), ")\n";
     unlink @tempfiles;
 }
 
@@ -143,7 +142,7 @@ sub mktree
         next if (-e $path) and (stat($path)->mtime > stat($datafile)->mtime);
         mkpath([dirname($path)]);
         copy($startfiles{$type}, $path) or croak("Copy of $startfiles{$type} to $path failed: $!\n");
-
+        push(@tempfiles, $path);
         #Set up tags here
     }
 

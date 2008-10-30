@@ -225,6 +225,8 @@ sub put_source_to_file
     my $dat_file   = exists $argref->{outputfile} ? $argref->{outputfile} : '';
     my $usecache   = exists $argref->{usecache} ? $argref->{usecache} : 1;
 
+    $datastore->purge();                     # Remove all strictly calculated keys
+
     # First (unless specifically told not to), opaquely to the data store
     if ($usecache)
     {

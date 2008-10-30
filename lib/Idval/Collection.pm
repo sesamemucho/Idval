@@ -168,6 +168,29 @@ sub key_exists
     return exists($self->{RECORDS}->{$key});
 }
 
+sub coll_map
+{
+    my $self = shift;
+    my $subr = shift;
+    my @retval;
+
+    foreach my $key ($self->get_keys())
+    {
+        push(@retval, &$subr($self->get($key)));
+    }
+
+    return \@retval;
+}
+
+sub purge
+{
+    my $self = shift;
+
+    $self->coll_map(sub {my $rec = shift; $rec->purge(); });
+
+    return;
+}
+
 # sub size
 # {
 #     my $self = shift;

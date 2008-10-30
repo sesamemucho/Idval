@@ -26,6 +26,11 @@ use Carp;
 use Idval::Ui;
 use Idval::Data::Genres;
 
+# Calculated tags start with '__'. There are three exceptions:
+# FILE, TYPE, and CLASS.
+my $strict_calc_tag_re = qr/^__\S+$/o;
+my $calculated_tags_re = qr/^(:?FILE|CLASS|TYPE|__\S+)$/o;
+
 sub new
 {
     my $class = shift;
@@ -88,9 +93,7 @@ sub get_selectors
 
     foreach my $tag (keys %{$self})
     {
-        next if $tag eq '__LINE';
-        next if $tag eq '__NEXT_LINE';
-
+        next if $tag =~ $calculated_tags_re;
         $sels->{$tag} = $self->{$tag};
     }
 
@@ -241,14 +244,14 @@ sub set_name
 sub get_calculated_keys_re
 {
     my $self = shift;
-    return qr/(:?FILE|CLASS|TYPE|__LINES|__NEXT_LINE)/;
+    return $calculated_tags_re;
 }
 
 # Actually, "get all keys, except for those that are calculated"
 sub get_all_keys
 {
     my $self = shift;
-    my @retval = grep {!/^(:?FILE|CLASS|TYPE|__LINES|__NEXT_LINE)$/x} sort keys %{$self};
+    my @retval = grep {!/$calculated_tags_re/} sort keys %{$self};
     #print STDERR "Record: From (", join(',', sort keys %{$self}), "), returning (", join(',', @retval), ")\n";
     return @retval;
 }
@@ -307,10 +310,7 @@ sub format_record
         next if $tag eq 'FILE'; # Already formatted
         if (!$full)
         {
-            next if $tag eq 'TYPE';
-            next if $tag eq 'CLASS';
-            next if $tag eq '__LINES';
-            next if $tag eq '__NEXT_LINE';
+            next if $tag =~ m/$calculated_tags_re/;
         }
 
         confess "Uninitialized value for tag \"$tag\"\n" if !defined($self->get_value($tag));
@@ -346,6 +346,19 @@ sub format_record
     }
 
     return @output;
+}
+
+# Removes all calculated tags (according to the strict definition).
+sub purge
+{
+    my $self = shift;
+
+    foreach my $tag (sort keys %{$self})
+    {
+        delete $self->{$tag} if $tag =~ m/$strict_calc_tag_re/;
+    }
+
+    return;
 }
 
 sub diff

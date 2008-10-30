@@ -273,6 +273,10 @@ sub each_item
             Idval::FileIO::idv_mkdir($dest_dir);
         }
 
+        # Save the destination path back into the tag record.
+        # This tag (since it begins with '__') will not be saved.
+        $tag_record->add_tag('__DEST_PATH', $dest_path);
+
         $retval = $prov->convert($tag_record, $dest_path);
         $retval = 0;
 
