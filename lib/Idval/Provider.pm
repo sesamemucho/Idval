@@ -202,12 +202,12 @@ sub find_exe_path
 
         foreach my $testexe (@{$exelist})
         {
-            $self->{LOG}->verbose($DBG_PROCESS, "Checking \"$testexe\"\n");
+            $self->{LOG}->verbose("Checking \"$testexe\"\n");
             $testexe = Idval::Common::expand_tilde($testexe);
             if (-e $testexe)
             {
                 $exe = $testexe;
-                $self->{LOG}->verbose($DBG_PROCESS, "Found \"$testexe\"\n");
+                $self->{LOG}->verbose("Found \"$testexe\"\n");
                 last;
             }
         }

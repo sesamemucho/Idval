@@ -31,6 +31,7 @@ $Carp::CarpLevel = 1;
 my $lo;
 my $lo_begin;
 my @warnings;
+our $depth = 0;
 
 autoflush STDOUT 1;
 
@@ -39,6 +40,15 @@ my %level_to_name = (-1 => 'SILENT',
                      1  => 'INFO',
                      2  => 'VERBOSE',
                      3  => 'CHATTY',
+    );
+
+my %DEBUG_MACROS = 
+    ( 'DBG_STARTUP' => [qw(ProviderMgr)],
+      'DBG_PROCESS' => [qw(Common Converter DoDots Provider ServiceLocator)],
+      'DBG_CONFIG'  => [qw(Config Select Validate)],
+      'DBG_PROVIDERS' => [qw(ProviderMgr)],
+      'DBG_FOR_UNIT_TEST0' => [qw(Common DBG_STARTUP DoDots)],
+      'DBG_FOR_UNIT_TEST1' => [qw(Common DBG_FOR_UNIT_TEST1 DoDots)],
     );
 
 END {
@@ -81,12 +91,13 @@ sub _init
     my $lfh;
 
     $self->accessor('LOGLEVEL', exists $argref->{level} ? $argref->{level} : $QUIET);
-    $self->accessor('DEBUGMASK', exists $argref->{debugmask} ? $argref->{debugmask} : $DBG_STARTUP + $DBG_PROCESS);
+    #$self->accessor('DEBUGMASK', exists $argref->{debugmask} ? $argref->{debugmask} : $DBG_STARTUP + $DBG_PROCESS);
     $self->accessor('SHOW_TRACE', exists $argref->{show_trace} ? $argref->{show_trace} : 0);
     $self->accessor('SHOW_TIME', exists $argref->{show_time} ? $argref->{show_time} : 0);
     $self->accessor('USE_XML', exists $argref->{xml} ? $argref->{xml} : 0);
     $self->accessor('FROM',  exists $argref->{from} ? $argref->{from} : 'nowhere');
 
+    $self->set_debugmask(exists $argref->{debugmask} ? $argref->{debugmask} : 'DBG_STARTUP+DBG_PROCESS');
     $self->set_fh('LOG_OUT',  safe_get($argref, 'log_out', 'STDOUT'));
     $self->set_fh('PRINT_TO', safe_get($argref, 'print_to', 'STDOUT'));
 
@@ -145,14 +156,112 @@ sub set_fh
     return $fh;
 }
 
+sub _walklist {
+    my $list = shift;
+    my @result;
+    local $depth = $depth;
+
+    croak "mask spec contains a recursive macro" if $depth++ > 10;
+
+    foreach my $item (@{$list})
+    {
+        if ($item =~ m/^DBG_/)
+        {
+            croak("unrecognized macro \"$item\" requested for debug mask\n") unless exists($DEBUG_MACROS{$item});
+            push(@result, _walklist($DEBUG_MACROS{$item}));
+        }
+        else
+        {
+            push(@result, $item);
+        }
+    }
+    return @result;
+}
+
+sub set_debugmask
+{
+    my $self = shift;
+    my $dbglist = shift;
+    my $loglevel = $self->accessor('LOGLEVEL');
+    $depth = 0;
+
+    my @modlist = eval {_walklist([split(/\+|,|\s+/, $dbglist)])};
+    croak "Error: For debug mask spec \"$dbglist\", $@\n" if $@;
+    my ($a, $b, $c, $d);
+    my @rev;
+    my $quad;
+    my %modules = ();
+
+    foreach my $item (@modlist)
+    {
+        @rev = reverse split(/::/, $item);
+        #print STDERR "rev is: <", join(',', @rev), ">\n";
+        push(@rev, qw(* * * *)); # Make sure we have at least four items
+        $quad = join('::', @rev[0..3]); # Exactly four
+        $quad =~ s/\*/\.\*\?/g;
+        $modules{$quad} = $loglevel;
+    }
+
+    $self->{MODULE_HASH} = \%modules;
+    # Now make a regular expression to match packages
+    my $mod_re = '^(' . join('|', keys %modules) . ')$';
+    $self->{MODULE_REGEXP} = qr/$mod_re/; # Don't compile it; it will never change (even if reassigned)
+
+    #print STDERR "module_regexp is: \"$self->{MODULE_REGEXP}\"\n";
+    return sort keys %modules;
+}
+
+sub get_debugmask
+{
+    my $self = shift;
+
+    return $self->{MODULE_HASH};
+}
+
+sub add_to_debugmask
+{
+    my $self = shift;
+    my $modspec = shift;
+
+    my @rev = reverse split(/::/, $modspec);
+    #print STDERR "rev is: <", join(',', @rev), ">\n";
+    push(@rev, qw(* * * *)); # Make sure we have at least four items
+    my $quad = join('::', @rev[0..3]); # Exactly four
+    $quad =~ s/\*/\.\*\?/g;
+
+    $self->{MODULE_HASH}->{$quad} = $self->accessor('LOGLEVEL');
+    my $mod_re = '^(' . join('|', keys %{$self->{MODULE_HASH}}) . ')$';
+    $self->{MODULE_REGEXP} = qr/$mod_re/; # Don't compile it; it will never change (even if reassigned)
+
+    return;
+}
+
+sub remove_from_debugmask
+{
+    my $self = shift;
+    my $modspec = shift;
+
+    my @rev = reverse split(/::/, $modspec);
+    #print STDERR "rev is: <", join(',', @rev), ">\n";
+    push(@rev, qw(* * * *)); # Make sure we have at least four items
+    my $quad = join('::', @rev[0..3]); # Exactly four
+    $quad =~ s/\*/\.\*\?/g;
+
+    delete $self->{MODULE_HASH}->{$quad} if exists $self->{MODULE_HASH}->{$quad};
+    my $mod_re = '^(' . join('|', keys %{$self->{MODULE_HASH}}) . ')$';
+    $self->{MODULE_REGEXP} = qr/$mod_re/; # Don't compile it; it will never change (even if reassigned)
+
+    return;
+}
+
 sub accessor
 {
     my $self = shift;
     my $key = shift;
     my $value = shift;
 
-    $self->{$key} = $value if defined($value);
-    return defined $self->{$key} ? $self->{$key} : 0;
+    $self->{VARS}->{$key} = $value if defined($value);
+    return defined $self->{VARS}->{$key} ? $self->{VARS}->{$key} : 0;
 }
 
 sub is_chatty
@@ -196,6 +305,23 @@ sub ok
     return $level <= $self->accessor('LOGLEVEL');
 }
 
+sub _pkg_matches
+{
+    my $self = shift;
+    my $pkg = shift;
+    my @rev = reverse split(/::/, $pkg);
+    #print STDERR "rev is: <", join(',', @rev), ">\n";
+    push(@rev, qw(* * * *)); # Make sure we have at least four items
+    my $quad = join('::', @rev[0..3]); # Exactly four
+
+    $quad =~ $self->{MODULE_REGEXP};
+
+    my $match = $1;
+    #print STDERR "pm: for \"$quad\", got \"$match\"\n";
+
+    return defined($match);
+}
+
 sub _log
 {
     my $self = shift;
@@ -203,36 +329,35 @@ sub _log
 
     my $fh = $self->{LOG_OUT};
     my $level = $argref->{level};
-    my $debugmask = $argref->{debugmask};
     my $decorate = exists($argref->{decorate}) ? $argref->{decorate} : 1;
     my $call_depth = exists($argref->{call_depth}) ? $argref->{call_depth} : 1;
     my $isquery = exists($argref->{query}) ? $argref->{query} : 0;
     my $from = exists($argref->{from}) ? $argref->{from} : $self->accessor("FROM");
     my $prepend = '';
 
+    my $package = caller($call_depth);
+    my $module  = (split(/::/, $package))[-1];
+    my ($a, $b, $c, $d) = reverse split(/::/, $package);
+    # So we can override
+    #my $debugmask_ok = exists($argref->{debugmask_ok}) ? $argref->{debugmask_ok} : exists($self->{DEBUGMASK}->{$module});
+    my $debugmask_ok = exists($argref->{debugmask_ok}) ? $argref->{debugmask_ok} : $self->_pkg_matches($package);
+
     if ($isquery)
     {
-        $debugmask = $DBG_ALL;
+        $debugmask_ok = 1;
         $level = $SILENT;
         $decorate = 0;
     }
-    #print STDERR "Hello from _log, fh is", Dumper($fh);
-    #print $fh "Hello 2 from _log\n";
-    if (($from eq 'BARFO') || ($_[0] =~ m/Well/))
-    {
-        print STDERR "debugmask: $debugmask; stored value: $self->{DEBUGMASK}\n";
-        print STDERR "level: $level; stored value: $self->{LOGLEVEL}\n";
-    }
 
-    return unless $debugmask & $self->{DEBUGMASK};
+    return unless $debugmask_ok;
     return unless $self->ok($level);
 
-    if ($self->{USE_XML})
+    if ($self->accessor('USE_XML'))
     {
         my $type = $isquery ? 'QUERY' : 'MSG';
         print "<LOGMESSAGE>\n";
         print "<LEVEL>", $level_to_name{$level}, "</LEVEL>\n";
-        print "<SOURCE>" . caller($call_depth) . "</SOURCE>\n" if $decorate;
+        print "<SOURCE>$package</SOURCE>\n" if $decorate;
         print "<TIME>", strftime("%y-%m-%d %H:%M:%S ", localtime), "</TIME>\n" if $decorate;
         print "<$type>", @_, "</$type>\n";
         print "</LOGMESSAGE>\n";
@@ -243,8 +368,8 @@ sub _log
 
         if ($decorate)
         {
-            my $time = $self->{SHOW_TIME} ? strftime("%y-%m-%d %H:%M:%S ", localtime) : '';
-            $prepend = $time . caller($call_depth) . ': ';
+            my $time = $self->accessor('SHOW_TIME') ? strftime("%y-%m-%d %H:%M:%S ", localtime) : '';
+            $prepend = $time . $package . ': ';
         }
 
         print $fh ($prepend, @_);
@@ -258,7 +383,7 @@ sub _log
             chomp $ans;
         }
         else { # user hit ctrl-D
-            $self->silent_q({debugmask=>$DBG_ALL}, "\n");
+            $self->silent_q({debugmask=>1}, "\n");
         }
 
         return $ans;
@@ -268,62 +393,50 @@ sub _log
 sub silent
 {
     my $self = shift;
-    my $dbgmask = shift;
-
-    return $self->_log({level => $SILENT, debugmask => $dbgmask}, @_);
+    return $self->_log({level => $SILENT}, @_);
 }
 
 sub silent_q
 {
     my $self = shift;
-    my $dbgmask = shift;
-
-    return $self->_log({level => $SILENT, decorate => 0, debugmask => $dbgmask}, @_);
+    return $self->_log({level => $SILENT, decorate => 0}, @_);
 }
 
 sub quiet
 {
     my $self = shift;
-    my $dbgmask = shift;
-    return $self->_log({level => $QUIET, debugmask => $dbgmask}, @_);
+    return $self->_log({level => $QUIET}, @_);
 }
 
 sub info
 {
     my $self = shift;
-    my $dbgmask = shift;
-    return $self->_log({level => $INFO, debugmask => $dbgmask}, @_);
+    return $self->_log({level => $INFO}, @_);
 }
 
 sub info_q
 {
     my $self = shift;
-    my $dbgmask = shift;
-
-    return $self->_log({level => $INFO, decorate => 0, debugmask => $dbgmask}, @_);
-#     return unless $dbgmask & $self->{DEBUGMASK};
-#     print $self->{INFO_OUT} (@_) if $self->ok($INFO);
+    return $self->_log({level => $INFO, decorate => 0}, @_);
 }
 
 sub verbose
 {
     my $self = shift;
-    my $dbgmask = shift;
-    return $self->_log({level => $VERBOSE, debugmask => $dbgmask}, @_);
+    return $self->_log({level => $VERBOSE}, @_);
 }
 
 sub chatty
 {
     my $self = shift;
-    my $dbgmask = shift;
-    return $self->_log({level => $CHATTY, debugmask => $dbgmask}, @_);
+    return $self->_log({level => $CHATTY}, @_);
 }
 
 sub idv_warn
 {
     my $self = shift;
     push(@warnings, join("", @_));
-    return $self->_log({level => $QUIET, debugmask => $DBG_ALL}, @_);
+    return $self->_log({level => $QUIET, debugmask_ok => 1}, @_);
 }
 
 sub _warn
@@ -331,15 +444,15 @@ sub _warn
     my $self = shift;
 
     push(@warnings, join("", @_));
-    return $self->_log({level => $QUIET, debugmask => $DBG_ALL, call_depth => 2}, @_);
+    return $self->_log({level => $QUIET, debugmask_ok => 1, call_depth => 2}, @_);
 }
 
 sub fatal
 {
     my $self = shift;
 
-    $self->_log({level => $QUIET, debugmask => $DBG_ALL, call_depth => 2}, @_);
-    if ($self->{SHOW_TRACE})
+    $self->_log({level => $QUIET, debugmask_ok => 1, call_depth => 2}, @_);
+    if ($self->accessor('SHOW_TRACE'))
     {
         Carp::confess('Backtrace');
     }
@@ -384,6 +497,14 @@ sub get_logger
 }
 
 BEGIN {
+%DEBUG_MACROS = 
+    ( 'DBG_STARTUP' => [qw(ProviderMgr)],
+      'DBG_PROCESS' => [qw(Common Converter DoDots Provider ServiceLocator)],
+      'DBG_CONFIG'  => [qw(Config Select Validate)],
+      'DBG_PROVIDERS' => [qw(ProviderMgr)],
+      'DBG_FOR_UNIT_TEST0' => [qw(Common DBG_STARTUP DoDots)],
+      'DBG_FOR_UNIT_TEST1' => [qw(Common DBG_FOR_UNIT_TEST1 DoDots)],
+    );
     $lo_begin = Idval::Logger->new({development => 0,
                              log_out => 'STDERR'});
 }

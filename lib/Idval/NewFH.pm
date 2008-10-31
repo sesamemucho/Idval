@@ -1,5 +1,7 @@
 package Idval::NewFH;
 
+# XXX unused?
+
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
 # This file is part of Idval.
@@ -17,23 +19,23 @@ package Idval::NewFH;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
-use strict;
-use warnings;
-use base qw(IO::File);
+# use strict;
+# use warnings;
+# use base qw(IO::File);
 
-sub save_filename {
-    my $glob = shift;
-    my $fname = shift;
+# sub save_filename {
+#     my $glob = shift;
+#     my $fname = shift;
 
-    ${$glob}->{SAVE_FILENAME} = $fname;
+#     ${$glob}->{SAVE_FILENAME} = $fname;
 
-    return;
-}
+#     return;
+# }
 
-sub get_filename {
-    my $glob = shift;
+# sub get_filename {
+#     my $glob = shift;
 
-    return ${$glob}->{SAVE_FILENAME};
-}
+#     return ${$glob}->{SAVE_FILENAME};
+# }
 
 1;

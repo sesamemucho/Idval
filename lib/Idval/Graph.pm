@@ -62,11 +62,9 @@ sub _init
 #     $self->add_edge('M', 'noo', 'W', 100);
 
     *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
-                                                  debugmask => $DBG_GRAPH,
                                                   decorate => 1}) unless defined(*verbose{CODE});
     #*verbose = sub{ print @_; };
     *chatty = Idval::Common::make_custom_logger({level => $CHATTY,
-                                                 debugmask => $DBG_GRAPH,
                                                  decorate => 1}) unless defined(*chatty{CODE});
 
     $self->{IS_CHATTY} = Idval::Common::get_logger()->is_chatty();

@@ -57,7 +57,6 @@ sub init
     $self->{CMD_PKG} = $cmd_pkg;
 
     *chatty = Idval::Common::make_custom_logger({level => $CHATTY,
-                                                 debugmask => $DBG_PROVIDERS,
                                                  decorate => 1,
                                                 }) unless defined(*chatty{CODE});
 

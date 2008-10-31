@@ -64,8 +64,7 @@ sub register_callback
 
     if (!exists($registered_callbacks{"$service_name/$callback_name/$callback_routine_name"}))
     {
-        $log->verbose($DBG_PROCESS, 
-                      "Registering callback with \"$service_name/$callback_name/$callback_routine_name\"\n");
+        $log->verbose("Registering callback with \"$service_name/$callback_name/$callback_routine_name\"\n");
         push(@{$callbacks{$service_name}}, [$callback_name, $cb]);
         $registered_callbacks{"$service_name/$callback_name/$callback_routine_name"} = 1;
     }

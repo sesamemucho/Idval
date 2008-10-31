@@ -39,16 +39,16 @@ sub dodots
     my $char = shift;
 
     $dotnum++;
-    $log->info_q($DBG_PROCESS, "$char");
-    $log->info_q($DBG_PROCESS, " ") if $dotnum % 4 == 0;
-    $log->info_q($DBG_PROCESS, "\n") if $dotnum % 60 == 0;
+    $log->info_q("$char");
+    $log->info_q(" ") if $dotnum % 4 == 0;
+    $log->info_q("\n") if $dotnum % 60 == 0;
 
     return;
 }
 
 sub finish
 {
-    $log->info_q($DBG_PROCESS, "\n") if $dotnum % 60 != 0;
+    $log->info_q("\n") if $dotnum % 60 != 0;
 
     return;
 }

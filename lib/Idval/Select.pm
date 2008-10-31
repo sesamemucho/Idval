@@ -219,7 +219,7 @@ sub get_regex
     }
 
     my $log = Idval::Common::get_logger();
-    $log->verbose($DBG_CONFIG, "\n\nregex is: \"$combo\"\n\n\n");
+    $log->verbose("\n\nregex is: \"$combo\"\n\n\n");
     return qr/$combo/;
 }
 

@@ -32,7 +32,7 @@ my $silent_q;
 sub init
 {
     *silent_q = Idval::Common::make_custom_logger({level => $SILENT,
-                                                   debugmask => $DBG_PROCESS,
+                                                   debugmask_ok => 1,
                                                    decorate => 0});
     set_pod_input();
 

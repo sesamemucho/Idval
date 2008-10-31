@@ -58,10 +58,8 @@ sub new
     my $self = $class->SUPER::new(@_);
     bless($self, ref($class) || $class);
     *verbose = Idval::Common::make_custom_logger({level => $VERBOSE, 
-                                                  debugmask => $DBG_CONFIG,
                                                   decorate => 1}) unless defined(*verbose{CODE});
     *chatty  = Idval::Common::make_custom_logger({level => $CHATTY,
-                                                  debugmask => $DBG_CONFIG,
                                                   decorate => 1}) unless defined(*chatty{CODE});
     $self->{ALLOW_KEY_REGEXPS} = 1;
     return $self;

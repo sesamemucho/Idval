@@ -66,17 +66,13 @@ sub _init
     $self->{PROVIDERS} = {};
     $self->{LOG} = Idval::Common::get_logger();
     *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
-                                                  debugmask => $DBG_PROVIDERS,
                                                   decorate => 1}) unless defined(*verbose{CODE});
     *chatty = Idval::Common::make_custom_logger({level => $CHATTY,
-                                                 debugmask => $DBG_PROVIDERS,
                                                  decorate => 1,
                                                 }) unless defined(*chatty{CODE});
     *chatty_graph = Idval::Common::make_custom_logger({level => $CHATTY,
-                                                 debugmask => $DBG_GRAPH,
                                                  decorate => 1}) unless defined(*chatty_graph{CODE});
     *info    = Idval::Common::make_custom_logger({level => $INFO,
-                                                  debugmask => $DBG_PROVIDERS,
                                                   decorate => 1}) unless defined(*info{CODE});
 
     map{$self->{GRAPH}->{$_} = Idval::Graph->new()} @provider_types;
