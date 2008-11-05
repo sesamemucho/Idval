@@ -25,7 +25,7 @@ use File::Spec;
 use List::Util;
 use Data::Dumper;
 
-use Idval::Logger qw(nverbose nfatal);
+use Idval::Logger qw(verbose fatal);
 use Idval::Common;
 use Idval::FileIO;
 use Idval::Record;
@@ -200,19 +200,19 @@ sub find_exe_path
 
         foreach my $testexe (@{$exelist})
         {
-            nverbose("Checking \"$testexe\"\n");
+            verbose("Checking \"$testexe\"\n");
             $testexe = Idval::Common::expand_tilde($testexe);
             if (-e $testexe)
             {
                 $exe = $testexe;
-                nverbose("Found \"$testexe\"\n");
+                verbose("Found \"$testexe\"\n");
                 last;
             }
         }
     }
 
     $exe = undef if !$exe;
-    #nfatal("Could not find program \"$name\"\n") if !$exe;
+    #fatal("Could not find program \"$name\"\n") if !$exe;
     return $exe;
 }
 

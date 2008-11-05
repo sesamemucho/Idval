@@ -5,7 +5,7 @@ use warnings;
 use Data::Dumper;
 use English '-no_match_vars';
 
-use Idval::Logger qw(debug nfatal);
+use Idval::Logger qw(debug fatal);
 
 sub new
 {
@@ -71,7 +71,7 @@ sub build_type_mapper
     my $result = [];
     my $converter;
 
-    nfatal("Undefined provider object") unless defined($prov);
+    fatal("Undefined provider object") unless defined($prov);
     # For each provider
     foreach my $provider ($prov->get_all_active_providers())
     {

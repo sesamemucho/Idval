@@ -25,11 +25,9 @@ use Carp qw(croak cluck confess);
 use POSIX qw(strftime);
 
 use base qw( Exporter );
-our @EXPORT_OK = qw( idv_print nsilent nsilent_q nquiet ninfo ninfo_q nverbose nchatty debug nidv_warn nfatal 
+our @EXPORT_OK = qw( idv_print silent silent_q quiet info info_q verbose chatty debug idv_warn fatal 
 $L_SILENT $L_QUIET $L_INFO $L_VERBOSE $L_CHATTY $L_DEBUG);
 our %EXPORT_TAGS = (vars => [qw($L_SILENT $L_QUIET $L_INFO $L_VERBOSE $L_CHATTY $L_DEBUG)]);
-
-#use Idval::Constants;
 
 $Carp::CarpLevel = 1;
 
@@ -522,79 +520,79 @@ sub idv_print
     return get_logger()->_log({level => $L_SILENT, decorate => 0, force_match => 1}, @_);
 }
 
-sub silent
-{
-    my $self = shift;
-    return $self->_log({level => $L_SILENT}, @_);
-}
+# sub silent
+# {
+#     my $self = shift;
+#     return $self->_log({level => $L_SILENT}, @_);
+# }
 
-sub nsilent
+sub silent
 {
     return get_logger()->_log({}, @_);
 }
 
-sub silent_q
-{
-    my $self = shift;
-    return $self->_log({level => $L_SILENT, decorate => 0}, @_);
-}
+# sub silent_q
+# {
+#     my $self = shift;
+#     return $self->_log({level => $L_SILENT, decorate => 0}, @_);
+# }
 
-sub nsilent_q
+sub silent_q
 {
     return get_logger()->_log({level => $L_SILENT, decorate => 0}, @_);
 }
 
-sub quiet
-{
-    my $self = shift;
-    return $self->_log({level => $L_QUIET}, @_);
-}
+# sub quiet
+# {
+#     my $self = shift;
+#     return $self->_log({level => $L_QUIET}, @_);
+# }
 
-sub nquiet
+sub quiet
 {
     return get_logger()->_log({level => $L_QUIET}, @_);
 }
 
-sub info
-{
-    my $self = shift;
-    return $self->_log({level => $L_INFO}, @_);
-}
+# sub info
+# {
+#     my $self = shift;
+#     return $self->_log({level => $L_INFO}, @_);
+# }
 
-sub ninfo
+sub info
 {
     return get_logger()->_log({level => $L_INFO}, @_);
 }
 
-sub info_q
-{
-    my $self = shift;
-    return $self->_log({level => $L_INFO, decorate => 0}, @_);
-}
+# sub info_q
+# {
+#     my $self = shift;
+#     return $self->_log({level => $L_INFO, decorate => 0}, @_);
+# }
 
-sub ninfo_q
+sub info_q
 {
     return get_logger()->_log({level => $L_INFO, decorate => 0}, @_);
 }
 
-sub verbose
-{
-    my $self = shift;
-    return $self->_log({level => $L_VERBOSE}, @_);
-}
+# sub verbose
+# {
+#     my $self = shift;
+#     return $self->_log({level => $L_VERBOSE}, @_);
+# }
 
-sub nverbose
+sub verbose
 {
     return get_logger()->_log({level => $L_VERBOSE}, @_);
 }
 
-sub chatty
-{
-    my $self = shift;
-    return $self->_log({level => $L_CHATTY}, @_);
-}
+# sub chatty
+# {
+#     my $self = shift;
+#     return $self->_log({level => $L_CHATTY}, @_);
+# }
 
-sub nchatty
+sub chatty
 {
     return get_logger()->_log({level => $L_CHATTY}, @_);
 }
@@ -604,14 +602,14 @@ sub debug
     return get_logger()->_log({level => $L_DEBUG}, @_);
 }
 
-sub idv_warn
-{
-    my $self = shift;
-    push(@warnings, join("", @_));
-    return $self->_log({level => $L_QUIET, force_match => 1}, @_);
-}
+# sub idv_warn
+# {
+#     my $self = shift;
+#     push(@warnings, join("", @_));
+#     return $self->_log({level => $L_QUIET, force_match => 1}, @_);
+# }
 
-sub nidv_warn
+sub idv_warn
 {
     push(@warnings, join("", @_));
     return get_logger()->_log({level => $L_QUIET, force_match => 1}, @_);
@@ -625,22 +623,22 @@ sub _warn
     return $self->_log({level => $L_QUIET, force_match => 1, call_depth => 2}, @_);
 }
 
+# sub fatal
+# {
+#     my $self = shift;
+
+#     $self->_log({level => $L_QUIET, force_match => 1, call_depth => 2}, @_);
+#     if ($self->accessor('SHOW_TRACE'))
+#     {
+#         Carp::confess('Backtrace');
+#     }
+#     else
+#     {
+#         Carp::croak('fatal error');
+#     }
+# }
+
 sub fatal
-{
-    my $self = shift;
-
-    $self->_log({level => $L_QUIET, force_match => 1, call_depth => 2}, @_);
-    if ($self->accessor('SHOW_TRACE'))
-    {
-        Carp::confess('Backtrace');
-    }
-    else
-    {
-        Carp::croak('fatal error');
-    }
-}
-
-sub nfatal
 {
     get_logger()->_log({level => $L_QUIET, force_match => 1, call_depth => 2}, @_);
     if (get_logger()->accessor('SHOW_TRACE'))

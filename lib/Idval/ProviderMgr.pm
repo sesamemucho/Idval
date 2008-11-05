@@ -26,7 +26,7 @@ use File::Basename;
 use File::Spec;
 use Memoize;
 
-use Idval::Logger qw(:vars ninfo nverbose nchatty nidv_warn nfatal);
+use Idval::Logger qw(:vars info verbose chatty idv_warn fatal);
 use Idval::Common;
 use Idval::Converter;
 use Idval::Graph;
@@ -148,7 +148,7 @@ sub get_provider
 
     if (!(defined($src) && defined($dest) && $src && $dest))
     {
-        nfatal("Invalid src \"$src\" or dest \"$dest\".");
+        fatal("Invalid src \"$src\" or dest \"$dest\".");
     }
     #print STDERR "Looking for provider type \"$prov_type\" src \"$src\" dest \"$dest\"\n";
     my $path = $graph->get_best_path($src, $dest);
@@ -167,7 +167,7 @@ sub get_provider
             #print STDERR "converter is <$converter>\n";
             #print STDERR "name is <$name>\n";
             #$cnv = $converter->new($config, $name);
-            nchatty("Looking up \{$prov_type\}->\{$converter\}->\{$name\}->\{$endpoint\}\n");
+            chatty("Looking up \{$prov_type\}->\{$converter\}->\{$name\}->\{$endpoint\}\n");
             $cnv = $self->{ALL_PROVIDERS}->{$prov_type}->{$converter}->{$name}->{$endpoint};
             #print STDERR "cnv is: ", Dumper($cnv) if $src eq 'about';
             push(@cnv_list, $cnv);
@@ -177,7 +177,7 @@ sub get_provider
     #print STDERR "Found ", scalar(@cnv_list), " providers for $dest -> $src\n";
     if (scalar(@cnv_list) < 1)
     {
-        nidv_warn("No \"$prov_type\" provider found for \"$src,$dest\"\n");
+        idv_warn("No \"$prov_type\" provider found for \"$src,$dest\"\n");
         $converter = undef;
     }
     elsif (scalar(@cnv_list) == 1)
@@ -245,7 +245,7 @@ sub _get_arg
     }
     else
     {
-        nfatal("Nothing provided for \"$keyword\" in ", Dumper($argref));
+        fatal("Nothing provided for \"$keyword\" in ", Dumper($argref));
     }
 
     return $retval;
@@ -305,8 +305,8 @@ sub _add_provider
         $self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name}->{$endpoint} = $cnv;
         if ($cnv->query('is_ok'))
         {
-            nchatty("Adding \{$prov_type\}->\{$package\}->\{$name\}->\{$endpoint\}\n");
-            nchatty("Adding \"$prov_type\" provider: From \"$src\", via \"${package}::$name\" to \"$dest\", weight: \"$weight\" ",
+            chatty("Adding \{$prov_type\}->\{$package\}->\{$name\}->\{$endpoint\}\n");
+            chatty("Adding \"$prov_type\" provider: From \"$src\", via \"${package}::$name\" to \"$dest\", weight: \"$weight\" ",
                    "attributes: \"", $argref->{attributes}, "\"\n");
             $self->{GRAPH}->{$prov_type}->add_edge($src, $package . '::' . $name, $dest, $weight, @attributes);
             $added = 1;
@@ -314,7 +314,7 @@ sub _add_provider
         else
         {
             my $status = $cnv->query('status') ? $cnv->query('status') : 'no status';
-            nverbose("Provider \"$name\" is not ok: status is: $status\n");
+            verbose("Provider \"$name\" is not ok: status is: $status\n");
         }
     }
 
@@ -343,7 +343,7 @@ sub register_provider
     #print "caller(2) is: ", caller(2), "\n";
     foreach my $argref (@_)
     {
-        nchatty("register_provider: argref is: ", Dumper($argref));
+        chatty("register_provider: argref is: ", Dumper($argref));
         my $provides = lc($self->_get_arg($argref, 'provides'));
         my $name     = $self->_get_arg($argref, 'name');
         # If a weighting for this provider has been specified in a config file, use that value
@@ -354,7 +354,7 @@ sub register_provider
         # If the caller has specified a package, use it (i.e., registering a command)
         $package = $self->_get_arg($argref, 'package', $package);
 
-        nchatty("Adding \"$provides\" $package\n");
+        chatty("Adding \"$provides\" $package\n");
         $self->{LOADED_PACKAGES}->{$package}++;
 
         $provides eq 'reads_tags' and do {
@@ -401,7 +401,7 @@ sub register_provider
 #             next;
 #         };
 
-        nfatal("Unrecognized provider type \"$provides\" in ", Dumper($argref));
+        fatal("Unrecognized provider type \"$provides\" in ", Dumper($argref));
     }
 
     return;
@@ -415,7 +415,7 @@ sub _load_plugin
     return $self->{PLUGIN_LIST}->{$filename} if exists $self->{PLUGIN_LIST}->{$filename};
 
     my $fh = Idval::FileIO->new($filename, "r");
-    nfatal("Bad filehandle: $! for item \"$filename\"") unless defined $fh;
+    fatal("Bad filehandle: $! for item \"$filename\"") unless defined $fh;
 
 
     # Doing it this way instead of just "do ..." to allow for use
@@ -432,14 +432,14 @@ sub _load_plugin
     }
     else
     {
-        nverbose("Plugin candidate \"$filename\" is not an Idval plugin: no \"package Idval::Plugin::...\"\n");
+        verbose("Plugin candidate \"$filename\" is not an Idval plugin: no \"package Idval::Plugin::...\"\n");
         return;
     }
 
 
     #print "Plugin is \"$plugin\"\n" if $filename eq "id3v2"; # or whatever...
-    #nfatal("Could not read plugin \"$filename\"\n") unless $plugin;
-    nchatty("Plugin $filename\n");
+    #fatal("Could not read plugin \"$filename\"\n") unless $plugin;
+    chatty("Plugin $filename\n");
 
     no warnings 'redefine';
     # This call causes a Provider plugin to call 'register_provider'
@@ -452,19 +452,19 @@ sub _load_plugin
 #     }
     if (defined $status)
     {
-        nchatty("Status is <$status>\n");
+        chatty("Status is <$status>\n");
     }
     else
     {
-        ninfo("Error return from \"$filename\"\n");
+        info("Error return from \"$filename\"\n");
     }
     if (not ($status or $! or $@))
     {
-        nfatal("Error reading \"$filename\": Does it return a true value at the end of the file?\n");
+        fatal("Error reading \"$filename\": Does it return a true value at the end of the file?\n");
     }
     else
     {
-        nfatal("Error reading \"$filename\":($!) ($@)") unless $status;
+        fatal("Error reading \"$filename\":($!) ($@)") unless $status;
     }
 
     $self->{PLUGIN_LIST}->{$filename} = $package_name;
@@ -479,7 +479,7 @@ sub find_all_plugins
 
     my $ext = $self->{COMMAND_EXT};
 
-    nfatal("No plugin file extension defined?") unless $ext;
+    fatal("No plugin file extension defined?") unless $ext;
     # We don't want to recurse to find providers, so don't use idv_find.
     # We don't want to recurse, because it should be easy for users to
     # write command scripts, and I don't want to make them put the
@@ -489,7 +489,7 @@ sub find_all_plugins
     {
         my @sources = Idval::FileIO::idv_glob("$dir/*.$ext",
                                               $Idval::FileIO::GLOB_NOCASE | $Idval::FileIO::GLOB_TILDE);
-        nchatty("ProviderMgr: in \"$dir\", candidates are: ", join(', ', @sources), "\n");
+        chatty("ProviderMgr: in \"$dir\", candidates are: ", join(', ', @sources), "\n");
         foreach my $source (@sources)
         {
             next if $source =~ m/\.?\.$/;

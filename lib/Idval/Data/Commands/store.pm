@@ -24,7 +24,7 @@ use Data::Dumper;
 use Getopt::Long;
 use English '-no_match_vars';;
 
-use Idval::Logger qw(nfatal);
+use Idval::Logger qw(fatal);
 use Idval::FileIO;
 use Idval::DoDots;
 use Idval::Ui;
@@ -50,8 +50,8 @@ sub main
     my $providers = shift;
     my $outputfile = shift || '';
 
-    nfatal("Bad \"datastore\" (ref is \"", ref $datastore , "\"\n") unless ref $datastore eq 'Idval::Collection';
-    nfatal("Bad \"providers\" (ref is \"", ref $providers , "\"\n") unless ref $providers eq 'Idval::ProviderMgr';
+    fatal("Bad \"datastore\" (ref is \"", ref $datastore , "\"\n") unless ref $datastore eq 'Idval::Collection';
+    fatal("Bad \"providers\" (ref is \"", ref $providers , "\"\n") unless ref $providers eq 'Idval::ProviderMgr';
 
     # Let's write out the data as required
     Idval::Ui::put_source_to_file({datastore => $datastore,

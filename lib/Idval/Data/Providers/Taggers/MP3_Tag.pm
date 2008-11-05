@@ -25,7 +25,7 @@ use Class::ISA;
 use Data::Dumper;
 use Encode;
 
-use Idval::Logger qw(nfatal);
+use Idval::Logger qw(fatal);
 use base qw(Idval::Provider);
 
 my $req_status = eval {require MP3::Tag};
@@ -373,7 +373,7 @@ sub write_tags
         $tag_index = -1;
         while ($tagvalue = $temp_rec->shift_value($tagname))
         {
-            #nfatal("Undefined value for tag \"$tagname\"") unless defined($tagvalue);
+            #fatal("Undefined value for tag \"$tagname\"") unless defined($tagvalue);
             $tag_index++;
             $framename = $tag_index > 0 ? sprintf("%s%02d", $tagname, $tag_index) : $tagname;
 

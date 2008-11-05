@@ -31,7 +31,7 @@ use English '-no_match_vars';;
 use Memoize;
 use Storable;
 
-use Idval::Logger qw(ninfo_q nverbose nchatty debug);
+use Idval::Logger qw(info_q verbose chatty debug);
 use Idval::Common;
 use Idval::FileIO;
 use Idval::DoDots;
@@ -118,13 +118,13 @@ sub ok_to_convert
 
     if (not -e $remote_pathname) {
         $convert_file = 1;
-        nverbose("Remote file \"$remote_pathname\" does not exist. Will create.\n");
+        verbose("Remote file \"$remote_pathname\" does not exist. Will create.\n");
     } elsif ($r_st->mtime < $l_st->mtime) {
         $convert_file = 1;
-        nverbose("Remote file \"$remote_pathname\" is older than local file \"$local_pathname\". Will convert.\n");
+        verbose("Remote file \"$remote_pathname\" is older than local file \"$local_pathname\". Will convert.\n");
     } else {
         $convert_file = 0;
-        nverbose("Remote file \"$remote_pathname\" is newer than local file \"$local_pathname\". Will not convert.\n");
+        verbose("Remote file \"$remote_pathname\" is newer than local file \"$local_pathname\". Will not convert.\n");
     }
 
     return $convert_file;
@@ -190,7 +190,7 @@ sub each_item
     my $dest_type = $config->get_single_value('convert', $tag_record);
     my $prov;
 
-    nchatty("source type is \"$src_type\" dest type is \"$dest_type\"\n");
+    chatty("source type is \"$src_type\" dest type is \"$dest_type\"\n");
     if ($src_type eq $dest_type)
     {
         # Once we allow transcoding between files of the same type,
@@ -202,17 +202,17 @@ sub each_item
     else
     {
         $prov = get_converter($src_type, $dest_type);
-        nchatty("src: $src_type to dest: $dest_type yields converter $prov\n");
+        chatty("src: $src_type to dest: $dest_type yields converter $prov\n");
     }
 
     $prov_list{$prov} = $prov;
     my $src_path = $prov->get_source_filepath($tag_record);
     my ($volume, $src_dir, $src_name) = File::Spec->splitpath($src_path);
-    nchatty("For $src_path\n");
+    chatty("For $src_path\n");
     my $remote_top = Idval::Common::mung_to_unix($config->get_single_value('remote_top', $tag_record));
-    nchatty("   remote top is \"$remote_top\"\n");
+    chatty("   remote top is \"$remote_top\"\n");
     my $dest_name = $prov->get_dest_filename($tag_record, $src_name, get_file_ext($dest_type));
-    nchatty("   dest name is \"$dest_name\"\n");
+    chatty("   dest name is \"$dest_name\"\n");
 
 
 #     my $src_path =  $tag_record->get_name();
@@ -230,7 +230,7 @@ sub each_item
     my $extre = get_all_extensions_regexp();
     if ($sync_dest !~ m/$extre/)
     {
-        nchatty("sync_dest is a directory\n");
+        chatty("sync_dest is a directory\n");
         # sync_dest is a directory, so to get the destination name just append dest_name
         $sync_dest = File::Spec->catfile($sync_dest, $dest_name);
     }
@@ -249,7 +249,7 @@ sub each_item
     if (ok_to_convert($src_path, $dest_path))
     {
 
-        nchatty("Converting \"$src_path\" to \"$dest_path\"\n");
+        chatty("Converting \"$src_path\" to \"$dest_path\"\n");
         my $dest_dir = dirname($dest_path);
         if (!Idval::FileIO::idv_test_isdir($dest_dir))
         {
@@ -267,7 +267,7 @@ sub each_item
     }
     else
     {
-        nchatty("Did not convert \"$src_path\" to \"$dest_path\"\n");
+        chatty("Did not convert \"$src_path\" to \"$dest_path\"\n");
         $retval = 0;
     }
 
@@ -429,8 +429,8 @@ sub progress_print_title
 {
     my $this = shift;
 
-    ninfo_q("processed remaining  total  percent  elapsed  remaining    total\n");
-    ninfo_q(sprintf("%5d %9d %9d %5.0f%%     %8s  %8s  %8s\n",
+    info_q("processed remaining  total  percent  elapsed  remaining    total\n");
+    info_q(sprintf("%5d %9d %9d %5.0f%%     %8s  %8s  %8s\n",
                     0,
                     $this->{total_number_to_process},
                     $this->{total_number_to_process},
@@ -456,7 +456,7 @@ sub progress_print_line
     my $est_time = $elapsed_time / $safe_frac;
     my $est_time_remaining = $est_time - $elapsed_time;
 
-    ninfo_q(sprintf("%5d %9d %9d %5.0f%%     %8s  %8s %8s\n",
+    info_q(sprintf("%5d %9d %9d %5.0f%%     %8s  %8s %8s\n",
                      $this->{number_of_processed_records},
                      $this->{total_number_to_process} - $this->{number_of_processed_records},
                      $this->{total_number_to_process},

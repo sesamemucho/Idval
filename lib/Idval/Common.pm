@@ -32,7 +32,7 @@ use Text::Balanced qw (
                        extract_multiple
                       );
 
-use Idval::Logger qw(nquiet nverbose nfatal);
+use Idval::Logger qw(quiet verbose fatal);
 
 my $log = Idval::Logger::get_logger();
 our %common_objs;
@@ -182,17 +182,17 @@ sub run
     #$name = exe_name($name);
     if ($no_run)
     {
-        nquiet("$name $cmdargs\n");
+        quiet("$name $cmdargs\n");
         return 0;
     }
     else
     {
-        nverbose("\"$name\" $cmdargs\n");
+        verbose("\"$name\" $cmdargs\n");
         $retval = qx{"$name" $cmdargs 2>&1};
         $status = $?;
         if ($status)
         {
-            nquiet("Error $status from: \"$name $cmdargs\"\nReturned \"$retval\"\n");
+            quiet("Error $status from: \"$name $cmdargs\"\nReturned \"$retval\"\n");
         }
         #elsif (! $log->log_level_is_under($Idval::Logger::DEBUG1))
         #{
@@ -237,7 +237,7 @@ sub deep_copy {
         }
     }
 
-    nfatal("what type is ", ref $this ,"?");
+    fatal("what type is ", ref $this ,"?");
 }
 
 # sub deep_copy {
@@ -302,7 +302,7 @@ sub get_common_object
 {
     my $key = shift;
 
-    nfatal("Common object \"$key\" not found.") unless exists($common_objs{$key});
+    fatal("Common object \"$key\" not found.") unless exists($common_objs{$key});
     return $common_objs{$key};
 }
 

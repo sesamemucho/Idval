@@ -27,7 +27,7 @@ use File::Temp;
 use Idval::Common;
 use Idval::Select;
 use Idval::FileIO;
-use Idval::Logger qw(nsilent nchatty nidv_warn nfatal);
+use Idval::Logger qw(silent chatty idv_warn fatal);
 
 my $xml_req_status = eval {require XML::Simple};
 my $xml_req_msg = !defined($xml_req_status) ? "$!" :
@@ -43,7 +43,7 @@ if ($xml_req_msg ne 'Load OK')
     $xml_req_msg = 'Load OK' if (defined($xml_req_status) && ($xml_req_status != 0));
 }
 
-nfatal("Need XML support (via XML::Simple)") unless $xml_req_msg eq 'Load OK';
+fatal("Need XML support (via XML::Simple)") unless $xml_req_msg eq 'Load OK';
 
 use constant STRICT_MATCH => 0;
 use constant LOOSE_MATCH  => 1;
@@ -141,7 +141,7 @@ sub _init
         delete $self->{DEF_VARS}->{$key} unless $key =~ m/^__/;
     }
 
-    #nchatty("Calculated variables are: ", Dumper($self->{DEF_VARS}));
+    #chatty("Calculated variables are: ", Dumper($self->{DEF_VARS}));
     return;
 }
 
@@ -188,7 +188,7 @@ sub add_file
 
     return unless $initfile;      # Blank input file names are OK... Just don't do anything.
     push(@{$self->{INITFILES}}, $initfile);
-    nfatal("Need a file") unless @{$self->{INITFILES}}; # We do need at least one config file
+    fatal("Need a file") unless @{$self->{INITFILES}}; # We do need at least one config file
 
 
     my $xmltext = "<config>\n";
@@ -206,7 +206,7 @@ sub add_file
         {
 
 
-            $fh = Idval::FileIO->new($fname, "r") || nfatal("Can't open \"$fname\" for reading: $! in " . __PACKAGE__ . " line(" . __LINE__ . ")");
+            $fh = Idval::FileIO->new($fname, "r") || fatal("Can't open \"$fname\" for reading: $! in " . __PACKAGE__ . " line(" . __LINE__ . ")");
         }
 
         $text = do { local $/ = undef; <$fh> };
@@ -236,7 +236,7 @@ sub add_file
             }
             else
             {
-                nfatal("This installation of idv does not have YAML support.");
+                fatal("This installation of idv does not have YAML support.");
             }
         }
         else # Must be a idv-style config file
@@ -249,7 +249,7 @@ sub add_file
     eval { $self->{TREE} = XML::Simple::XMLin($xmltext, keyattr => {select=>'name'}, forcearray => ['select']); };
     if ($@)
     {
-        nsilent("Error from XML conversion: $@\n");
+        silent("Error from XML conversion: $@\n");
         my ($linenum, $col, $byte) = ($@ =~ m/ line (\d+), column (\d+), byte (\d+)/);
         $linenum = 0 unless (defined($linenum) && $linenum);
         my $i = 1;
@@ -264,7 +264,7 @@ sub add_file
             $i++;
         }
         print "\n\n";
-        nfatal("XML conversion error");
+        fatal("XML conversion error");
     }
 
     $self->{XMLTEXT} = $xmltext; # In case someone wants to see it later
@@ -347,7 +347,7 @@ sub config_to_xml
         };
 
 
-        nidv_warn("Unrecognized input line <$line>\n");
+        idv_warn("Unrecognized input line <$line>\n");
     }
 
     return $xml;
@@ -381,7 +381,7 @@ sub visit
     #print "visit ($level): ref of node_list_ref is: ", ref $node_list_ref, "\n";
     #print("visit ($level): visiting \"$name\", with ", scalar(@{$node_list_ref}), " nodes\n");
 
-    nfatal("node_list_ref not an ARRAY ref") unless ref $node_list_ref eq 'ARRAY';
+    fatal("node_list_ref not an ARRAY ref") unless ref $node_list_ref eq 'ARRAY';
     foreach my $node (@{$node_list_ref})
     {
         # Should we process this node?
@@ -393,7 +393,7 @@ sub visit
 #             # Don't allow 'select' as a regular key
 #             if (exists($node->{'group'}) && (ref($node->{'group'}) ne 'HASH'))
 #             {
-#                 nfatal("Dis-allowed configuration name 'group' found");
+#                 fatal("Dis-allowed configuration name 'group' found");
 #             }
 
             # Do we have any sub-nodes to visit?
@@ -433,30 +433,30 @@ sub merge_blocks
     my $match_status;
     my $match_id;
 
-    nchatty("Start of _merge_blocks, selects: ", Dumper($selects)) if $self->{DEBUG};
+    chatty("Start of _merge_blocks, selects: ", Dumper($selects)) if $self->{DEBUG};
 
     my $visitor = sub {
         my $self = shift;
         my $noderef = shift;
 
-        nchatty("merge_blocks: noderef is: ", Dumper($noderef)) if $self->{DEBUG};
+        chatty("merge_blocks: noderef is: ", Dumper($noderef)) if $self->{DEBUG};
         return 0 if ($self->evaluate($noderef, $selects) == 0);
 
-        nchatty("merge_blocks: evaluate returned nonzero\n") if $self->{DEBUG};
+        chatty("merge_blocks: evaluate returned nonzero\n") if $self->{DEBUG};
         foreach my $key (sort keys %{$noderef})
         {
-            nchatty("merge_blocks: checking key $key\n") if $self->{DEBUG};
+            chatty("merge_blocks: checking key $key\n") if $self->{DEBUG};
             next if ($key eq 'group');
             next if ($key eq 'select');
 
             my $value = $noderef->{$key};
             my $append = 0;
-            nchatty("ref of value is: ", ref $value, "\n") if $self->{DEBUG};
+            chatty("ref of value is: ", ref $value, "\n") if $self->{DEBUG};
             if (ref $value eq 'HASH')
             {
                 if (!exists($value->{append}))
                 {
-                    nfatal("Unexpected attributes for value: ", join(', ', sort keys %{$value}));
+                    fatal("Unexpected attributes for value: ", join(', ', sort keys %{$value}));
                 }
                 $append = $value->{append};
                 $value = $value->{content};
@@ -481,7 +481,7 @@ sub merge_blocks
                 $value =~ s/\%DATA\%/$self->{datadir}/gx;
             }
 
-            nchatty("merge_blocks: Adding \"$value\" to \"$key\"\n") if $self->{DEBUG};
+            chatty("merge_blocks: Adding \"$value\" to \"$key\"\n") if $self->{DEBUG};
             #print "value: ", Dumper($value);
             if ($append)
             {
@@ -500,7 +500,7 @@ sub merge_blocks
 
     $self->visit([$tree], 'top', 0, $visitor);
 
-    nchatty("Result of merge blocks - VARS: ", Dumper(\%vars)) if $self->{DEBUG};
+    chatty("Result of merge blocks - VARS: ", Dumper(\%vars)) if $self->{DEBUG};
 
     return \%vars;
 }
@@ -514,13 +514,13 @@ sub match_blocks
     my $match_status = 0;
     my $result;
 
-    nchatty("Start of match_blocks, selects: ", Dumper($selects)) if $self->{DEBUG};
+    chatty("Start of match_blocks, selects: ", Dumper($selects)) if $self->{DEBUG};
 
     my $visitor = sub {
         my $self = shift;
         my $noderef = shift;
 
-        nchatty("match_blocks: noderef is: ", Dumper($noderef)) if $self->{DEBUG};
+        chatty("match_blocks: noderef is: ", Dumper($noderef)) if $self->{DEBUG};
         my $eval_status = $self->evaluate($noderef, $selects);
         return 0 if $eval_status == 0;
         return 1 if $eval_status == 2;
@@ -534,7 +534,7 @@ sub match_blocks
     $result = $match_status;
     $match_status = 0;
 
-    nchatty("Result of match blocks is $result\n") if $self->{DEBUG};
+    chatty("Result of match blocks is $result\n") if $self->{DEBUG};
 
     return $result;
 }
@@ -553,12 +553,12 @@ sub evaluate
     my $match = '';
     my $is_regexp = 0;
 
-    nchatty("in evaluate: ", Dumper($noderef)) if $DEBUG;
-    nchatty("evaluate: 1 select_list: ", Dumper($select_list)) if $DEBUG;
+    chatty("in evaluate: ", Dumper($noderef)) if $DEBUG;
+    chatty("evaluate: 1 select_list: ", Dumper($select_list)) if $DEBUG;
     # If the block has no selector keys itself, then all matches should succeed
     if (not (exists($noderef->{'select'}) && ref($noderef->{'select'}) eq 'HASH'))
     {
-        nchatty("Block has no selector keys, returning 2\n") if $DEBUG;
+        chatty("Block has no selector keys, returning 2\n") if $DEBUG;
         return 2;
     }
 
@@ -577,11 +577,11 @@ sub evaluate
         # result of the subroutine is used as the value of the variable.
         if (exists ($self->{DEF_VARS}->{$block_key}))
         {
-            nchatty("Using \"$block_key\" as subroutine name\n");
+            chatty("Using \"$block_key\" as subroutine name\n");
             no strict 'refs';
             my $subr = $self->{DEF_VARS}->{$block_key};
             $selectors{$block_key} = &$subr(\%selectors);
-            nchatty ("Using ", $selectors{$block_key}, " for \"$block_key\"\n");
+            chatty ("Using ", $selectors{$block_key}, " for \"$block_key\"\n");
             use strict;
         }
 
@@ -594,7 +594,7 @@ sub evaluate
         # look at (possibly non-existing) selector keys.
         if ($block_op eq 'passes' or $block_op eq 'fails')
         {
-            nchatty("Comparing \"selector list\" \"$block_key\" \"$block_op\" \"$block_value\" resulted in ",
+            chatty("Comparing \"selector list\" \"$block_key\" \"$block_op\" \"$block_value\" resulted in ",
                     &$block_cmp_func(\%selectors, $block_key, $block_value) ? "True\n" : "False\n") if $DEBUG;
 
             my $cmp_result = &$block_cmp_func(\%selectors, $block_key, $block_value);
@@ -603,8 +603,8 @@ sub evaluate
             next KEY_MATCH;
         }
 
-        nchatty("evaluate: 2 select_list: ", Dumper(\%selectors)) if $DEBUG;
-        nchatty("Checking block selector \"$block_key\"\n") if $DEBUG;
+        chatty("evaluate: 2 select_list: ", Dumper(\%selectors)) if $DEBUG;
+        chatty("Checking block selector \"$block_key\"\n") if $DEBUG;
 
 #        @s_key_list = ($block_key);
         @s_key_list = $self->{ALLOW_KEY_REGEXPS} ? grep(/^$block_key$/, keys %selectors) :
@@ -633,7 +633,7 @@ sub evaluate
             # A successful match for any of these values constitutes a successful match for the block selector.
             foreach my $value (@{$arg_value_list})
             {
-                nchatty("Comparing \"$value\" \"$block_op\" \"$block_value\" resulted in ",
+                chatty("Comparing \"$value\" \"$block_op\" \"$block_value\" resulted in ",
                        &$block_cmp_func($value, $block_value) ? "True\n" : "False\n") if $DEBUG;
 
                 $cmp_result ||= &$block_cmp_func($value, $block_value);
@@ -693,9 +693,9 @@ sub get_value
     my $default = shift || '';
 
     #$cfg_dbg = ($key eq 'sync_dest');
-    nchatty ("In get_single_value with key \"$key\"\n") if $self->{DEBUG};
+    chatty ("In get_single_value with key \"$key\"\n") if $self->{DEBUG};
     my $vars = $self->merge_blocks($selects);
-    nchatty ("get_single_value: list result for \"$key\" is: ", Dumper($vars->{$key})) if $self->{DEBUG};
+    chatty ("get_single_value: list result for \"$key\" is: ", Dumper($vars->{$key})) if $self->{DEBUG};
     return defined $vars->{$key} ? $vars->{$key} : $default;
 }
 
@@ -722,7 +722,7 @@ package Idval::Config::Methods;
 use strict;
 use Config;
 
-use Idval::Logger qw(nfatal);
+use Idval::Logger qw(fatal);
 use Idval::FileIO;
 
 sub get_system_type
@@ -734,7 +734,7 @@ sub get_mtime
 {
     my $selectors = shift;
 
-    nfatal("No filename in selectors") unless exists $selectors->{FILE};
+    fatal("No filename in selectors") unless exists $selectors->{FILE};
     return Idval::FileIO::idv_get_mtime($selectors->{FILE});
 }
 

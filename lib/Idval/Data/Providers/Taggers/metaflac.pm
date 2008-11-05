@@ -23,7 +23,7 @@ use warnings;
 no warnings qw(redefine);
 use Class::ISA;
 
-use Idval::Logger qw(nidv_warn nchatty);
+use Idval::Logger qw(idv_warn chatty);
 use base qw(Idval::Provider);
 
 my $name = 'metaflac';
@@ -79,8 +79,8 @@ sub read_tags
 
         if ($line =~ m/ERROR: reading metadata/)
         {
-            nidv_warn('Getters::BadFlac', $line, $filename, "\n");
-            nchatty("ref record: ", ref $tag_record, "\n");
+            idv_warn('Getters::BadFlac', $line, $filename, "\n");
+            chatty("ref record: ", ref $tag_record, "\n");
             #delete $tag_record;
             $retval = 1;
             last;

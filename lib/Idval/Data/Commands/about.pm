@@ -24,7 +24,7 @@ use Data::Dumper;
 use Getopt::Long;
 
 use Idval::Common;
-use Idval::Logger qw(nsilent_q);
+use Idval::Logger qw(silent_q);
 use Idval::TypeMap;
 
 sub init
@@ -148,45 +148,45 @@ sub main
                 push(@msgs, $infoline);
             }
         }
-        nsilent_q(join("\n", @msgs), "\n");
+        silent_q(join("\n", @msgs), "\n");
 
-        nsilent_q("Reads:\n");
+        silent_q("Reads:\n");
         foreach my $reader_type (sort keys %readers_by_type)
         {
             $provider = $readers_by_type{$reader_type};
             $provider_paths{$provider->{NAME}} = $provider->query('path');
-            nsilent_q("\tReads tags from: $reader_type using ", $provider->{NAME}, "\n");
+            silent_q("\tReads tags from: $reader_type using ", $provider->{NAME}, "\n");
         }
 
-        nsilent_q("Writes:\n");
+        silent_q("Writes:\n");
         foreach my $writer_type (sort keys %writers_by_type)
         {
             $provider = $writers_by_type{$writer_type};
             $provider_paths{$provider->{NAME}} = $provider->query('path');
-            nsilent_q("\tWrites tags to: $writer_type using ", $provider->{NAME}, "\n");
+            silent_q("\tWrites tags to: $writer_type using ", $provider->{NAME}, "\n");
         }
 
-        nsilent_q("Types:\n");
+        silent_q("Types:\n");
         #print STDERR "TypeMap: ", Dumper($typemap);
         foreach my $filetype ($typemap->get_all_filetypes()) {
-            nsilent_q("\tType $filetype files have extensions: ",
+            silent_q("\tType $filetype files have extensions: ",
                      join(', ', map {lc $_} $typemap->get_exts_from_filetype($filetype), "\n"));
         }
-        nsilent_q("\n");
+        silent_q("\n");
         foreach my $class ($typemap->get_all_classes()) {
-            nsilent_q("\tClass $class comprises types: ",
+            silent_q("\tClass $class comprises types: ",
                      join(', ', $typemap->get_filetypes_from_class($class)), "\n");
         }
 
         #if ((exists $options->{'all'}) and $options->{'all'})
         {
-            nsilent_q("\nProvider paths:\n");
+            silent_q("\nProvider paths:\n");
             foreach my $provider (sort keys %provider_paths)
             {
                 next if $provider =~ m{/}; # This indicates a 'smooshed' combined converter,
                 # whose individual components will be displayed
                 # separately.
-                nsilent_q("\tProvider $provider uses ", $provider_paths{$provider}, "\n");
+                silent_q("\tProvider $provider uses ", $provider_paths{$provider}, "\n");
             }
         }
 
@@ -196,7 +196,7 @@ sub main
             # It is assumed that, for different endpoints, a given provider
             # has the same characteristics
 
-            nsilent_q("\nProvider info:\n");
+            silent_q("\nProvider info:\n");
             my %provider_status_info;
             foreach my $pinfo ($providers->direct_get_providers('converts', 'reads_tags', 'writes_tags'))
             {
@@ -221,7 +221,7 @@ sub main
                         $infoline .= $verbose ? '    attributes: ' . $cnv->query('attributes') : '';
                     }
                     $infoline .= "\n";
-                    nsilent_q($infoline);
+                    silent_q($infoline);
                 }
             }
 #            foreach my $pinfo ($providers->direct_get_providers('converts', 'reads_tags', 'writes_tags'))
@@ -235,7 +235,7 @@ sub main
 #                     $infoline .= $verbose ? '    attributes: ' . $cnv->query('attributes') : '';
 #                 }
 #                 $infoline .= "\n";
-#                 nsilent_q($infoline);
+#                 silent_q($infoline);
 #             }
         }
 

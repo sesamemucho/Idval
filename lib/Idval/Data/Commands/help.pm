@@ -26,7 +26,7 @@ use Pod::Usage;
 use Pod::Select;
 use Text::Abbrev;
 
-use Idval::Logger qw(nsilent_q nfatal);
+use Idval::Logger qw(silent_q fatal);
 use Idval::Help;
 
 sub init
@@ -63,34 +63,34 @@ sub main
         $name = lc (shift @ARGV);
         $cmd = $providers->get_command($name);
         
-        nfatal("Unrecognized command name \"$name\"\n") unless defined($cmd);
+        fatal("Unrecognized command name \"$name\"\n") unless defined($cmd);
         $cmd_name = $cmd->{NAME};
         $cmd = $cmd_info{$cmd_name};
-        nfatal("No help information for command name \"$name\"\n") unless defined($help_file->man_info($cmd_name));
+        fatal("No help information for command name \"$name\"\n") unless defined($help_file->man_info($cmd_name));
     
         if ($verbose)
         {
-            nsilent_q($help_file->get_full_description($cmd_name));
+            silent_q($help_file->get_full_description($cmd_name));
         }
         else
         {
-            nsilent_q($help_file->get_synopsis($cmd_name));
-            nsilent_q("\nUse \"help -v $cmd_name\" for more information.\n");
+            silent_q($help_file->get_synopsis($cmd_name));
+            silent_q("\nUse \"help -v $cmd_name\" for more information.\n");
         }
     }
     else
     {
         # Just a bare 'help' command => print help for the main program
-        nsilent_q($help_file->get_full_description('main'));
+        silent_q($help_file->get_full_description('main'));
     }
 
     if ($cmd_name eq 'help')
     {
  
-       nsilent_q("\nAvailable commands:\n");
+       silent_q("\nAvailable commands:\n");
        foreach my $cmd_name (sort keys %cmd_info) {
            my $gsd = $help_file->get_short_description($cmd_name);
-           nsilent_q("  ", $help_file->get_short_description($cmd_name), "\n");
+           silent_q("  ", $help_file->get_short_description($cmd_name), "\n");
        }
     }
 

@@ -23,7 +23,7 @@ use Data::Dumper;
 use English '-no_match_vars';
 
 use Idval::Common;
-use Idval::Logger qw(nchatty nverbose);
+use Idval::Logger qw(chatty verbose);
 use Idval::Data::Genres;
 
 use base qw( Idval::Config );
@@ -72,12 +72,12 @@ sub val_evaluate
     my $is_regexp = 0;
     my @tags_matched = ();
 
-    nchatty("in val_evaluate: ", Dumper($noderef)) if $self->{DEBUG};
-    nchatty("val_evaluate: 1 select_list: ", Dumper($select_list)) if $self->{DEBUG};
+    chatty("in val_evaluate: ", Dumper($noderef)) if $self->{DEBUG};
+    chatty("val_evaluate: 1 select_list: ", Dumper($select_list)) if $self->{DEBUG};
     # If the block has no selector keys itself, then all matches should succeed
     if (not (exists($noderef->{'select'}) && ref($noderef->{'select'}) eq 'HASH'))
     {
-        nchatty("Block has no selector keys, returning 2\n") if $self->{DEBUG};
+        chatty("Block has no selector keys, returning 2\n") if $self->{DEBUG};
         return 2;
     }
 
@@ -99,7 +99,7 @@ sub val_evaluate
             no strict 'refs';
             my $subr = $self->{DEF_VARS}->{$block_key};
             $selectors{$block_key} = &$subr(\%selectors);
-            nchatty("Using ", $selectors{$block_key}, " for \"$block_key\"\n");
+            chatty("Using ", $selectors{$block_key}, " for \"$block_key\"\n");
             use strict;
         }
 
@@ -110,29 +110,29 @@ sub val_evaluate
 
         my $bstor = $noderef->{'select'}->{$block_key}; # Naming convenience
 
-        nverbose("val_evaluate: 2 select_list: ", Dumper(\%selectors)) if $self->{DEBUG};
+        verbose("val_evaluate: 2 select_list: ", Dumper(\%selectors)) if $self->{DEBUG};
 
         @s_key_list = $self->{ALLOW_KEY_REGEXPS} ? grep(/^$block_key$/, keys %selectors) :
             ($block_key);
         $is_regexp = $block_key =~ m/\W/;
 
-        nverbose("Checking block selector \"$block_key\" (is_regexp = \"$is_regexp\")\n") if $self->{DEBUG};
+        verbose("Checking block selector \"$block_key\" (is_regexp = \"$is_regexp\")\n") if $self->{DEBUG};
 
         my $key_list_loop_result = 0;
 
         foreach my $s_key (@s_key_list)
         {
-            nchatty("Checking block selector key \"$s_key\"\n") if $self->{DEBUG};
+            chatty("Checking block selector key \"$s_key\"\n") if $self->{DEBUG};
             if (!exists($selectors{$s_key}))
             {
                 # The select list has nothing to match a required selector, so this must fail
-                nchatty("Select list has nothing to match block selector key \"$s_key\", so return 0.\n") if $self->{DEBUG};
+                chatty("Select list has nothing to match block selector key \"$s_key\", so return 0.\n") if $self->{DEBUG};
                 return 0;
             }
 
             if ($is_regexp && ($s_key =~ m/$tags_to_ignore/))
             {
-                nchatty("Block selector key \"$s_key\" is a tag to ignore.\n") if $self->{DEBUG};
+                chatty("Block selector key \"$s_key\" is a tag to ignore.\n") if $self->{DEBUG};
                 next;
             }
 
@@ -149,7 +149,7 @@ sub val_evaluate
             # A successful match for any of these values constitutes a successful match for the block selector.
             foreach my $value (@{$arg_value_list})
             {
-                nverbose("Comparing \"$s_key\" => \"$value\" \"$block_op\" \"$block_value\" resulted in ",
+                verbose("Comparing \"$s_key\" => \"$value\" \"$block_op\" \"$block_value\" resulted in ",
                          &$block_cmp_func($value, $block_value) ? "True\n" : "False\n") if $self->{DEBUG};
 
                 $cmp_result ||= &$block_cmp_func($value, $block_value);
@@ -169,13 +169,13 @@ sub val_evaluate
                 push(@tags_matched, $s_key);
             }
 
-            nchatty("accumulated retval is now \"$retval\"\n") if $self->{DEBUG};
+            chatty("accumulated retval is now \"$retval\"\n") if $self->{DEBUG};
         }
 
         $retval &&= $key_list_loop_result;
     }
 
-    nchatty("val_evaluate returning \"$retval\"\n") if $self->{DEBUG};
+    chatty("val_evaluate returning \"$retval\"\n") if $self->{DEBUG};
     return ($retval, \@tags_matched);
 }
 
@@ -188,7 +188,7 @@ sub get_gripes
     my $tree = $self->{TREE};
     my @gripelist;
 
-    nchatty("Start of _get_gripes, selects: ", Dumper($selects)) if $self->{DEBUG};
+    chatty("Start of _get_gripes, selects: ", Dumper($selects)) if $self->{DEBUG};
 
     my $visitor = sub {
         my $self = shift;
@@ -197,11 +197,11 @@ sub get_gripes
         my $gripe = 'no gripe found?';
         my @match_tags = ();
 
-        nchatty("get_gripes: noderef is: ", Dumper($noderef)) if $self->{DEBUG};
+        chatty("get_gripes: noderef is: ", Dumper($noderef)) if $self->{DEBUG};
         my ($retval, $matches) = $self->val_evaluate($noderef, $selects);
         return 0 if ($retval == 0);
 
-        nchatty("get_gripes: val_evaluate returned nonzero\n") if $self->{DEBUG};
+        chatty("get_gripes: val_evaluate returned nonzero\n") if $self->{DEBUG};
 
         # There might not be a GRIPE at this node (for instance, a top-level 'group')
         if(exists $noderef->{GRIPE})
@@ -236,7 +236,7 @@ sub get_gripes
         }
     }
 
-    nchatty("Result of merge blocks - VARS: ", Dumper(\@retlist)) if $self->{DEBUG};
+    chatty("Result of merge blocks - VARS: ", Dumper(\@retlist)) if $self->{DEBUG};
 
     return \@retlist;
 }
@@ -246,7 +246,7 @@ package Idval::ValidateFuncs;
 use strict;
 use Data::Dumper;
 
-#use Idval::Logger(nfatal);
+#use Idval::Logger(fatal);
 
 sub Check_Genre_for_id3v1
 {

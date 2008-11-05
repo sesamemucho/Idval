@@ -23,7 +23,7 @@ use warnings;
 use English '-no_match_vars';
 use Data::Dumper;
 
-use Idval::Logger qw(nverbose);
+use Idval::Logger qw(verbose);
 use Idval::Common;
 use Idval::Ui;
 
@@ -43,7 +43,7 @@ sub main
 
     #print "read.pm: inputfile is: \"$inputfile\"\n";
     my $loc = $inputfile ? $inputfile : 'Cached data store';
-    nverbose("Reading tag information from \"$loc\"\n");
+    verbose("Reading tag information from \"$loc\"\n");
 
     if ($inputfile)
     {

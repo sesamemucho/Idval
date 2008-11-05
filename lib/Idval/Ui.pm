@@ -27,7 +27,7 @@ use File::Basename;
 use File::Path;
 use File::Spec;
 
-use Idval::Logger qw(nverbose nchatty debug nfatal);
+use Idval::Logger qw(verbose chatty debug fatal);
 use Idval::Common;
 use Idval::Config;
 use Idval::FileIO;
@@ -54,7 +54,7 @@ sub get_sysconfig_file
     }
     else
     {
-        nfatal("No idval configuration file found in \"$datadir\"\n");
+        fatal("No idval configuration file found in \"$datadir\"\n");
     }
 
     return $cfgname;
@@ -86,7 +86,7 @@ sub get_userconfig_file
         $cfgname = 'data/idvaluser.cfg' if Idval::FileIO::idv_test_exists('data/idvaluser.cfg');
     }
 
-    nchatty("user config file name is: \"$cfgname\"\n");
+    chatty("user config file name is: \"$cfgname\"\n");
     return $cfgname;
 }
 
@@ -202,7 +202,7 @@ sub get_source_from_cache
     my $reclist;
 
     $reclist = eval {retrieve(Idval::Common::expand_tilde($data_store))};
-    nfatal("Tag info cache is corrupted; you will need to regenerate it (with 'gettags'):\n$@\n") if $@;
+    fatal("Tag info cache is corrupted; you will need to regenerate it (with 'gettags'):\n$@\n") if $@;
     my $ds = Idval::Collection->new({contents => $reclist});
     $ds->source($dat_file_name);
 
@@ -237,7 +237,7 @@ sub put_source_to_file
         $datastore->source('STORED DATA CACHE'); # First, adjust the SOURCE descriptor
         store($datastore, $ds_bin);
         my $out = Idval::FileIO->new($ds_dat, '>') or 
-            nfatal("Can't open $ds_dat for writing: $ERRNO\n");
+            fatal("Can't open $ds_dat for writing: $ERRNO\n");
 
         $out->print(join("\n", @{$datastore->stringify()}), "\n");
         $out->close();
@@ -247,7 +247,7 @@ sub put_source_to_file
     if ($dat_file)
     {
         my $fname = $dat_file;
-        my $out = Idval::FileIO->new($fname, '>') or nfatal("Can't open $fname for writing: $ERRNO\n");
+        my $out = Idval::FileIO->new($fname, '>') or fatal("Can't open $fname for writing: $ERRNO\n");
 
         $datastore->source($fname);
         my @outstrs = @{$datastore->stringify()};
@@ -257,7 +257,7 @@ sub put_source_to_file
             $ftag = $line if $line =~ m/^FILE/;
             foreach my $char (split(//, $line))
             {
-                nverbose("Wide char in \"$line\" from \"$ftag\"\n") if ord($char) > 255;
+                verbose("Wide char in \"$line\" from \"$ftag\"\n") if ord($char) > 255;
             }
         }
         $out->print(join("\n", @outstrs), "\n");

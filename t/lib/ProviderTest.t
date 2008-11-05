@@ -9,7 +9,6 @@ use Test::More;
 use Data::Dumper;
 
 use TestUtils;
-use Idval::Constants;
 use Idval::ProviderMgr;
 use Idval::Common;
 use Idval::Logger;
@@ -62,8 +61,6 @@ sub init : Test(2)
 
 sub get_providers : Test(1)
 {
-    #my $self = shift;
-
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
     add_UserPlugin3_up1();
     add_UserPlugin3_up2();
@@ -80,8 +77,6 @@ sub get_providers : Test(1)
 
 sub get_packages : Test(2)
 {
-    #my $self = shift;
-
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
     add_UserPlugin3_up1();
     add_UserPlugin3_up2();
@@ -100,8 +95,6 @@ sub get_packages : Test(2)
 
 sub get_a_provider_1 : Test(1)
 {
-    #my $self = shift;
-
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
     add_UserPlugin3_up1();
     add_UserPlugin3_up2();
@@ -118,11 +111,8 @@ sub get_a_provider_1 : Test(1)
 
 sub get_a_provider_2 : Test(1)
 {
-    #my $self = shift;
     my $item;
 
-    #my $old_level = Idval::Common::get_logger()->accessor('LOGLEVEL', $CHATTY);
-    #my $old_debug = Idval::Common::get_logger()->accessor('DEBUGMASK', $DBG_GRAPH + $DBG_PROVIDERS);
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
     add_UserPlugin3_up1();
     add_UserPlugin3_up2();
@@ -131,8 +121,6 @@ sub get_a_provider_2 : Test(1)
     my $fc = Idval::Config->new("/testdir/gt1.txt");
     $provs = Idval::ProviderMgr->new($fc);
     $item = $provs->get_provider('converts', 'FLAC', 'WAV');
-    #Idval::Common::get_logger()->accessor('DEBUGMASK', $old_debug);
-    #Idval::Common::get_logger()->accessor('LOGLEVEL', $old_level);
     ok(not $item);
 
     return;
@@ -140,8 +128,6 @@ sub get_a_provider_2 : Test(1)
 
 sub choose_provider_by_weight_in_config_file_1 : Test(1)
 {
-    my $self = shift;
-
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n" .
         "{\ncommand_name == goober\nweight = 50\n}\n");
     add_UserPlugin3_up1();
@@ -149,13 +135,8 @@ sub choose_provider_by_weight_in_config_file_1 : Test(1)
     add_UserPlugin3_up3();
     add_UserPlugin3_up4();
     my $fc = Idval::Config->new("/testdir/gt1.txt");
-    #Idval::Logger::initialize_logger({log_out => 'STDERR'});
-    #my $old_level = Idval::Common::get_logger()->accessor('LOGLEVEL', $CHATTY);
-    #my $old_debug = Idval::Common::get_logger()->accessor('DEBUGMASK', $DBG_GRAPH + $DBG_PROVIDERS);
     $provs = Idval::ProviderMgr->new($fc);
     my $writer = $provs->get_provider('writes_tags', 'MP3');
-    #Idval::Common::get_logger()->accessor('DEBUGMASK', $old_debug);
-    #Idval::Common::get_logger()->accessor('LOGLEVEL', $old_level);
 
     is(ref $writer, 'Idval::Plugins::Up1');
 
@@ -164,8 +145,6 @@ sub choose_provider_by_weight_in_config_file_1 : Test(1)
 
 sub choose_provider_by_weight_in_config_file_2 : Test(1)
 {
-    #my $self = shift;
-
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n" .
         "{\ncommand_name == tag_write4\nweight = 50\n}\n");
     add_UserPlugin3_up1();
@@ -186,8 +165,6 @@ sub choose_provider_by_weight_in_config_file_2 : Test(1)
 
 # sub get_a_provider_3 : Test(1)
 # {
-#     #my $self = shift;
-
 #     my $fc = FakeConfig->new("$testdir/Idval/UserPlugins3");
 #     $provs = Idval::ProviderMgr->new($fc);
 
@@ -198,17 +175,12 @@ sub choose_provider_by_weight_in_config_file_2 : Test(1)
 
 sub get_a_command_1 : Test(2)
 {
-    #my $self = shift;
-
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\ncommand_dir = /testdir/Idval\n\n");
     add_command_1();
     my $fc = Idval::Config->new("/testdir/gt1.txt");
-    #my $old_level = Idval::Common::get_logger()->accessor('LOGLEVEL', $CHATTY);
-    #my $old_debug = Idval::Common::get_logger()->accessor('DEBUGMASK', $DBG_GRAPH + $DBG_PROVIDERS);
     $provs = Idval::ProviderMgr->new($fc);
     my @cmds = $provs->_get_providers('command');
-    #Idval::Common::get_logger()->accessor('DEBUGMASK', $old_debug);
-    #Idval::Common::get_logger()->accessor('LOGLEVEL', $old_level);
+
 
     is(scalar(@cmds), 1);
 

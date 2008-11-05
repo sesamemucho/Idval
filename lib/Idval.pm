@@ -26,7 +26,7 @@ use Data::Dumper;
 use File::Spec;
 use Cwd;
 
-use Idval::Logger qw(nverbose nchatty);
+use Idval::Logger qw(verbose chatty);
 use Idval::ServiceLocator;
 use Idval::Ui;
 use Idval::Config;
@@ -165,12 +165,12 @@ sub _init
     # Tell the system to use the regular filesystem services (i.e., not the unit-testing version)
     Idval::ServiceLocator::provide('io_type', 'FileSystem');
 
-    nverbose("option list:", Dumper(\%options));
-    nverbose("Looking for: ", Idval::Ui::get_sysconfig_file($data_dir), "\n");
+    verbose("option list:", Dumper(\%options));
+    verbose("Looking for: ", Idval::Ui::get_sysconfig_file($data_dir), "\n");
 
     my $sysconfig_file  = $options{'sysconfig'} || Idval::Ui::get_sysconfig_file($data_dir);
     my $userconfig_file = $options{'userconfig'} || Idval::Ui::get_userconfig_file($data_dir);
-    nverbose("sysconfig is: \"$sysconfig_file\", userconfig is \"$userconfig_file\"\n");
+    verbose("sysconfig is: \"$sysconfig_file\", userconfig is \"$userconfig_file\"\n");
 
     my $config = Idval::Config->new($sysconfig_file);
     $config->add_file($userconfig_file) if $userconfig_file;
@@ -196,7 +196,7 @@ sub _init
     $self->{DATASTORE} = Idval::Collection->new({contents => '', source => 'blank'});
 
     $self->{REMAINING_ARGS} = [@other_args];
-    nchatty("Remaining args: <", join(", ", @{$self->{REMAINING_ARGS}}), ">\n");
+    chatty("Remaining args: <", join(", ", @{$self->{REMAINING_ARGS}}), ">\n");
     return;
 }
 
@@ -230,7 +230,7 @@ sub datastore
 
 package Idval::Scripts;
 use Idval::Common;
-use Idval::Logger qw(nchatty nfatal);
+use Idval::Logger qw(chatty fatal);
 use Data::Dumper;
 
 our $AUTOLOAD;
@@ -245,11 +245,11 @@ sub AUTOLOAD  ## no critic (RequireFinalReturn)
     return if $name =~ m/^[[:upper:]]+$/;
 
     #print STDERR "Checking \"$name\"\n";
-    nchatty("In autoload, checking \"$name\"\n");
+    chatty("In autoload, checking \"$name\"\n");
     my $providers = Idval::Common::get_common_object('providers');
-    nfatal("ERROR: Command \"$rtn\" called too early\n") unless defined $providers;
+    fatal("ERROR: Command \"$rtn\" called too early\n") unless defined $providers;
 
-    nchatty("In autoload; rtn is \"$rtn\"\n");
+    chatty("In autoload; rtn is \"$rtn\"\n");
 
     #my $subr = $providers->find_command($name);
     #$subr .= '::main';

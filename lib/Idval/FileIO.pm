@@ -29,7 +29,7 @@ use warnings;
 use IO::File;
 use File::Glob;
 
-use Idval::Logger qw(nfatal);
+use Idval::Logger qw(fatal);
 use Idval::ServiceLocator;
 use Idval::FileSystem;
 use Idval::FileString;
@@ -44,11 +44,11 @@ sub set_imp
     my $service_name = shift;
     my $service = shift;
 
-    nfatal("Unrecognized service name \"$service_name\" in Idval::FileIO") if $service_name ne "io_type";
+    fatal("Unrecognized service name \"$service_name\" in Idval::FileIO") if $service_name ne "io_type";
 
     $implementation = $service eq "FileSystem" ? "Idval::FileSystem" :
                       $service eq "FileString" ? "Idval::FileString" :
-                      nfatal("Unrecognized service \"$service\" for service name io_type");
+                      fatal("Unrecognized service \"$service\" for service name io_type");
 
     return;
 }
@@ -62,9 +62,9 @@ sub AUTOLOAD
     #print "AUTOLOAD: args: \"", join(" ", @_), "\"\n";
     my $self = shift;
 
-    nfatal("File system implementation not set.\n" .
+    fatal("File system implementation not set.\n" .
            "Did you forget to call Idval::ServiceLocator::provide('io_type', xxx)?\n") unless $implementation;
-    nfatal("undefined self") unless defined($self);
+    fatal("undefined self") unless defined($self);
     if ($self eq __PACKAGE__)
     {
         unshift @_, $implementation;

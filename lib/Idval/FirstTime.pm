@@ -29,8 +29,8 @@ use File::Basename ();
 use File::Path ();
 use File::Spec;
 
+use Idval::Logger qw(:vars);
 use Idval::Common;
-use Idval::Constants;
 use Idval::Config;
 
 use vars qw(
@@ -40,8 +40,8 @@ use vars qw(
 
 $VERSION = substr q$Revision: 0.02 $, 10;
 
-*prompt = Idval::Common::make_custom_logger({level => $SILENT,
-                                             debugmask => $DBG_ALL,
+*prompt = Idval::Common::make_custom_logger({level => $L_SILENT,
+                                             force_match => 1,
                                              decorate => 0,
                                             });
 *query = Idval::Common::make_custom_logger({query => 1,

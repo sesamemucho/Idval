@@ -7,7 +7,7 @@ use base qw(Test::Class);
 use Test::More;
 
 use Data::Dumper;
-use Idval::Logger qw(:vars nverbose nchatty);
+use Idval::Logger qw(:vars verbose chatty);
 
 INIT { Test::Class->runtests } # here's the magic!
 
@@ -217,10 +217,10 @@ sub test_chatty : Test(2)
 {
     my $msg = 'test_chatty test';
 
-    my $result = capture_logger('nchatty', 'Test', $L_SILENT, $msg);
+    my $result = capture_logger('chatty', 'Test', $L_SILENT, $msg);
     is($result, '');
 
-    $result = capture_logger('nchatty', 'Test', $L_CHATTY, $msg);
+    $result = capture_logger('chatty', 'Test', $L_CHATTY, $msg);
     is($result, "Idval::Logger::Test: $msg");
 }
 
@@ -228,13 +228,13 @@ sub test_verbose : Test(3)
 {
     my $msg = 'test_verbose test';
 
-    my $result = capture_logger('nverbose', 'Test', $L_SILENT, $msg);
+    my $result = capture_logger('verbose', 'Test', $L_SILENT, $msg);
     is($result, '');
 
-    $result = capture_logger('nverbose', 'Test', $L_VERBOSE, $msg);
+    $result = capture_logger('verbose', 'Test', $L_VERBOSE, $msg);
     is($result, "Idval::Logger::Test: $msg");
 
-    $result = capture_logger('nverbose', 'Test', $L_CHATTY, $msg);
+    $result = capture_logger('verbose', 'Test', $L_CHATTY, $msg);
     is($result, "Idval::Logger::Test: $msg");
 }
 

@@ -25,7 +25,7 @@ use Pod::Usage;
 use Data::Dumper;
 use English '-no_match_vars';;
 
-use Idval::Logger qw(nfatal debug);
+use Idval::Logger qw(fatal debug);
 use Idval::Common;
 use Idval::FileIO;
 use Idval::DoDots;
@@ -45,12 +45,12 @@ sub main
     my $inputfile = shift;
     my $retval;
 
-    nfatal("Need an input file for update\n") unless (defined($inputfile) && $inputfile);
+    fatal("Need an input file for update\n") unless (defined($inputfile) && $inputfile);
 
     my $new_datastore = eval {
         Idval::Ui::get_source_from_file($inputfile);};
 
-    nfatal($@) if $@;
+    fatal($@) if $@;
     #debug("update: datastore:", Dumper($datastore));
     #debug("update: new datastore:", Dumper($new_datastore));
 

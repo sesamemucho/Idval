@@ -22,7 +22,7 @@ use warnings;
 
 use Data::Dumper;
 
-use Idval::Logger qw( nchatty nfatal );
+use Idval::Logger qw( chatty fatal );
 use Idval::Common;
 
 #
@@ -58,7 +58,7 @@ sub init
 #                                                  decorate => 1,
 #                                                 }) unless defined(*chatty{CODE});
 
-    nchatty("Idval::Command creating object from \"$cmd_pkg\"\n");
+    chatty("Idval::Command creating object from \"$cmd_pkg\"\n");
 
     # The first time a command is encountered, if it has an "init" routine, call it
     no strict 'refs';
@@ -88,7 +88,7 @@ sub main
     }
     else
     {
-        nfatal("No \"main\" routine in command \"$cmd_pkg\"");
+        fatal("No \"main\" routine in command \"$cmd_pkg\"");
     }
 
     use strict;

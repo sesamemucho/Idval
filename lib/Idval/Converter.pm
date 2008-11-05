@@ -23,7 +23,7 @@ use Data::Dumper;
 #use File::Temp qw/ tmpnam /;
 use File::Temp qw/ :POSIX /;
 
-use Idval::Logger qw(nfatal);
+use Idval::Logger qw(fatal);
 use Idval::Common;
 use base qw(Idval::Provider);
 
@@ -41,7 +41,7 @@ use warnings;
 use Data::Dumper;
 use Memoize;
 
-use Idval::Logger qw(nverbose);
+use Idval::Logger qw(verbose);
 use Idval::Common;
 use base qw(Idval::Converter);
 
@@ -53,7 +53,7 @@ sub new
     my $from = shift;
     my $to = shift;
     my @cnv_list = @_;
-    nfatal("No converters in smoosh?") unless @_ and defined($_[0]);
+    fatal("No converters in smoosh?") unless @_ and defined($_[0]);
     my $name = join('/', map{$_->query('name')} @cnv_list);
     my $config = $cnv_list[0]->{CONFIG}; # They all have the same CONFIG object.
     my $self = $class->SUPER::new($config, $name);
@@ -73,7 +73,7 @@ sub init
     $self->{FIRSTCONVERTER} = $converters[0];
     $self->{LASTCONVERTER} = $converters[-1];
 
-    nverbose("Smooshing: ", join(" -> ", map { $_->query('name') } @{$self->{CONVERTERS}}), "\n");
+    verbose("Smooshing: ", join(" -> ", map { $_->query('name') } @{$self->{CONVERTERS}}), "\n");
     $self->{TO} = $to;
     $self->add_endpoint($from, $to);
     $self->set_param('name', $self->{NAME});
@@ -122,7 +122,7 @@ sub convert
             push(@temporary_files, $to_file);
         }
 
-        nverbose("Converting ", $tag_record->get_name(), " to $to_file using ", $conv->query('name'), "\n");
+        verbose("Converting ", $tag_record->get_name(), " to $to_file using ", $conv->query('name'), "\n");
         $retval = $conv->convert($tag_record, $to_file);
         last if $retval != 0;
 

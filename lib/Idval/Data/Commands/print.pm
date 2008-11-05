@@ -49,7 +49,7 @@ sub main
     # If there's something left, we've been passed a file handle
     $outputfile = $ARGV[0] if @ARGV;
     my $out = ref $outputfile ? $outputfile :
-        Idval::FileIO->new($outputfile, '>') or nfatal("Can't open $outputfile for writing: $ERRNO\n");
+        Idval::FileIO->new($outputfile, '>') or fatal("Can't open $outputfile for writing: $ERRNO\n");
 
     #print STDERR "print command: ", Dumper($datastore);
     my $coll = $datastore->stringify($full);

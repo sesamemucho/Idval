@@ -25,7 +25,7 @@ use Getopt::Long qw(:config pass_through permute);
 
 use Idval;
 use Idval::Common;
-use Idval::Logger qw(nfatal);
+use Idval::Logger qw(fatal);
 
 sub new
 {
@@ -142,7 +142,7 @@ sub cmd_loop
                 else
                 {
                     print STDERR "Yipes\n";
-                    nfatal("Error in \"$cmd_name\": \"$status\", \"$reason\"\n");
+                    fatal("Error in \"$cmd_name\": \"$status\", \"$reason\"\n");
                 }
             }
 

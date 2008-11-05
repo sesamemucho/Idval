@@ -25,8 +25,7 @@ use Pod::Usage;
 use Data::Dumper;
 use English '-no_match_vars';;
 
-use Idval::Logger qw(ninfo_q nfatal);
-use Idval::Constants;
+use Idval::Logger qw(info_q fatal);
 use Idval::Record;
 use Idval::FileIO;
 use Idval::DoDots;
@@ -104,14 +103,14 @@ sub main
         }
     }
 
-    ninfo_q({force_match => 1}, "Processed $numrecs records.\n") unless $quiet;
+    info_q({force_match => 1}, "Processed $numrecs records.\n") unless $quiet;
 
     if ($outputfile)
     {
         $select_coll->source($outputfile);
         my $coll = $select_coll->stringify();
 
-        my $out = Idval::FileIO->new($outputfile, '>') or nfatal("Can't open $outputfile for writing: $ERRNO\n");
+        my $out = Idval::FileIO->new($outputfile, '>') or fatal("Can't open $outputfile for writing: $ERRNO\n");
         $out->print(join("\n", @{$coll}), "\n");
         $out->close();
     }

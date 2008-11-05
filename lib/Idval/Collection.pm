@@ -21,7 +21,7 @@ use strict;
 use warnings;
 use Data::Dumper;
 
-use Idval::Logger qw(nfatal);
+use Idval::Logger qw(fatal);
 use Idval::Common;
 
 sub new
@@ -111,7 +111,7 @@ sub stringify
 
     my @output = ();
     my @reclist;
-    nfatal("Huh?") unless defined $self->{CREATIONDATE};
+    fatal("Huh?") unless defined $self->{CREATIONDATE};
     my $date = $self->{CREATIONDATE};
 
     push(@output, "# IDValidator Tag File (DO NOT REMOVE THIS LINE)");
