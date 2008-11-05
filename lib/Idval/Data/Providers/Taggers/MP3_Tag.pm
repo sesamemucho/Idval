@@ -22,10 +22,10 @@ use strict;
 use warnings;
 no  warnings qw(redefine);
 use Class::ISA;
-use Carp;
 use Data::Dumper;
 use Encode;
 
+use Idval::Logger qw(nfatal);
 use base qw(Idval::Provider);
 
 my $req_status = eval {require MP3::Tag};
@@ -86,8 +86,8 @@ sub init
     # Forward mapping is ID3v1 to ID3v2
     # Reverse mapping is ID3v2 to ID3v1
     $self->get_tagname_mappings($config, 'MP3');
-    #print "MP3_Tags FWD_MAPPING: ", Dumper($self->{FWD_MAPPING});
-    #print "MP3_Tags REV_MAPPING: ", Dumper($self->{REV_MAPPING});
+    #debug("MP3_Tags FWD_MAPPING: ", Dumper($self->{FWD_MAPPING}));
+    #debug("MP3_Tags REV_MAPPING: ", Dumper($self->{REV_MAPPING}));
     $self->{DEBUG} = 0;
     return;
 }
@@ -136,7 +136,7 @@ sub read_tags
 
     if (exists $mp3->{ID3v1})
     {
-        #print STDERR "MP3: Yes to ID3v1\n";
+        #debug(STDERR "MP3: Yes to ID3v1\n");
         ($title, $artist, $album, $year, $comment, $track, $genre) = $mp3->{ID3v1}->all;
 
         $tag_record->add_tag($self->{FWD_MAPPING}->{'TITLE'}, $title);
@@ -373,7 +373,7 @@ sub write_tags
         $tag_index = -1;
         while ($tagvalue = $temp_rec->shift_value($tagname))
         {
-            #confess("Undefined value for tag \"$tagname\"") unless defined($tagvalue);
+            #nfatal("Undefined value for tag \"$tagname\"") unless defined($tagvalue);
             $tag_index++;
             $framename = $tag_index > 0 ? sprintf("%s%02d", $tagname, $tag_index) : $tagname;
 

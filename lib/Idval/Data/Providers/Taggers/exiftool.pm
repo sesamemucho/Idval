@@ -22,7 +22,6 @@ use strict;
 use warnings;
 no  warnings qw(redefine);
 use Class::ISA;
-use Carp;
 
 use base qw(Idval::Provider);
 

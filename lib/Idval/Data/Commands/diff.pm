@@ -25,17 +25,12 @@ use Pod::Usage;
 use Data::Dumper;
 use Carp;
 
-use Idval::Constants;
 use Idval::Common;
 use Idval::FileIO;
 use Idval::Ui;
 
 sub init
 {
-    *silent_q = Idval::Common::make_custom_logger({level => $SILENT,
-                                                  debugmask => $DBG_ALL,
-                                                  decorate => 0});
-
     set_pod_input();
 
     return;

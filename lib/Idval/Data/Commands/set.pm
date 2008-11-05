@@ -24,10 +24,8 @@ use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
 use English '-no_match_vars';;
-use Carp;
 
-use Idval::Constants;
-use Idval::Logger;
+use Idval::Logger qw(idv_print);
 
 my $first = 0;
 
@@ -68,15 +66,15 @@ sub main
         }
         else
         {
-            print "Unrecognized \"set\" parameter: \"$param\" (try \"help set\")\n";
+            idv_print("Unrecognized \"set\" parameter: \"$param\" (try \"help set\")\n");
             return $datastore;
         }
 
-        print "Value for \"$param\" is $newvalue\n";
+        idv_print("Value for \"$param\" is $newvalue\n");
     }
     else
     {
-        print "Unrecognized \"set\" command: \"$args\" (try \"help set\")\n";
+        idv_print("Unrecognized \"set\" command: \"$args\" (try \"help set\")\n");
     }
 
     return $datastore;

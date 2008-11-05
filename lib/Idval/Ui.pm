@@ -27,7 +27,7 @@ use File::Basename;
 use File::Path;
 use File::Spec;
 
-use Idval::Logger qw(nverbose nchatty insane nfatal);
+use Idval::Logger qw(nverbose nchatty debug nfatal);
 use Idval::Common;
 use Idval::Config;
 use Idval::FileIO;
@@ -145,12 +145,12 @@ sub make_wanted
     
     my @exts = map { '\.' . lc($_) } keys %type_list;
 
-    insane("UI: exts: ", join(",", @exts), ">\n");
+    debug("UI: exts: ", join(",", @exts), ">\n");
     return sub {
-        insane("UI: file is \"$_\"\n");
+        debug("UI: file is \"$_\"\n");
         return if -d $_;
         my($filename, $junk, $suffix) = fileparse(basename($_), @exts);
-        insane("UI: name is $_, Suffix is: <$suffix>\n");
+        debug("UI: name is $_, Suffix is: <$suffix>\n");
         return unless $suffix;  # It wasn't one of the ones we were looking for
 
         $suffix = substr($suffix, 1); # Remove the '.'

@@ -24,7 +24,7 @@ use Data::Dumper;
 use English '-no_match_vars';
 use Carp;
 
-use Idval::Constants;
+use Idval::Logger qw(ninfo_q debug);
 use Idval::Common;
 use Idval::FileIO;
 use Idval::DoDots;
@@ -51,7 +51,7 @@ sub main
     my $dotmap = $typemap->get_dot_map();
     Idval::DoDots::init();
 
-    Idval::Common::get_logger()->info_q($DBG_PROCESS, "Collecting directory information. Please wait...\n");
+    ninfo_q("Collecting directory information. Please wait...\n");
     $datastore = Idval::Ui::get_source_from_dirs($providers,
                                                  Idval::Common::get_common_object('config'),
                                                  @args);
@@ -63,7 +63,7 @@ sub main
 
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
-        #print STDERR "Checking \"$key\"\n";
+        debug("Checking \"$key\"\n");
         $tag_record = $datastore->{RECORDS}->{$key};
         $type = $tag_record->get_value('TYPE');
         $prov = $providers->get_provider('reads_tags', $type, 'NULL');

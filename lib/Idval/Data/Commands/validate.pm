@@ -22,10 +22,8 @@ use warnings;
 use Data::Dumper;
 use Scalar::Util;
 use English qw( -no_match_vars );
-use Carp;
 
 use Idval::Config;
-use Idval::Constants;
 use Idval::Logger qw(nsilent_q);
 use Idval::FileIO;
 use Idval::DoDots;
@@ -35,14 +33,9 @@ use Idval::Select;
 my $dbg = 0;
 my $filename;
 my $val_cfg;
-my $silent_q;
 
 sub init
 {
-    *silent_q = Idval::Common::make_custom_logger({level => $SILENT,
-                                                  debugmask => $DBG_ALL,
-                                                  decorate => 0});
-
     set_pod_input();
 
     return;

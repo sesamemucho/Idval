@@ -23,9 +23,9 @@ use warnings;
 no  warnings qw(redefine);
 use Class::ISA;
 use Data::Dumper;
-use Carp;
 
 use Idval::FileIO;
+use Idval::Logger qw(nfatal);
 use base qw(Idval::Provider);
 
 my $name = 'abc';
@@ -259,7 +259,7 @@ sub parse_file
 
     if (!exists($self->{TEXT}->{$fname}))
     {
-        my $fh = Idval::FileIO->new($fname, "r") || croak "Can't open \"$fname\" for reading: $!\n";
+        my $fh = Idval::FileIO->new($fname, "r") || nfatal("Can't open \"$fname\" for reading: $!\n");
         my $text = do { local $/ = undef; <$fh> };
         $fh->close();
 
@@ -371,7 +371,7 @@ sub create_records
     my $type    = $arglist->{type};
     my $srclist = $arglist->{srclist};
 
-    my $fh = Idval::FileIO->new($fname, "r") || croak "Can't open \"$fname\" for reading: $!\n";
+    my $fh = Idval::FileIO->new($fname, "r") || nfatal("Can't open \"$fname\" for reading: $!\n");
     my $text = do { local $/ = undef; <$fh> };
     $fh->close();
 
@@ -403,7 +403,7 @@ sub close
     {
         foreach my $fname (keys %{$self->{OUTPUT}})
         {
-            $fh = Idval::FileIO->new($fname, "w") || croak "Can't open \"$fname\" for writing: $!\n";
+            $fh = Idval::FileIO->new($fname, "w") || nfatal("Can't open \"$fname\" for writing: $!\n");
             $fh->printflush($self->{OUTPUT}->{$fname});
             $fh->close();
         }

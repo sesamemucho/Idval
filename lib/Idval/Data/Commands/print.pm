@@ -23,7 +23,6 @@ use warnings;
 use English '-no_match_vars';
 use Getopt::Long;
 use Data::Dumper;
-use Carp;
 
 use Idval::FileIO;
 use Idval::Common;
@@ -50,7 +49,7 @@ sub main
     # If there's something left, we've been passed a file handle
     $outputfile = $ARGV[0] if @ARGV;
     my $out = ref $outputfile ? $outputfile :
-        Idval::FileIO->new($outputfile, '>') or croak "Can't open $outputfile for writing: $ERRNO\n";
+        Idval::FileIO->new($outputfile, '>') or nfatal("Can't open $outputfile for writing: $ERRNO\n");
 
     #print STDERR "print command: ", Dumper($datastore);
     my $coll = $datastore->stringify($full);

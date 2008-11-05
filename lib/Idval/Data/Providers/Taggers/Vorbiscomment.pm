@@ -22,8 +22,8 @@ use strict;
 use warnings;
 no  warnings qw(redefine);
 use Class::ISA;
-use Carp;
 
+use Idval::Logger qw(nchatty nidv_warn debug);
 use base qw(Idval::Provider);
 
 my $name = 'vorbiscomment';
@@ -86,8 +86,8 @@ sub read_tags
 
         if ($line =~ m/Failed to open file as vorbis/)
         {
-            print 'Getters::BadVorbis', $line, $filename, "\n";
-            print "ref record: ", ref $tag_record, "\n";
+            nidv_warn('Getters::BadVorbis', $line, $filename, "\n");
+            nchatty("ref record: ", ref $tag_record, "\n");
             $retval = 1;
             last;
         }
@@ -106,8 +106,8 @@ sub read_tags
         $tag_record->add_to_tag($current_tag, "\n$line");
     }
 
-    #print "\nGot tag:\n";
-    #print join("\n", $tag_record->format_record());
+    #debug("\nGot tag:\n");
+    #debug(join("\n", $tag_record->format_record()));
 
     return $retval;
 }

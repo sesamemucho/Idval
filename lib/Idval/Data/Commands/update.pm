@@ -24,8 +24,8 @@ use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
 use English '-no_match_vars';;
-use Carp;
 
+use Idval::Logger qw(nfatal debug);
 use Idval::Common;
 use Idval::FileIO;
 use Idval::DoDots;
@@ -45,14 +45,14 @@ sub main
     my $inputfile = shift;
     my $retval;
 
-    croak "Need an input file for update\n" unless (defined($inputfile) && $inputfile);
+    nfatal("Need an input file for update\n") unless (defined($inputfile) && $inputfile);
 
     my $new_datastore = eval {
         Idval::Ui::get_source_from_file($inputfile);};
 
-    croak($@) if $@;
-    #print STDERR "update: datastore:", Dumper($datastore);
-    #print STDERR "update: new datastore:", Dumper($new_datastore);
+    nfatal($@) if $@;
+    #debug("update: datastore:", Dumper($datastore));
+    #debug("update: new datastore:", Dumper($new_datastore));
 
     my $typemap = Idval::Common::get_common_object('typemap');
     my $dotmap = $typemap->get_dot_map();
@@ -65,7 +65,7 @@ sub main
     foreach my $key (sort keys %{$new_datastore->{RECORDS}})
     {
         $tag_record = $new_datastore->{RECORDS}->{$key};
-        #print STDERR "in update with: ", Dumper($tag_record);
+        #debug("in update with: ", Dumper($tag_record));
         $type = $tag_record->get_value('TYPE');
         $prov = $providers->get_provider('writes_tags', $type, 'NULL');
         $prov_list{$prov} = $prov;

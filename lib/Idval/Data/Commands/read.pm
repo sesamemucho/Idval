@@ -22,18 +22,13 @@ use warnings;
 
 use English '-no_match_vars';
 use Data::Dumper;
-use Carp;
 
-use Idval::Constants;
+use Idval::Logger qw(nverbose);
 use Idval::Common;
 use Idval::Ui;
 
 sub init
 {
-    *mylog = Idval::Common::make_custom_logger({level => $VERBOSE,
-                                               debugmask => $DBG_PROCESS,
-                                               decorate => 1});
-
     set_pod_input();
 
     return;
@@ -48,7 +43,7 @@ sub main
 
     #print "read.pm: inputfile is: \"$inputfile\"\n";
     my $loc = $inputfile ? $inputfile : 'Cached data store';
-    mylog("Reading tag information from \"$loc\"\n");
+    nverbose("Reading tag information from \"$loc\"\n");
 
     if ($inputfile)
     {

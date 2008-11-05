@@ -20,22 +20,17 @@ package Idval::Plugins::Command::Help;
 use strict;
 use warnings;
 
-use Carp qw(cluck croak);
 use Data::Dumper;
 use Getopt::Long;
 use Pod::Usage;
 use Pod::Select;
 use Text::Abbrev;
 
-use Idval::Constants;
+use Idval::Logger qw(nsilent_q nfatal);
 use Idval::Help;
 
 sub init
 {
-    *silent_q = Idval::Common::make_custom_logger({level => $SILENT,
-                                                  debugmask => $DBG_PROCESS,
-                                                  decorate => 0});
-
     set_pod_input();
 
     return;
@@ -68,34 +63,34 @@ sub main
         $name = lc (shift @ARGV);
         $cmd = $providers->get_command($name);
         
-        croak "Unrecognized command name \"$name\"\n" unless defined($cmd);
+        nfatal("Unrecognized command name \"$name\"\n") unless defined($cmd);
         $cmd_name = $cmd->{NAME};
         $cmd = $cmd_info{$cmd_name};
-        croak "No help information for command name \"$name\"\n" unless defined($help_file->man_info($cmd_name));
+        nfatal("No help information for command name \"$name\"\n") unless defined($help_file->man_info($cmd_name));
     
         if ($verbose)
         {
-            silent_q($help_file->get_full_description($cmd_name));
+            nsilent_q($help_file->get_full_description($cmd_name));
         }
         else
         {
-            silent_q($help_file->get_synopsis($cmd_name));
-            silent_q("\nUse \"help -v $cmd_name\" for more information.\n");
+            nsilent_q($help_file->get_synopsis($cmd_name));
+            nsilent_q("\nUse \"help -v $cmd_name\" for more information.\n");
         }
     }
     else
     {
         # Just a bare 'help' command => print help for the main program
-        silent_q($help_file->get_full_description('main'));
+        nsilent_q($help_file->get_full_description('main'));
     }
 
     if ($cmd_name eq 'help')
     {
  
-       silent_q("\nAvailable commands:\n");
+       nsilent_q("\nAvailable commands:\n");
        foreach my $cmd_name (sort keys %cmd_info) {
            my $gsd = $help_file->get_short_description($cmd_name);
-           silent_q("  ", $help_file->get_short_description($cmd_name), "\n");
+           nsilent_q("  ", $help_file->get_short_description($cmd_name), "\n");
        }
     }
 

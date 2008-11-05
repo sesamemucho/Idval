@@ -25,7 +25,7 @@ use File::Copy;
 use Time::HiRes qw (sleep);
 
 use Idval::Common;
-use Idval::Constants;
+use Idval::Logger qw(nchatty);
 use base qw(Idval::Converter);
 
 Idval::Common::register_provider({provides=>'converts', name=>'copy', from=>'*', to=>'*'});
@@ -63,7 +63,7 @@ sub convert
     $dest = Idval::Common::mung_path($dest);
     $src = Idval::Common::mung_path($src);
 
-    Idval::Common::get_logger->chatty($DBG_PROCESS, "Copying \"$src\" to \"$dest\"\n");
+    nchatty("Copying \"$src\" to \"$dest\"\n");
     #sleep(rand(10));
     return copy($src, $dest);
 }

@@ -28,11 +28,10 @@ use File::Temp qw/ tempfile /;
 use Time::HiRes qw(gettimeofday tv_interval);
 use Getopt::Long;
 use English '-no_match_vars';;
-use Carp;
 use Memoize;
 use Storable;
 
-use Idval::Constants;
+use Idval::Logger qw(ninfo_q nverbose nchatty debug);
 use Idval::Common;
 use Idval::FileIO;
 use Idval::DoDots;
@@ -48,18 +47,6 @@ memoize('get_converter');
 
 sub init
 {
-    *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
-                                                  debugmask => $DBG_PROCESS,
-                                                  decorate => 1});
-
-    *chatty = Idval::Common::make_custom_logger({level => $CHATTY,
-                                                  debugmask => $DBG_PROCESS,
-                                                  decorate => 1});
-
-    *progress = Idval::Common::make_custom_logger({level => $INFO,
-                                                  debugmask => $DBG_PROCESS,
-                                                  decorate => 0});
-
     set_pod_input();
     %prov_list = ();
 
@@ -84,8 +71,6 @@ sub main
 
     my ($syncfile, $should_delete_syncfile) = _parse_args(@args);
 
-    #my $syncfile = defined($args[0]) ? $args[0] : '';
-    #croak "Need a sync file." unless $syncfile;
     # Now, make a new config object that incorporates the sync file info.
     #$config->{DEBUG} = 1;
     $config->add_file($syncfile);
@@ -127,21 +112,19 @@ sub ok_to_convert
     my $local_pathname = shift;
     my $remote_pathname = shift;
 
-    #$log->log_error('Idval::CannotReadFile', $local_pathname) unless -r "$local_pathname";
-
     my $convert_file = 0;
     my $l_st = stat($local_pathname);
     my $r_st = stat($remote_pathname);
 
     if (not -e $remote_pathname) {
         $convert_file = 1;
-        verbose("Remote file \"$remote_pathname\" does not exist. Will create.\n");
+        nverbose("Remote file \"$remote_pathname\" does not exist. Will create.\n");
     } elsif ($r_st->mtime < $l_st->mtime) {
         $convert_file = 1;
-        verbose("Remote file \"$remote_pathname\" is older than local file \"$local_pathname\". Will convert.\n");
+        nverbose("Remote file \"$remote_pathname\" is older than local file \"$local_pathname\". Will convert.\n");
     } else {
         $convert_file = 0;
-        verbose("Remote file \"$remote_pathname\" is newer than local file \"$local_pathname\". Will not convert.\n");
+        nverbose("Remote file \"$remote_pathname\" is newer than local file \"$local_pathname\". Will not convert.\n");
     }
 
     return $convert_file;
@@ -184,8 +167,8 @@ sub each_item
 
     #if ($first and ($key =~ m/ogg/))
     #{
-    #print STDERR "Record is: ", Dumper($tag_record);
-        #print STDERR Dumper($config);
+    #debug("Record is: ", Dumper($tag_record));
+        #debug(Dumper($config));
         #$first = 0;
     #}
 
@@ -193,7 +176,7 @@ sub each_item
     my $do_sync = $config->get_single_value('sync', $tag_record);
 #     if ($sync_dest or $do_sync)
 #     {
-#         print STDERR "sync_dest = \"$sync_dest\", do_sync = \"$do_sync\"\n";
+#         debug("sync_dest = \"$sync_dest\", do_sync = \"$do_sync\"\n");
 #     }
 
     progress_inc_seen($progress_data);
@@ -207,7 +190,7 @@ sub each_item
     my $dest_type = $config->get_single_value('convert', $tag_record);
     my $prov;
 
-    chatty("source type is \"$src_type\" dest type is \"$dest_type\"\n");
+    nchatty("source type is \"$src_type\" dest type is \"$dest_type\"\n");
     if ($src_type eq $dest_type)
     {
         # Once we allow transcoding between files of the same type,
@@ -219,24 +202,24 @@ sub each_item
     else
     {
         $prov = get_converter($src_type, $dest_type);
-        chatty("src: $src_type to dest: $dest_type yields converter $prov\n");
+        nchatty("src: $src_type to dest: $dest_type yields converter $prov\n");
     }
 
     $prov_list{$prov} = $prov;
     my $src_path = $prov->get_source_filepath($tag_record);
     my ($volume, $src_dir, $src_name) = File::Spec->splitpath($src_path);
-    chatty("For $src_path\n");
+    nchatty("For $src_path\n");
     my $remote_top = Idval::Common::mung_to_unix($config->get_single_value('remote_top', $tag_record));
-    chatty("   remote top is \"$remote_top\"\n");
+    nchatty("   remote top is \"$remote_top\"\n");
     my $dest_name = $prov->get_dest_filename($tag_record, $src_name, get_file_ext($dest_type));
-    chatty("   dest name is \"$dest_name\"\n");
+    nchatty("   dest name is \"$dest_name\"\n");
 
 
 #     my $src_path =  $tag_record->get_name();
 #     my ($volume, $src_dir, $src_name) = File::Spec->splitpath($src_path);
-#     #print STDERR "For $src_path\n";
+#     #debug("For $src_path\n");
 #     my $remote_top = Idval::Common::mung_to_unix($config->get_single_value('remote_top', $tag_record));
-#     #print STDERR "   remote top is \"$remote_top\"\n";
+#     #debug("   remote top is \"$remote_top\"\n");
 #     my $src_type = $tag_record->get_value('TYPE');
 #     my $dest_type = $config->get_single_value('convert', $tag_record);
 
@@ -247,7 +230,7 @@ sub each_item
     my $extre = get_all_extensions_regexp();
     if ($sync_dest !~ m/$extre/)
     {
-        chatty("sync_dest is a directory\n");
+        nchatty("sync_dest is a directory\n");
         # sync_dest is a directory, so to get the destination name just append dest_name
         $sync_dest = File::Spec->catfile($sync_dest, $dest_name);
     }
@@ -266,7 +249,7 @@ sub each_item
     if (ok_to_convert($src_path, $dest_path))
     {
 
-        chatty("Converting \"$src_path\" to \"$dest_path\"\n");
+        nchatty("Converting \"$src_path\" to \"$dest_path\"\n");
         my $dest_dir = dirname($dest_path);
         if (!Idval::FileIO::idv_test_isdir($dest_dir))
         {
@@ -284,7 +267,7 @@ sub each_item
     }
     else
     {
-        chatty("Did not convert \"$src_path\" to \"$dest_path\"\n");
+        nchatty("Did not convert \"$src_path\" to \"$dest_path\"\n");
         $retval = 0;
     }
 
@@ -320,7 +303,7 @@ sub get_converter
 
     my $src_type = shift;
     my $dest_type = shift;
-    #print "Getting provider for src:$src_type dest:$dest_type\n";
+    #debug("Getting provider for src:$src_type dest:$dest_type\n");
     return $providers->get_provider('converts', $src_type, $dest_type);
 }
 
@@ -446,16 +429,16 @@ sub progress_print_title
 {
     my $this = shift;
 
-    progress("processed remaining  total  percent  elapsed  remaining    total\n");
-    progress(sprintf("%5d %9d %9d %5.0f%%     %8s  %8s  %8s\n",
-                     0,
-                     $this->{total_number_to_process},
-                     $this->{total_number_to_process},
-                     0.0,
-                     '00:00:00',
-                     '00:00:00',
-                     '',
-             ));
+    ninfo_q("processed remaining  total  percent  elapsed  remaining    total\n");
+    ninfo_q(sprintf("%5d %9d %9d %5.0f%%     %8s  %8s  %8s\n",
+                    0,
+                    $this->{total_number_to_process},
+                    $this->{total_number_to_process},
+                    0.0,
+                    '00:00:00',
+                    '00:00:00',
+                    '',
+            ));
     return;
 }
 
@@ -473,7 +456,7 @@ sub progress_print_line
     my $est_time = $elapsed_time / $safe_frac;
     my $est_time_remaining = $est_time - $elapsed_time;
 
-    progress(sprintf("%5d %9d %9d %5.0f%%     %8s  %8s %8s\n",
+    ninfo_q(sprintf("%5d %9d %9d %5.0f%%     %8s  %8s %8s\n",
                      $this->{number_of_processed_records},
                      $this->{total_number_to_process} - $this->{number_of_processed_records},
                      $this->{total_number_to_process},

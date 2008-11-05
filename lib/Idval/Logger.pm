@@ -25,9 +25,9 @@ use Carp qw(croak cluck confess);
 use POSIX qw(strftime);
 
 use base qw( Exporter );
-our @EXPORT_OK = qw( nsilent nsilent_q nquiet ninfo ninfo_q nverbose nchatty insane nidv_warn nfatal 
-$L_SILENT $L_QUIET $L_INFO $L_VERBOSE $L_CHATTY $L_INSANE);
-our %EXPORT_TAGS = (vars => [qw($L_SILENT $L_QUIET $L_INFO $L_VERBOSE $L_CHATTY $L_INSANE)]);
+our @EXPORT_OK = qw( idv_print nsilent nsilent_q nquiet ninfo ninfo_q nverbose nchatty debug nidv_warn nfatal 
+$L_SILENT $L_QUIET $L_INFO $L_VERBOSE $L_CHATTY $L_DEBUG);
+our %EXPORT_TAGS = (vars => [qw($L_SILENT $L_QUIET $L_INFO $L_VERBOSE $L_CHATTY $L_DEBUG)]);
 
 #use Idval::Constants;
 
@@ -45,14 +45,14 @@ our $L_QUIET       = 0;
 our $L_INFO        = 1;
 our $L_VERBOSE     = 2;
 our $L_CHATTY      = 3;
-our $L_INSANE      = 4;
+our $L_DEBUG      = 4;
 
 my %level_to_name = (-1 => 'SILENT',
                      0  => 'QUIET',
                      1  => 'INFO',
                      2  => 'VERBOSE',
                      3  => 'CHATTY',
-                     4  => 'INSANE',
+                     4  => 'DEBUG',
     );
 
  # use 'our' instead of 'my' for unit tests
@@ -433,22 +433,39 @@ sub _pkg_matches
 sub _log
 {
     my $self = shift;
-    my $argref = shift;
+    my $call_args = shift;
+
+    # If caller passes in an argref as the first parameter, allow override of the defaults by the caller
+    my %caller_args;
+    %caller_args = %{$_[0]}, shift if ref $_[0] eq 'HASH';
+
+    my %argref = (
+        decorate => 1,
+        call_depth => 1,
+        query => 0,
+        package => '',
+        force_match => 0,
+
+        %{$call_args},          # Logger call customization
+        %caller_args,           # Caller customization
+        );
+
+
+    my $level = $argref{level};
+    my $isquery = $argref{query};
+
+    # Try to determine quickly if we should print
+    return if !($self->ok($level) or $isquery);
 
     my $fh = $self->{LOG_OUT};
-    my $level = $argref->{level};
-    my $decorate = exists($argref->{decorate}) ? $argref->{decorate} : 1;
-    my $call_depth = exists($argref->{call_depth}) ? $argref->{call_depth} : 1;
-    my $isquery = exists($argref->{query}) ? $argref->{query} : 0;
-    my $from = exists($argref->{from}) ? $argref->{from} : $self->accessor("FROM");
-    my $package = exists($argref->{package}) ? $argref->{package} : caller($call_depth);
-    # So we can override
-    my $force_match = exists($argref->{force_match}) ? $argref->{force_match} : 0;
+    my $decorate = $argref{decorate};
+    # The caller can supply a package name. Otherwise, determine it automatically
+    my $package = $argref{package} ? $argref{package} : caller($argref{call_depth});
 
     my $prepend = '';
     my $module  = (split(/::/, $package))[-1];
     my ($a, $b, $c, $d) = reverse split(/::/, $package);
-    my $debugmask_ok = $force_match || $self->_pkg_matches($package);
+    my $debugmask_ok = $argref{force_match} || $self->_pkg_matches($package);
 
     if ($isquery)
     {
@@ -460,7 +477,6 @@ sub _log
     #print STDERR "level: $level, deco: $decorate, package: $package, debugmask_ok: $debugmask_ok\n";
     #print STDERR "modlist: ", Dumper($self->{MODULE_HASH}) if $package =~ m/Validate/;
     return unless $debugmask_ok;
-    return unless $self->ok($level);
     #print STDERR "Log: should print\n";
     if ($self->accessor('USE_XML'))
     {
@@ -500,6 +516,12 @@ sub _log
     }
 }
 
+# Really, a replacement for 'print'
+sub idv_print
+{
+    return get_logger()->_log({level => $L_SILENT, decorate => 0, force_match => 1}, @_);
+}
+
 sub silent
 {
     my $self = shift;
@@ -508,7 +530,7 @@ sub silent
 
 sub nsilent
 {
-    return get_logger()->_log({level => $L_SILENT}, @_);
+    return get_logger()->_log({}, @_);
 }
 
 sub silent_q
@@ -577,9 +599,9 @@ sub nchatty
     return get_logger()->_log({level => $L_CHATTY}, @_);
 }
 
-sub insane
+sub debug
 {
-    return get_logger()->_log({level => $L_INSANE}, @_);
+    return get_logger()->_log({level => $L_DEBUG}, @_);
 }
 
 sub idv_warn
@@ -679,7 +701,7 @@ BEGIN {
     $L_INFO        = 1;
     $L_VERBOSE     = 2;
     $L_CHATTY      = 3;
-    $L_INSANE      = 4;
+    $L_DEBUG       = 4;
 
 %DEBUG_MACROS = 
     ( 'DBG_STARTUP' => [qw(ProviderMgr)],
