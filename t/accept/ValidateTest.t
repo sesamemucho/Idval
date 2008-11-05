@@ -11,8 +11,7 @@ use Data::Dumper;
 use FindBin;
 use File::Temp qw/ tempfile tempdir /;
 
-use Idval::Constants;
-use Idval::Logger;
+use Idval::Logger qw(:vars);
 
 our $tempfiles;
 our $idval_obj;
@@ -54,7 +53,7 @@ use AcceptUtils;
 sub run_validation_test
 {
     my $cfg = shift;
-    my $do_logging = shift || 0;
+    my $do_logging = shift || 1;
 
     my $eval_status;
 
@@ -75,13 +74,11 @@ sub run_validation_test
     open STDOUT, '>', \$str_buf or die "Can't redirect STDOUT: $!";
     select STDOUT; $| = 1;      # make unbuffered
 
-    my $old_level;
-    my $old_debug;
+    my $old_logger;
     if ($do_logging)
     {
-        Idval::Logger::initialize_logger({log_out => 'STDERR'});
-        my $old_level = Idval::Common::get_logger()->accessor('LOGLEVEL', $CHATTY);
-        my $old_debug = Idval::Common::get_logger()->accessor('DEBUGMASK', $DBG_CONFIG);
+        $old_logger = Idval::Logger::get_logger();
+        Idval::Logger::initialize_logger({log_out => 'STDOUT', debugmask=>'+Validate', level=>$L_QUIET});
     }
 
     eval {$taglist = Idval::Scripts::validate($taglist, $idval_obj->providers(), $fname);};
@@ -89,8 +86,7 @@ sub run_validation_test
 
     if ($do_logging)
     {
-        Idval::Common::get_logger()->accessor('DEBUGMASK', $old_debug);
-        Idval::Common::get_logger()->accessor('LOGLEVEL', $old_level);
+        Idval::Logger::initialize_logger($old_logger);
     }
 
     open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
@@ -112,7 +108,7 @@ EOF
     return $reason unless $prov_p;
 
     my $expected_result = ".+?:\\d+: error: For TYER, Date is wrong!\n";
-    my $test_result = run_validation_test($val_cfg, 0);
+    my $test_result = run_validation_test($val_cfg, 1);
     like($test_result, qr/$expected_result/);
     return;
 }

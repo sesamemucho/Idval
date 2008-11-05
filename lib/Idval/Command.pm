@@ -21,11 +21,9 @@ use strict;
 use warnings;
 
 use Data::Dumper;
-use Carp;
 
-use Idval::Constants;
+use Idval::Logger qw( nchatty nfatal );
 use Idval::Common;
-
 
 #
 # A Command is a lot like a Provider, except that we don't require it
@@ -56,11 +54,11 @@ sub init
 
     $self->{CMD_PKG} = $cmd_pkg;
 
-    *chatty = Idval::Common::make_custom_logger({level => $CHATTY,
-                                                 decorate => 1,
-                                                }) unless defined(*chatty{CODE});
+#     *chatty = Idval::Common::make_custom_logger({level => $CHATTY,
+#                                                  decorate => 1,
+#                                                 }) unless defined(*chatty{CODE});
 
-    chatty("Idval::Command creating object from \"$cmd_pkg\"\n");
+    nchatty("Idval::Command creating object from \"$cmd_pkg\"\n");
 
     # The first time a command is encountered, if it has an "init" routine, call it
     no strict 'refs';
@@ -90,7 +88,7 @@ sub main
     }
     else
     {
-        confess "No \"main\" routine in command \"$cmd_pkg\"";
+        nfatal("No \"main\" routine in command \"$cmd_pkg\"");
     }
 
     use strict;

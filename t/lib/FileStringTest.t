@@ -171,7 +171,7 @@ sub mkdir2 : Test(2)
 
     eval {$dir = Idval::FileString::idv_mkdir("/a/a2/goober")};
     my $str = $@;
-    like($str, qr{^A regular file \(a2\) was found while creating the directory path "/a/a2/goober"});
+    like($str, qr{A regular file \(a2\) was found while creating the directory path "/a/a2/goober"});
 
     return;
 }

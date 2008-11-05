@@ -24,9 +24,8 @@ use Config;
 use File::Spec;
 use List::Util;
 use Data::Dumper;
-use Carp;
 
-use Idval::Constants;
+use Idval::Logger qw(nverbose nfatal);
 use Idval::Common;
 use Idval::FileIO;
 use Idval::Record;
@@ -38,7 +37,6 @@ sub new
     my $name = shift;
     my $self = {};
     bless($self, ref($class) || $class);
-    $self->{LOG} = Idval::Common::get_logger();
     $self->{PARAMS} = {};
     $self->{CONFIG} = $config;
     $self->{NAME} = $name;
@@ -202,19 +200,19 @@ sub find_exe_path
 
         foreach my $testexe (@{$exelist})
         {
-            $self->{LOG}->verbose("Checking \"$testexe\"\n");
+            nverbose("Checking \"$testexe\"\n");
             $testexe = Idval::Common::expand_tilde($testexe);
             if (-e $testexe)
             {
                 $exe = $testexe;
-                $self->{LOG}->verbose("Found \"$testexe\"\n");
+                nverbose("Found \"$testexe\"\n");
                 last;
             }
         }
     }
 
     $exe = undef if !$exe;
-    #croak("Could not find program \"$name\"\n") if !$exe;
+    #nfatal("Could not find program \"$name\"\n") if !$exe;
     return $exe;
 }
 

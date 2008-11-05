@@ -4,7 +4,8 @@ use strict;
 use warnings;
 use Data::Dumper;
 use English '-no_match_vars';
-use Carp;
+
+use Idval::Logger qw(insane nfatal);
 
 sub new
 {
@@ -25,7 +26,7 @@ sub _init
 
     $self->build_type_mapper($prov);
 
-    #print STDERR "TypeMap: FILETYPE map is: ", Dumper($self->{MAPPING}->{FILETYPE});
+    insane("TypeMap: FILETYPE map is: ", Dumper($self->{MAPPING}->{FILETYPE}));
     return;
 }
 
@@ -70,7 +71,7 @@ sub build_type_mapper
     my $result = [];
     my $converter;
 
-    confess "Undefined provider object" unless defined($prov);
+    nfatal("Undefined provider object") unless defined($prov);
     # For each provider
     foreach my $provider ($prov->get_all_active_providers())
     {
@@ -173,7 +174,6 @@ sub get_output_ext_from_filetype
     # should set a preference for an output extension.
     my $pref_ext = exists($self->{MAPPING}->{OUTPUTEXTTYPE}->{FWD}->{$filetype}) ? 
         lc((keys %{$self->{MAPPING}->{OUTPUTEXTTYPE}->{FWD}->{$filetype}})[0]) : '';
-    #print "pref_ext is \"$pref_ext\"\n";
     return $pref_ext || ($self->get_exts_from_filetype($filetype))[0];
 }
 
@@ -214,7 +214,7 @@ sub get_filetype_from_file
     $ext =~ s/\Q${vis_sep}\E.*$//;
     $ext = uc($ext);
 
-    #print STDERR "TypeMap::get_filetype_from_file: ext is \"$ext\"\n";
+    insane("TypeMap::get_filetype_from_file: ext is \"$ext\"\n");
     return exists($self->{MAPPING}->{FILETYPE}->{REV}->{$ext}) ? $self->{MAPPING}->{FILETYPE}->{REV}->{$ext} : '';
 }
 

@@ -24,10 +24,9 @@ use 5.006;
 use Getopt::Long;
 use Data::Dumper;
 use File::Spec;
-use Carp;
 use Cwd;
 
-use Idval::Constants;
+use Idval::Logger qw(nverbose nchatty);
 use Idval::ServiceLocator;
 use Idval::Ui;
 use Idval::Config;
@@ -35,7 +34,6 @@ use Idval::ProviderMgr;
 use Idval::NewFH;
 use Idval::FileIO;
 use Idval::Common;
-use Idval::Logger;
 use Idval::Help;
 
 my @standard_options;
@@ -168,12 +166,12 @@ sub _init
     # Tell the system to use the regular filesystem services (i.e., not the unit-testing version)
     Idval::ServiceLocator::provide('io_type', 'FileSystem');
 
-    $log->verbose($DBG_STARTUP, "option list:", Dumper(\%options));
-    $log->verbose($DBG_STARTUP, "Looking for: ", Idval::Ui::get_sysconfig_file($data_dir), "\n");
+    nverbose("option list:", Dumper(\%options));
+    nverbose("Looking for: ", Idval::Ui::get_sysconfig_file($data_dir), "\n");
 
     my $sysconfig_file  = $options{'sysconfig'} || Idval::Ui::get_sysconfig_file($data_dir);
     my $userconfig_file = $options{'userconfig'} || Idval::Ui::get_userconfig_file($data_dir);
-    $log->verbose($DBG_STARTUP, "sysconfig is: \"$sysconfig_file\", userconfig is \"$userconfig_file\"\n");
+    nverbose("sysconfig is: \"$sysconfig_file\", userconfig is \"$userconfig_file\"\n");
 
     my $config = Idval::Config->new($sysconfig_file);
     $config->add_file($userconfig_file) if $userconfig_file;
@@ -199,7 +197,7 @@ sub _init
     $self->{DATASTORE} = Idval::Collection->new({contents => '', source => 'blank'});
 
     $self->{REMAINING_ARGS} = [@other_args];
-    $log->chatty($DBG_PROVIDERS, "Remaining args: <", join(", ", @{$self->{REMAINING_ARGS}}), ">\n");
+    nchatty("Remaining args: <", join(", ", @{$self->{REMAINING_ARGS}}), ">\n");
     return;
 }
 
@@ -232,9 +230,8 @@ sub datastore
 }
 
 package Idval::Scripts;
-use Carp;
 use Idval::Common;
-use Idval::Constants;
+use Idval::Logger qw(nchatty nfatal);
 use Data::Dumper;
 
 our $AUTOLOAD;
@@ -249,11 +246,11 @@ sub AUTOLOAD  ## no critic (RequireFinalReturn)
     return if $name =~ m/^[[:upper:]]+$/;
 
     #print STDERR "Checking \"$name\"\n";
-    $log->chatty($DBG_PROVIDERS, "In autoload, checking \"$name\"\n");
+    nchatty("In autoload, checking \"$name\"\n");
     my $providers = Idval::Common::get_common_object('providers');
-    croak "ERROR: Command \"$rtn\" called too early\n" unless defined $providers;
+    nfatal("ERROR: Command \"$rtn\" called too early\n") unless defined $providers;
 
-    $log->chatty($DBG_PROVIDERS, "In autoload; rtn is \"$rtn\"\n");
+    nchatty("In autoload; rtn is \"$rtn\"\n");
 
     #my $subr = $providers->find_command($name);
     #$subr .= '::main';

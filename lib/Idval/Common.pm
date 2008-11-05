@@ -21,7 +21,7 @@ use strict;
 use warnings;
 use POSIX;
 use Data::Dumper;
-use Carp;
+
 use Config;
 use File::Basename;
 use File::Spec;
@@ -32,8 +32,7 @@ use Text::Balanced qw (
                        extract_multiple
                       );
 
-use Idval::Logger;
-use Idval::Constants;
+use Idval::Logger qw(nquiet nverbose nfatal);
 
 my $log = Idval::Logger::get_logger();
 our %common_objs;
@@ -114,32 +113,6 @@ sub get_top_dir
     return @subdirs ? File::Spec->catdir($top_dir, @subdirs): $top_dir;
 }
 
-# sub get_top_dir
-# {
-#     my @subdirs = @_;
-#     my $got_it = 0;
-
-#     if (!@top_dir_path)
-#     {
-#         foreach my $dir (File::Spec->splitdir($FindBin::RealBin))
-#         {
-#             push(@top_dir_path, $dir);
-#             if($dir eq 'idv')
-#             {
-#                 $got_it = 1;
-#                 last;
-#             }
-#         }
-
-#         if ($got_it == 0)
-#         {
-#             croak "Couldn't find top directory \"idv\" in $FindBin::RealBin\n";
-#         }
-#     }
-
-#     return @subdirs ? File::Spec->catdir(@top_dir_path, @subdirs): File::Spec->catdir(@top_dir_path);
-# }
-
 sub expand_tilde
 {
     my $name = shift;
@@ -209,17 +182,17 @@ sub run
     #$name = exe_name($name);
     if ($no_run)
     {
-        $log->quiet($DBG_PROCESS, "$name $cmdargs\n");
+        nquiet("$name $cmdargs\n");
         return 0;
     }
     else
     {
-        $log->verbose($DBG_PROCESS, "\"$name\" $cmdargs\n");
+        nverbose("\"$name\" $cmdargs\n");
         $retval = qx{"$name" $cmdargs 2>&1};
         $status = $?;
         if ($status)
         {
-            $log->quiet($DBG_PROCESS, "Error $status from: \"$name $cmdargs\"\nReturned \"$retval\"\n");
+            nquiet("Error $status from: \"$name $cmdargs\"\nReturned \"$retval\"\n");
         }
         #elsif (! $log->log_level_is_under($Idval::Logger::DEBUG1))
         #{
@@ -258,13 +231,13 @@ sub deep_copy {
     {
         if (ref($this) =~ m/$item/)
         {
-            print "Deep copy: getting retsub for \"$item\"\n";
+            #print STDERR "Deep copy: getting retsub for \"$item\"\n";
             my $ret_sub = $value_for{$item};
             return &$ret_sub($this);
         }
     }
 
-    croak  "what type is ", ref $this ,"?";
+    nfatal("what type is ", ref $this ,"?");
 }
 
 # sub deep_copy {
@@ -297,7 +270,6 @@ sub deep_assign
 
     foreach my $key (keys %{$from})
     {
-        #print STDERR "ref \$from->{$key} is <", ref $from->{$key}, ">\n";
         if (not ref $from->{$key})
         {
             $to->{$key} = $from->{$key};
@@ -330,8 +302,7 @@ sub get_common_object
 {
     my $key = shift;
 
-    #print Dumper($common_objs{$key}) if $key eq "help_file";
-    croak "Common object \"$key\" not found." unless exists($common_objs{$key});
+    nfatal("Common object \"$key\" not found.") unless exists($common_objs{$key});
     return $common_objs{$key};
 }
 

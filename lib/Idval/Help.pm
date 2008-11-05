@@ -20,7 +20,6 @@ package Idval::Help;
 use strict;
 use warnings;
 
-use Carp;
 use Pod::Usage;
 use Pod::Select;
 

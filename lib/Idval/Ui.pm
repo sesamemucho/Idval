@@ -20,7 +20,6 @@ package Idval::Ui;
 use strict;
 use warnings;
 use Data::Dumper;
-use Carp;
 use Storable;
 use Config;
 use English '-no_match_vars';
@@ -28,6 +27,7 @@ use File::Basename;
 use File::Path;
 use File::Spec;
 
+use Idval::Logger qw(nverbose nchatty insane nfatal);
 use Idval::Common;
 use Idval::Config;
 use Idval::FileIO;
@@ -54,7 +54,7 @@ sub get_sysconfig_file
     }
     else
     {
-        croak "No idval configuration file found in \"$datadir\"\n";
+        nfatal("No idval configuration file found in \"$datadir\"\n");
     }
 
     return $cfgname;
@@ -86,7 +86,7 @@ sub get_userconfig_file
         $cfgname = 'data/idvaluser.cfg' if Idval::FileIO::idv_test_exists('data/idvaluser.cfg');
     }
 
-    #print "user config file name is: \"$cfgname\"\n";
+    nchatty("user config file name is: \"$cfgname\"\n");
     return $cfgname;
 }
 
@@ -145,14 +145,12 @@ sub make_wanted
     
     my @exts = map { '\.' . lc($_) } keys %type_list;
 
-    #print STDERR "UI: exts: ", join(",", @exts), ">\n";
+    insane("UI: exts: ", join(",", @exts), ">\n");
     return sub {
-        #print STDERR "UI: file is \"$_\"\n";
+        insane("UI: file is \"$_\"\n");
         return if -d $_;
-#         my $rec;
-        #my($filename, $junk, $suffix) = fileparse($_, @exts);
         my($filename, $junk, $suffix) = fileparse(basename($_), @exts);
-        #print STDERR "UI: name is $_, Suffix is: <$suffix>\n";
+        insane("UI: name is $_, Suffix is: <$suffix>\n");
         return unless $suffix;  # It wasn't one of the ones we were looking for
 
         $suffix = substr($suffix, 1); # Remove the '.'
@@ -168,7 +166,7 @@ sub make_wanted
     };
 }
 
-# This should just provide a very basic list of records, consisting only of FILE, TYPE and CLASS tags
+
 sub get_source_from_dirs
 {
     my $providers = shift;
@@ -181,7 +179,6 @@ sub get_source_from_dirs
 
     Idval::FileIO::idv_find($wanted, @dirs);
 
-    #print "srclist: ", Dumper($srclist);
     return $srclist;
 }
 
@@ -205,8 +202,7 @@ sub get_source_from_cache
     my $reclist;
 
     $reclist = eval {retrieve(Idval::Common::expand_tilde($data_store))};
-    croak "Tag info cache is corrupted; you will need to regenerate it (with 'gettags'):\n$@\n" if $@;
-    #print Dumper($reclist);
+    nfatal("Tag info cache is corrupted; you will need to regenerate it (with 'gettags'):\n$@\n") if $@;
     my $ds = Idval::Collection->new({contents => $reclist});
     $ds->source($dat_file_name);
 
@@ -241,18 +237,17 @@ sub put_source_to_file
         $datastore->source('STORED DATA CACHE'); # First, adjust the SOURCE descriptor
         store($datastore, $ds_bin);
         my $out = Idval::FileIO->new($ds_dat, '>') or 
-            croak "Can't open $ds_dat for writing: $ERRNO\n";
+            nfatal("Can't open $ds_dat for writing: $ERRNO\n");
 
         $out->print(join("\n", @{$datastore->stringify()}), "\n");
         $out->close();
-        #print "Finished storing data\n";
     }
 
     # Next, write to output file if requested
     if ($dat_file)
     {
         my $fname = $dat_file;
-        my $out = Idval::FileIO->new($fname, '>') or croak "Can't open $fname for writing: $ERRNO\n";
+        my $out = Idval::FileIO->new($fname, '>') or nfatal("Can't open $fname for writing: $ERRNO\n");
 
         $datastore->source($fname);
         my @outstrs = @{$datastore->stringify()};
@@ -262,7 +257,7 @@ sub put_source_to_file
             $ftag = $line if $line =~ m/^FILE/;
             foreach my $char (split(//, $line))
             {
-                print "Wide char in \"$line\" from \"$ftag\"\n" if ord($char) > 255;
+                nverbose("Wide char in \"$line\" from \"$ftag\"\n") if ord($char) > 255;
             }
         }
         $out->print(join("\n", @outstrs), "\n");

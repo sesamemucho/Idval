@@ -22,9 +22,8 @@ package Idval::ServiceLocator;
 
 use strict;
 use warnings;
-use Carp;
 
-use Idval::Constants;
+use Idval::Logger qw(nverbose nfatal);
 use Idval::Common;
 
 my %services;
@@ -60,11 +59,10 @@ sub register_callback
     my $callback_name = shift;
     my $callback_routine_name = shift;
     my $cb = shift;
-    my $log = Idval::Common::get_logger();
 
     if (!exists($registered_callbacks{"$service_name/$callback_name/$callback_routine_name"}))
     {
-        $log->verbose("Registering callback with \"$service_name/$callback_name/$callback_routine_name\"\n");
+        nverbose("Registering callback with \"$service_name/$callback_name/$callback_routine_name\"\n");
         push(@{$callbacks{$service_name}}, [$callback_name, $cb]);
         $registered_callbacks{"$service_name/$callback_name/$callback_routine_name"} = 1;
     }
@@ -78,7 +76,7 @@ sub locate
 
     if (!exists($services{$service_name}))
     {
-        croak "Unregistered service \"$service_name\" requested.\n";
+        nfatal("Unregistered service \"$service_name\" requested.\n");
     }
 
     return $services{$service_name};

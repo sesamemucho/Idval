@@ -21,11 +21,10 @@ use strict;
 use warnings;
 use Data::Dumper;
 use English '-no_match_vars';
-use Carp;
 use Memoize;
 use Scalar::Util;
 
-use Idval::Constants;
+use Idval::Logger qw(nverbose nfatal);
 use Idval::Common;
 use Idval::Validate;
 
@@ -157,7 +156,7 @@ sub passes
 {
     my $selectors = $_[0];
     my $funcname = $_[2];
-    croak "Unknown function Idval::ValidateFuncs::$funcname" unless check_function($funcname);
+    nfatal("Unknown function Idval::ValidateFuncs::$funcname") unless check_function($funcname);
     my $func = \&{"Idval::ValidateFuncs::$funcname"};
     return (&$func($selectors, split(/,/, $_[1])) != 0 );
 }
@@ -218,8 +217,7 @@ sub get_regex
         $combo = $op_string_no_spaces;
     }
 
-    my $log = Idval::Common::get_logger();
-    $log->verbose("\n\nregex is: \"$combo\"\n\n\n");
+    nverbose("\n\nregex is: \"$combo\"\n\n\n");
     return qr/$combo/;
 }
 

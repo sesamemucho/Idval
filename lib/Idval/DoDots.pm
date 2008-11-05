@@ -21,16 +21,13 @@ use strict;
 use warnings;
 
 use Idval::Common;
-use Idval::Constants;
+use Idval::Logger qw(ninfo_q);
 
 my $dotnum;
-my $log;
 
 sub init
 {
     $dotnum = 0;
-    $log = Idval::Common::get_logger();
-
     return;
 }
 
@@ -39,16 +36,16 @@ sub dodots
     my $char = shift;
 
     $dotnum++;
-    $log->info_q("$char");
-    $log->info_q(" ") if $dotnum % 4 == 0;
-    $log->info_q("\n") if $dotnum % 60 == 0;
+    ninfo_q("$char");
+    ninfo_q(" ") if $dotnum % 4 == 0;
+    ninfo_q("\n") if $dotnum % 60 == 0;
 
     return;
 }
 
 sub finish
 {
-    $log->info_q("\n") if $dotnum % 60 != 0;
+    ninfo_q("\n") if $dotnum % 60 != 0;
 
     return;
 }

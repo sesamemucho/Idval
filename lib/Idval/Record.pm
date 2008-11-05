@@ -21,8 +21,8 @@ use strict;
 use warnings;
 use Data::Dumper;
 use English '-no_match_vars';
-use Carp;
 
+use Idval::Logger qw(nfatal);
 use Idval::Ui;
 use Idval::Data::Genres;
 
@@ -69,7 +69,7 @@ sub _init
     }
     else
     {
-        confess "A new Record must have a filename." if !exists($argref->{FILE});
+        nfatal("A new Record must have a filename.") if !exists($argref->{FILE});
     }
 
     foreach my $tagname (keys %{$argref})
@@ -114,7 +114,7 @@ sub add_tag
     my $name = shift;
     my $value = shift;
 
-    confess "undefined tag name" unless defined($name);
+    nfatal("undefined tag name") unless defined($name);
 
     #$self->{TEMP}->{$name} = $value;
     if (ref $value eq 'ARRAY')
@@ -293,7 +293,7 @@ sub format_record
     my $self = shift;
     my $argref = shift;
 
-    confess "Record::format_record: bogus arg_ref\n" if $argref and (ref $argref ne 'HASH');
+    nfatal("Record::format_record: bogus arg_ref\n") if $argref and (ref $argref ne 'HASH');
 
     my $start_line = exists $argref->{start_line} ? $argref->{start_line} : undef;
     my $full       = exists $argref->{full} ? $argref->{full} : 0;
@@ -313,14 +313,14 @@ sub format_record
             next if $tag =~ m/$calculated_tags_re/;
         }
 
-        confess "Uninitialized value for tag \"$tag\"\n" if !defined($self->get_value($tag));
+        nfatal("Uninitialized value for tag \"$tag\"\n") if !defined($self->get_value($tag));
         
         $tag_value = $self->get_value($tag);
         if (ref $tag_value eq 'ARRAY')
         {
             my @values = (@{$tag_value}); # Make a copy
             my $value = shift @values;
-            confess "Uninitialized array value for tag \"$tag\"\n" if !defined($value);
+            nfatal("Uninitialized array value for tag \"$tag\"\n") if !defined($value);
             push(@output, "$tag = $value");
             foreach $value (@values)
             {

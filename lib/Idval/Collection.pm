@@ -20,8 +20,8 @@ package Idval::Collection;
 use strict;
 use warnings;
 use Data::Dumper;
-use Carp qw(confess);
 
+use Idval::Logger qw(nfatal);
 use Idval::Common;
 
 sub new
@@ -111,7 +111,7 @@ sub stringify
 
     my @output = ();
     my @reclist;
-    confess "Huh?" unless defined $self->{CREATIONDATE};
+    nfatal("Huh?") unless defined $self->{CREATIONDATE};
     my $date = $self->{CREATIONDATE};
 
     push(@output, "# IDValidator Tag File (DO NOT REMOVE THIS LINE)");

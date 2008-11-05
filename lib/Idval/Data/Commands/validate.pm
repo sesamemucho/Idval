@@ -26,6 +26,7 @@ use Carp;
 
 use Idval::Config;
 use Idval::Constants;
+use Idval::Logger qw(nsilent_q);
 use Idval::FileIO;
 use Idval::DoDots;
 use Idval::Validate;
@@ -116,7 +117,7 @@ sub each_item
         $gripe = $$gripe_item[0];
         $linenumber = $$gripe_item[1];
         $tagname = $$gripe_item[2];
-        silent_q(sprintf "%s:%d: error: For %s, %s\n", $filename, $linenumber, $tagname, $gripe);
+        nsilent_q(sprintf "%s:%d: error: For %s, %s\n", $filename, $linenumber, $tagname, $gripe);
     }
 
 #a.c:7: error: `garf' undeclared (first use in this function)

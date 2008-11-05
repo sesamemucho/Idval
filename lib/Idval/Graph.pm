@@ -24,9 +24,8 @@ use strict;
 use warnings;
 use Data::Dumper;
 use List::Util;
-use Carp;
 
-use Idval::Constants;
+use Idval::Logger qw(nverbose nchatty nfatal);
 use Idval::Common;
 
 my @path_list;
@@ -60,12 +59,6 @@ sub _init
 #     $self->add_edge('F', 'loo', 'O', 100);
 #     $self->add_edge('O', 'moo', 'W', 100);
 #     $self->add_edge('M', 'noo', 'W', 100);
-
-    *verbose = Idval::Common::make_custom_logger({level => $VERBOSE,
-                                                  decorate => 1}) unless defined(*verbose{CODE});
-    #*verbose = sub{ print @_; };
-    *chatty = Idval::Common::make_custom_logger({level => $CHATTY,
-                                                 decorate => 1}) unless defined(*chatty{CODE});
 
     $self->{IS_CHATTY} = Idval::Common::get_logger()->is_chatty();
     return;
@@ -134,7 +127,7 @@ sub get_paths
     foreach my $list (@{$self->{PATH_LIST}})
     {
         my %path_info;
-        verbose("Inspecting (", join(',', @{$list}), "); length is: ", scalar(@{$list}), "\n");
+        nverbose("Inspecting (", join(',', @{$list}), "); length is: ", scalar(@{$list}), "\n");
         # We don't want just a NODEX->NODEX loop (it must be at least NODEX->converter->NODEX).
         next if scalar(@{$list}) <= 1;
         #%path_info = ();
@@ -148,7 +141,7 @@ sub get_paths
         $path_info{END} = $end;
         
         %attrs = (%{$self->{GRAPH}->{$start}->{$type}->{ATTRS}});
-        verbose("Initial attributes are: ", join(':', sort keys %attrs), "\n");
+        nverbose("Initial attributes are: ", join(':', sort keys %attrs), "\n");
 
         for (my $i = 0; $i < $num_paths; $i++)
         {
@@ -156,7 +149,7 @@ sub get_paths
             push(@{$path_info{PATHS}}, [$start, $type, $end]);
             $path_weight += $self->{GRAPH}->{$start}->{$type}->{WEIGHT};
             $path_weight += $self->{GRAPH}->{$type}->{$end}->{WEIGHT};
-            verbose("Got: ($start, $type, $end)\n");
+            nverbose("Got: ($start, $type, $end)\n");
             # Find shared attributes
             foreach my $attr (keys %attrs)
             {
@@ -167,7 +160,7 @@ sub get_paths
                 delete $attrs{$attr} if !exists($self->{GRAPH}->{$type}->{$end}->{ATTRS}->{$attr});
             }
 
-            verbose("In loop: attributes are: ", join(':', sort keys %attrs), "\n");
+            nverbose("In loop: attributes are: ", join(':', sort keys %attrs), "\n");
             $path_index += 2;
         }
 
@@ -178,7 +171,7 @@ sub get_paths
 
         push(@{$self->{EXTRACTED_PATHS}->{$path_info{START} . '.' . $path_info{END}}}, \%path_info);
     }
-    #verbose(Dumper($self));
+    #nverbose(Dumper($self));
 
     return;
 }
@@ -191,14 +184,14 @@ sub do_walk
 
     foreach my $item (keys %{$self->{START_NODES}})
     {
-        verbose("Starting with node \"$item\"\n");
+        nverbose("Starting with node \"$item\"\n");
         $self->walkit($item, $self->{GRAPH}, 1);
     }
 
-    #verbose(Dumper($self));
+    #nverbose(Dumper($self));
 #     foreach my $list (@{$self->{PATH_LIST}})
 #     {
-#         #verbose("(", join(',', @{$list}), ")\n");
+#         #nverbose("(", join(',', @{$list}), ")\n");
 #     }
 
     return;
@@ -227,17 +220,17 @@ sub walkit
 
     my @saved_path = (@{$self->{CURRENT_PATH}});
     
-    verbose($leader x $level, "Checking \"$item\" against ", $self->current_path_as_str("\n"));
+    nverbose($leader x $level, "Checking \"$item\" against ", $self->current_path_as_str("\n"));
     if (defined(${$self->{CURRENT_PATH}}[0]) and ($item eq ${$self->{CURRENT_PATH}}[0]))
     {
         # Let's allow loops back to the start
         # But make sure it really is to the start
-        verbose($leader x $level, "Found a loop: ", Dumper($self->{CURRENT_PATH}));
-        croak("Beginning of current path \($item\) is not a START_NODE\n") unless $self->is_major_node($item);
+        nverbose($leader x $level, "Found a loop: ", Dumper($self->{CURRENT_PATH}));
+        nfatal("Beginning of current path \($item\) is not a START_NODE\n") unless $self->is_major_node($item);
     }
     elsif (List::Util::first { $item eq $_ } @{$self->{CURRENT_PATH}})
     {
-        verbose($leader x $level, "Found an internal loop. Returning.\n");
+        nverbose($leader x $level, "Found an internal loop. Returning.\n");
         return;
     }
 
@@ -254,29 +247,29 @@ sub walkit
             if(!$self->has_duplicate_nodes($self->{CURRENT_PATH}))
             ##if ($self->is_lighter_than_max($self->{CURRENT_PATH}))
             {
-                verbose($leader x $level, "Saving current path ", $self->current_path_as_str("\n"));
+                nverbose($leader x $level, "Saving current path ", $self->current_path_as_str("\n"));
                 push(@{$self->{PATH_LIST}}, [@{$self->{CURRENT_PATH}}]);
             }
             else
             {
-                verbose($leader x $level, "Current path has illegal duplicate nodes: ", $self->current_path_as_str("\n"));
+                nverbose($leader x $level, "Current path has illegal duplicate nodes: ", $self->current_path_as_str("\n"));
                 return;
             }
         }
         else
         {
-            verbose($leader x $level, "Current path is too short to save: ", $self->current_path_as_str("\n"));
+            nverbose($leader x $level, "Current path is too short to save: ", $self->current_path_as_str("\n"));
         }
     }
 
-    verbose($leader x $level, "Will travel from \"$item\" to: (", join(',', keys %{$gakker->{$item}}), ")\n");
+    nverbose($leader x $level, "Will travel from \"$item\" to: (", join(',', keys %{$gakker->{$item}}), ")\n");
     foreach my $next (keys %{$gakker->{$item}})
     {
-        verbose($leader x $level, "Going from \"$item\" to \"$next\"\n");
+        nverbose($leader x $level, "Going from \"$item\" to \"$next\"\n");
         $self->walkit($next, $gakker, ($level + 1));
     }
 
-    verbose($leader x $level, 'Restoring ', $self->current_path_as_str(), ' to (', join(',', @saved_path), ")\n");
+    nverbose($leader x $level, 'Restoring ', $self->current_path_as_str(), ' to (', join(',', @saved_path), ")\n");
     @{$self->{CURRENT_PATH}} = (@saved_path);
 
     return;
@@ -386,21 +379,21 @@ sub get_best_path
 
     $self->process_graph();
 
-    verbose("Looking for path: \"", $arc, "\"\n");
+    nverbose("Looking for path: \"", $arc, "\"\n");
     if(!exists($self->{EXTRACTED_PATHS}->{$arc}))
     {
-        chatty("Path: \"", $arc, "\" does not exist in EXTRACTED_PATHS\n");
+        nchatty("Path: \"", $arc, "\" does not exist in EXTRACTED_PATHS\n");
         return;
     }
 
     # Get a list of all the paths that have all the required attributes
-    chatty("Need attributes: ", join(',', @attrs), "\n");
+    nchatty("Need attributes: ", join(',', @attrs), "\n");
   CHECK_PATHS:
     foreach my $pathinfo (@{$self->{EXTRACTED_PATHS}->{$arc}})
     {
         if ($self->{IS_CHATTY})
         {
-            chatty("Path \"", $pathinfo->{START} . '.' . $pathinfo->{END}, 
+            nchatty("Path \"", $pathinfo->{START} . '.' . $pathinfo->{END}, 
                    " has attributes: ", join(',', sort keys %{$pathinfo->{ATTRS}}), "\n");
         }
 
@@ -414,7 +407,7 @@ sub get_best_path
 
     if ($self->{IS_CHATTY})
     {
-        chatty("Resulting path list is: ", join(':', @goodpaths), "\n");
+        nchatty("Resulting path list is: ", join(':', @goodpaths), "\n");
     }
     
     #

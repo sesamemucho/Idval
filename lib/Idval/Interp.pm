@@ -19,14 +19,13 @@ package Idval::Interp;
 
 use strict;
 use warnings;
-use Carp;
 use Data::Dumper;
 use Term::ReadLine;
 use Getopt::Long qw(:config pass_through permute);
 
 use Idval;
 use Idval::Common;
-use Idval::Constants;
+use Idval::Logger qw(nfatal);
 
 sub new
 {
@@ -143,7 +142,7 @@ sub cmd_loop
                 else
                 {
                     print STDERR "Yipes\n";
-                    croak "Error in \"$cmd_name\": \"$status\", \"$reason\"\n";
+                    nfatal("Error in \"$cmd_name\": \"$status\", \"$reason\"\n");
                 }
             }
 

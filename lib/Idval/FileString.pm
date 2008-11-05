@@ -25,11 +25,12 @@ package Idval::FileString;
 
 use strict;
 use warnings;
-use Carp;
 use Data::Dumper;
 use File::Spec;
 use File::Basename;
 use File::Find;
+
+use Idval::Logger qw(nfatal);
 
 BEGIN {
     eval "use IO::String;";
@@ -73,8 +74,7 @@ sub new
 
     if (!$filename && ($mode && ($mode =~ m/^[r<]/x)) && !idv_test_exists($filename))
     {
-        print STDERR "Filename \"$filename\" opened in read mode but it doesn't exist.\n";
-        croak "Filename \"$filename\" opened in read mode but it doesn't exist.\n";
+        nfatal("Filename \"$filename\" opened in read mode but it doesn't exist.\n");
     }
 
     if ($filename && ($mode && ($mode =~ m/^[r<]/x)) && idv_test_exists($filename))
@@ -285,8 +285,8 @@ sub idv_get_dirname
 
         if ($i > 128)
         {
-            croak "Maximum directory depth exceeded. So far, the name is: \"" .
-                '/' . join('/', reverse @name) . "\"";
+            nfatal("Maximum directory depth exceeded. So far, the name is: \"" .
+                   '/' . join('/', reverse @name) . "\"");
         }
     }
 
@@ -463,7 +463,7 @@ sub idv_mkdir
     }
     else
     {
-        croak "A regular file ($dpath) was found while creating the directory path \"$path\"\n";
+        nfatal("A regular file ($dpath) was found while creating the directory path \"$path\"\n");
     }
 
     return $retval;
@@ -477,7 +477,7 @@ sub _get_dir
     my $restpath = '';
     my $dir;
 
-    confess "Undefined path\n" unless defined($path);
+    nfatal("Undefined path\n") unless defined($path);
     if ($path)
     {
         $path =~ s{//+}{/}gx;
@@ -585,7 +585,7 @@ sub idv_get_file
     $dirpath =~ s{//+}{/}gx;
     #print STDERR "idv_get_file: vol, dirpath, filename: \"$vol\" \"$dirpath\" \"$filename\"\n";
 
-    croak "File \"$path\" not found\n" unless idv_test_isfile($path);
+    nfatal("File \"$path\" not found\n") unless idv_test_isfile($path);
     my ($status, $dpath) = _get_dir($dirpath);
 
     #print STDERR "idv_get_file: returning \"$dpath->{$filename}\"\n";
