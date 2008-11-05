@@ -31,7 +31,6 @@ use Idval::ServiceLocator;
 use Idval::Ui;
 use Idval::Config;
 use Idval::ProviderMgr;
-use Idval::NewFH;
 use Idval::FileIO;
 use Idval::Common;
 use Idval::Help;

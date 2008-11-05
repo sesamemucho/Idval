@@ -26,7 +26,6 @@ use Text::Balanced qw (
                        extract_tagged
                       );
 use Idval::Logger qw(nfatal);
-use Idval::FileParse;
 use Idval::Common;
 use Idval::Record;
 use Idval::Collection;
