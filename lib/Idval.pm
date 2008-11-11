@@ -63,7 +63,7 @@ $VERSION = '0.7.0';
      # For error logging
      'verbose+',
      'quiet+',
-     'debug=i',
+     'debug=s',
      'development',
      'log_out=i',
     );
@@ -175,14 +175,18 @@ sub _init
     my $config = Idval::Config->new($sysconfig_file);
     $config->add_file($userconfig_file) if $userconfig_file;
 
-# XXX This really should be done during installation
-#     # Is this the first time through?
-#     if (not $config->value_exists('use_cache_file', {config_group => 'idval_settings'}))
-#     {
-#         require Idval::FirstTime;
-#         my $cfgfile = Idval::FirstTime::init($config);
-#         $config->add_file($cfgfile);
-#     }
+# XXX This really should be done during installation ? Let's try it this way for now
+    # Is this the first time through?
+    print "HELLO from Idval\n";
+    if (not $config->value_exists('data_store', {config_group => 'idval_settings'}))
+    {
+        require Idval::FirstTime;
+        my $cfgfile = Idval::FirstTime::init($config);
+        print "conf: Got \"$cfgfile\"\n";
+        exit;
+        #$config->add_file($cfgfile);
+    }
+    print "data_store is: ", $config->get_single_value('data_store', {config_group => 'idval_settings'}), "\n";
 
     Idval::Common::register_common_object('tempfiles', $tempfiles);
     $self->{CONFIG} = $config;

@@ -60,11 +60,10 @@ sub init
     my $config = Idval::Common::get_common_object('config');
     $self->{VISIBLE_SEPARATOR} = $config->get_single_value('visible_separator', {'config_group' => 'idval_settings'});
 
-    $self->{FWD_MAPPING} = $config->merge_blocks({'config_group' => 'tag_mappings',
-                                                  'TYPE' => 'ABC'
-                                                 });
-
-    $self->{REV_MAPPING} = map { $self->{FWD_MAPPING}->{$_} => $_ } keys %{$self->{FWD_MAPPING}};
+    # Forward mapping is ABC to ID3v2
+    # Reverse mapping is ID3v2 to ABC
+    $self->set_tagname_mappings(Idval::Common::get_common_object('config'),
+                                'ABC');
 
     $self->save_info();
     return;
@@ -73,7 +72,10 @@ sub init
 sub read_tags
 {
     my $self = shift;
-    my $tag_record = shift;
+    my $argref = shift;
+    my $tag_record = $argref->{tag_record};
+    $self->{BYPASS_MAPPING} = exists($argref->{bypass_mapping}) ? $argref->{bypass_mapping} : 0;
+
     my $line;
     my $current_tag;
     my $fileid = $tag_record->get_value('FILE');
@@ -86,14 +88,7 @@ sub read_tags
         my @tag_value_list = @{$tags->{$key}};
         $taginfo = scalar(@tag_value_list) == 1 ? $tag_value_list[0] : \@tag_value_list;
 
-        if (exists $self->{FWD_MAPPING}->{$key})
-        {
-            $tag_record->add_tag($self->{FWD_MAPPING}->{$key}, $taginfo);
-        }
-        else
-        {
-            $tag_record->add_tag($key, $taginfo);
-        }
+        $tag_record->add_tag($self->map_to_id3v2($key), $taginfo);
     }
 
     return 0;
@@ -102,7 +97,8 @@ sub read_tags
 sub write_tags
 {
     my $self = shift;
-    my $tag_record = shift;
+    my $argref = shift;
+    my $tag_record = $argref->{tag_record};
     my $eol;
 
     return 0 if !$self->query('is_ok');

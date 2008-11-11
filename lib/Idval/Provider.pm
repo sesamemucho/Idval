@@ -44,6 +44,11 @@ sub new
     $self->{ENDPOINTS}->{SRCS} = {};
     $self->{ENDPOINTS}->{DESTS} = {};
 
+    # Just make sure these keys exist
+    $self->{FWD_MAPPING} = {};
+    $self->{REV_MAPPING} = {};
+    $self->{BYPASS_MAPPING} = 0;
+
     return $self;
 }
 
@@ -232,7 +237,7 @@ sub find_and_set_exe_path
 
 # The idval.cfg file has mappings to go from <whatever> tag names to id3v2 names.
 
-sub get_tagname_mappings
+sub set_tagname_mappings
 {
     my $self = shift;
     my $config = shift;
@@ -250,6 +255,34 @@ sub get_tagname_mappings
     }
 
     return;
+}
+
+sub map_to_id3v2
+{
+    my $self = shift;
+    my $tagname = shift;
+    my $value = $tagname;
+
+    if (exists($self->{FWD_MAPPING}->{$tagname}) and !$self->{BYPASS_MAPPING})
+    {
+        $value = $self->{FWD_MAPPING}->{$tagname};
+    }
+
+    return $value;
+}
+
+sub map_from_id3v2
+{
+    my $self = shift;
+    my $tagname = shift;
+    my $value = $tagname;
+
+    if (exists($self->{REV_MAPPING}->{$tagname}) and !$self->{BYPASS_MAPPING})
+    {
+        $value = $self->{REV_MAPPING}->{$tagname};
+    }
+
+    return $value;
 }
 
 # For any plugin that needs to clean up

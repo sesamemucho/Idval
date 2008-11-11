@@ -85,7 +85,7 @@ sub init
 
     # Forward mapping is ID3v1 to ID3v2
     # Reverse mapping is ID3v2 to ID3v1
-    $self->get_tagname_mappings($config, 'MP3');
+    $self->set_tagname_mappings($config, 'MP3');
     #debug("MP3_Tags FWD_MAPPING: ", Dumper($self->{FWD_MAPPING}));
     #debug("MP3_Tags REV_MAPPING: ", Dumper($self->{REV_MAPPING}));
     $self->{DEBUG} = 0;
@@ -100,7 +100,10 @@ sub init
 sub read_tags
 {
     my $self = shift;
-    my $tag_record = shift;
+    my $argref = shift;
+    my $tag_record = $argref->{tag_record};
+    $self->{BYPASS_MAPPING} = exists($argref->{bypass_mapping}) ? $argref->{bypass_mapping} : 0;
+
     my $line;
     my $current_tag;
     my $retval = 0;
@@ -112,7 +115,8 @@ sub read_tags
     # XML::Simple when there is a broken XML::SAX on the system. See
     # the README file for XML::Simple for more about XML::SAX. The
     # badness causes the first decode of UTF-16 to be bad. This seems
-    # to fix it...
+    # to fix it... There's nothing special about the string here; we
+    # just need to do any decode.
     my $found = Encode::decode('UTF-16', pack("H*", "fffe47007200"));
 
     my $exact_tags = $self->{EXACT_TAGS};
@@ -139,13 +143,13 @@ sub read_tags
         #debug(STDERR "MP3: Yes to ID3v1\n");
         ($title, $artist, $album, $year, $comment, $track, $genre) = $mp3->{ID3v1}->all;
 
-        $tag_record->add_tag($self->{FWD_MAPPING}->{'TITLE'}, $title);
-        $tag_record->add_tag($self->{FWD_MAPPING}->{'TRACK'}, $track);
-        $tag_record->add_tag($self->{FWD_MAPPING}->{'ARTIST'}, $artist);
-        $tag_record->add_tag($self->{FWD_MAPPING}->{'ALBUM'}, $album);
-        $tag_record->add_tag($self->{FWD_MAPPING}->{'COMMENT'}, $comment);
-        $tag_record->add_tag($self->{FWD_MAPPING}->{'YEAR'}, $year);
-        $tag_record->add_tag($self->{FWD_MAPPING}->{'GENRE'}, $genre);
+        $tag_record->add_tag($self->map_to_id3v2('TITLE'), $title);
+        $tag_record->add_tag($self->map_to_id3v2('TRACK'), $track);
+        $tag_record->add_tag($self->map_to_id3v2('ARTIST'), $artist);
+        $tag_record->add_tag($self->map_to_id3v2('ALBUM'), $album);
+        $tag_record->add_tag($self->map_to_id3v2('COMMENT'), $comment);
+        $tag_record->add_tag($self->map_to_id3v2('YEAR'), $year);
+        $tag_record->add_tag($self->map_to_id3v2('GENRE'), $genre);
     }
 
     my $frameIDs_hash = {};
@@ -302,7 +306,9 @@ sub read_tags
 sub write_tags
 {
     my $self = shift;
-    my $tag_record = shift;
+    my $argref = shift;
+    my $tag_record = $argref->{tag_record};
+    $self->{BYPASS_MAPPING} = exists($argref->{bypass_mapping}) ? $argref->{bypass_mapping} : 0;
 
     return 0 if !$self->query('is_ok');
 
@@ -337,7 +343,7 @@ sub write_tags
         foreach my $id3v1_key (qw(TITLE TRACK ARTIST ALBUM COMMENT YEAR GENRE))
         {
             # The information is stored as a id3v2 tag, so get the corresponding id3v2 tag name
-            $tag = $self->{FWD_MAPPING}->{$id3v1_key};
+            $tag = $self->map_to_id3v2($id3v1_key);
 
             $id3v1_subr = lc $id3v1_key;
 

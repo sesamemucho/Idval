@@ -172,7 +172,6 @@ sub each_item
         #$first = 0;
     #}
 
-    my $sync_dest = Idval::Common::mung_to_unix($config->get_single_value('sync_dest', $tag_record));
     my $do_sync = $config->get_single_value('sync', $tag_record);
 #     if ($sync_dest or $do_sync)
 #     {
@@ -205,46 +204,10 @@ sub each_item
         chatty("src: $src_type to dest: $dest_type yields converter $prov\n");
     }
 
+    # Keep track of all the providers, so we can call close() on them later.
     $prov_list{$prov} = $prov;
-    my $src_path = $prov->get_source_filepath($tag_record);
-    my ($volume, $src_dir, $src_name) = File::Spec->splitpath($src_path);
-    chatty("For $src_path\n");
-    my $remote_top = Idval::Common::mung_to_unix($config->get_single_value('remote_top', $tag_record));
-    chatty("   remote top is \"$remote_top\"\n");
-    my $dest_name = $prov->get_dest_filename($tag_record, $src_name, get_file_ext($dest_type));
-    chatty("   dest name is \"$dest_name\"\n");
 
-
-#     my $src_path =  $tag_record->get_name();
-#     my ($volume, $src_dir, $src_name) = File::Spec->splitpath($src_path);
-#     #debug("For $src_path\n");
-#     my $remote_top = Idval::Common::mung_to_unix($config->get_single_value('remote_top', $tag_record));
-#     #debug("   remote top is \"$remote_top\"\n");
-#     my $src_type = $tag_record->get_value('TYPE');
-#     my $dest_type = $config->get_single_value('convert', $tag_record);
-
-#     my $dest_name;
-#     my $dest_ext = get_file_ext($dest_type);
-#     ($dest_name = $src_name) =~ s{\.[^.]+$}{.$dest_ext};
-
-    my $extre = get_all_extensions_regexp();
-    if ($sync_dest !~ m/$extre/)
-    {
-        chatty("sync_dest is a directory\n");
-        # sync_dest is a directory, so to get the destination name just append dest_name
-        $sync_dest = File::Spec->catfile($sync_dest, $dest_name);
-    }
-
-    my $dest_path = File::Spec->catfile($remote_top, $sync_dest);
-    $dest_path = Idval::Common::mung_to_unix($dest_path);
-
-    if ($dest_path =~ m{%LASTDIR%})
-    {
-        my $lastdir = (File::Spec->splitdir(File::Spec->canonpath($src_dir)))[-1];
-        $dest_path =~ s{%LASTDIR%}{$lastdir};
-    }
-
-    $dest_path = File::Spec->canonpath($dest_path); # Make sure the destination path is nice and clean
+    my ($src_path, $dest_path) = get_file_paths($tag_record, $dest_type, $prov, $config);
 
     if (ok_to_convert($src_path, $dest_path))
     {
@@ -493,6 +456,68 @@ sub progress_format_time
     $secs = sprintf(":%02d", $secs);
 
     return $hrs . $mins . $secs;
+}
+
+sub get_file_paths
+{
+    my $tag_record = shift;
+    my $dest_type = shift;
+    my $prov = shift;
+    my $config = shift;
+
+    my $src_path = $prov->get_source_filepath($tag_record);
+    my ($volume, $src_dir, $src_name) = File::Spec->splitpath($src_path);
+    chatty("For $src_path\n");
+    my $remote_top = Idval::Common::mung_to_unix($config->get_single_value('remote_top', $tag_record));
+    chatty("   remote top is \"$remote_top\"\n");
+    my $dest_name = $prov->get_dest_filename($tag_record, $src_name, get_file_ext($dest_type));
+    chatty("   dest name is \"$dest_name\"\n");
+    my $sync_dest = Idval::Common::mung_to_unix($config->get_single_value('sync_dest', $tag_record));
+
+
+#     my $src_path =  $tag_record->get_name();
+#     my ($volume, $src_dir, $src_name) = File::Spec->splitpath($src_path);
+#     #debug("For $src_path\n");
+#     my $remote_top = Idval::Common::mung_to_unix($config->get_single_value('remote_top', $tag_record));
+#     #debug("   remote top is \"$remote_top\"\n");
+#     my $src_type = $tag_record->get_value('TYPE');
+#     my $dest_type = $config->get_single_value('convert', $tag_record);
+
+#     my $dest_name;
+#     my $dest_ext = get_file_ext($dest_type);
+#     ($dest_name = $src_name) =~ s{\.[^.]+$}{.$dest_ext};
+
+    my $extre = get_all_extensions_regexp();
+    if ($sync_dest !~ m/$extre/)
+    {
+        # sync_dest is a directory, so to get the destination name just append dest_name
+        $sync_dest = File::Spec->catfile($sync_dest, $dest_name);
+        chatty("sync_dest is a directory: sync dest is \"$sync_dest\"\n");
+    }
+
+    my $dest_path = File::Spec->catfile($remote_top, $sync_dest);
+    $dest_path = Idval::Common::mung_to_unix($dest_path);
+
+    if ($dest_path =~ m{%LASTDIR%})
+    {
+        my $lastdir = (File::Spec->splitdir(File::Spec->canonpath($src_dir)))[-1];
+        $dest_path =~ s{%LASTDIR%}{$lastdir};
+    }
+
+    # Do we have any tagname expansions?
+    if (my @tags = ($dest_path =~ m/%([^%]+)%/g))
+    {
+        debug("Found tags to expand: ", join(',', @tags), "\n");
+        foreach my $tag (@tags)
+        {
+            $dest_path =~ s{%$tag%}{$tag_record->{$tag}} if exists($tag_record->{$tag});
+        }
+        debug("dest path is now: \"$dest_path\"\n");
+    }
+
+    $dest_path = File::Spec->canonpath($dest_path); # Make sure the destination path is nice and clean
+
+    return ($src_path, $dest_path);
 }
 
 sub set_pod_input

@@ -131,14 +131,14 @@ sub cmp_gt_num { return ($_[0] eq "" ? 0 : $_[0]) > ($_[1] eq "" ? 0 : $_[1]); }
 sub cmp_le_num { return ($_[0] eq "" ? 0 : $_[0]) <= ($_[1] eq "" ? 0 : $_[1]); }
 sub cmp_ge_num { return ($_[0] eq "" ? 0 : $_[0]) >= ($_[1] eq "" ? 0 : $_[1]); }
 
-sub cmp_eq_str { return $_[0] eq $_[1]; }
-sub cmp_ne_str { return $_[0] ne $_[1]; }
-sub cmp_lt_str { return ($_[0] lt $_[1]); }
-sub cmp_gt_str { return ($_[0] gt $_[1]); }
-sub cmp_le_str { return ($_[0] le $_[1]); }
-sub cmp_ge_str { return ($_[0] ge $_[1]); }
+sub cmp_eq_str { return lc $_[0] eq lc $_[1]; }
+sub cmp_ne_str { return lc $_[0] ne lc $_[1]; }
+sub cmp_lt_str { return lc $_[0] lt lc $_[1]; }
+sub cmp_gt_str { return lc $_[0] gt lc $_[1]; }
+sub cmp_le_str { return lc $_[0] le lc $_[1]; }
+sub cmp_ge_str { return lc $_[0] ge lc $_[1]; }
 
-sub cmp_has_str { return (index("$_[0]", "$_[1]") != -1); }
+sub cmp_has_str { return (index(lc "$_[0]", lc "$_[1]") != -1); }
 
 # Check to see if we have a valid function in the package space 'Idval::ValidateFuncs'
 sub check_function

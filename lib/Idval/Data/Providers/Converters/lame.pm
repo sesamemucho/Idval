@@ -27,6 +27,7 @@ use base qw(Idval::Converter);
 
 Idval::Common::register_provider({provides=>'converts', name=>'lame_enc', from=>'WAV', to=>'MP3', attributes=>'transcode'});
 Idval::Common::register_provider({provides=>'converts', name=>'lame_dec', from=>'MP3', to=>'WAV', attributes=>'transcode'});
+Idval::Common::register_provider({provides=>'converts', name=>'lame_trans', from=>'MP3', to=>'MP3', attributes=>'transcode'});
 
 sub new
 {

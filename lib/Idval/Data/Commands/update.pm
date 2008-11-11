@@ -70,7 +70,7 @@ sub main
         $prov = $providers->get_provider('writes_tags', $type, 'NULL');
         $prov_list{$prov} = $prov;
 
-        $retval = $prov->write_tags($tag_record);
+        $retval = $prov->write_tags({tag_record => $tag_record});
         last if $retval != 0;
         Idval::DoDots::dodots($dotmap->{$type});
     }

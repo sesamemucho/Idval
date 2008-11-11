@@ -87,7 +87,9 @@ sub init
 sub read_tags
 {
     my $self = shift;
-    my $tag_record = shift;
+    my $argref = shift;
+    my $tag_record = $argref->{tag_record};
+
     my $line;
     my $current_tag;
     my $retval = 0;
@@ -142,7 +144,8 @@ sub read_tags
 sub write_tags
 {
     my $self = shift;
-    my $tag_record = shift;
+    my $argref = shift;
+    my $tag_record = $argref->{tag_record};
 
     return 0 if !$self->query('is_ok');
 

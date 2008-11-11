@@ -60,30 +60,52 @@ sub get_sysconfig_file
     return $cfgname;
 }
 
-sub get_userconfig_file
+sub get_userconfig_file_choices
 {
-    my $datadir = shift;
     my $osname = $Config{'osname'};
-    my $cfgname = '';
+    my @choices;
 
-    if (exists($ENV{HOME}) and Idval::FileIO::idv_test_exists("$ENV{HOME}/.idvalrc"))
+    if ($osname eq 'MSWin32')
     {
-        $cfgname = "$ENV{HOME}/.idvalrc";
-    }
-    elsif ($osname eq 'MSWin32')
-    {
-        $cfgname = "idvaluser.cfg" if Idval::FileIO::idv_test_exists("idvaluser.cfg");
-        $cfgname = "$datadir/idvaluser.cfg" if Idval::FileIO::idv_test_exists("$datadir/idvaluser.cfg");
+        push(@choices, "$ENV{HOME}/idvaluser.cfg") if exists($ENV{HOME});
+        push(@choices, "idvaluser.cfg");
     }
     elsif ($osname =~ m/ux$/ix or $osname =~ m/cygwin/ix)
     {
-        $cfgname = '.idvalrc' if Idval::FileIO::idv_test_exists('.idvalrc');
-        $cfgname = "$datadir/idvaluser.cfg" if Idval::FileIO::idv_test_exists("$datadir/idvaluser.cfg");
+        push(@choices, "$ENV{HOME}/.idvalrc") if exists($ENV{HOME});
+        push(@choices, ".idvalrc");
     }
     else
     {
-        $cfgname = "$datadir/idvaluser.cfg" if Idval::FileIO::idv_test_exists("$datadir/idvaluser.cfg");
-        $cfgname = 'data/idvaluser.cfg' if Idval::FileIO::idv_test_exists('data/idvaluser.cfg');
+        push(@choices, "$ENV{HOME}/idvaluser.cfg") if exists($ENV{HOME});
+        push(@choices, "idvaluser.cfg");
+    }
+
+    return @choices;
+}
+
+sub get_userconfig_file
+{
+    my $osname = $Config{'osname'};
+    my $cfgname = '';
+
+    if ($osname eq 'MSWin32')
+    {
+        $cfgname = (exists($ENV{HOME}) && Idval::FileIO::idv_test_exists("$ENV{HOME}/idvaluser.cfg")) ? "$ENV{HOME}/idvaluser.cfg"
+                 : Idval::FileIO::idv_test_exists("idvaluser.cfg")                                    ? "idvaluser.cfg"
+                 : '';
+    }
+    elsif ($osname =~ m/ux$/ix or $osname =~ m/cygwin/ix)
+    {
+        $cfgname = (exists($ENV{HOME}) && Idval::FileIO::idv_test_exists("$ENV{HOME}/.idvalrc")) ? "$ENV{HOME}/.idvalrc"
+                 : Idval::FileIO::idv_test_exists(".idvalrc")                                    ? ".idvalrc"
+                 : '';
+    }
+    else
+    {
+        $cfgname = (exists($ENV{HOME}) && Idval::FileIO::idv_test_exists("$ENV{HOME}/idvaluser.cfg")) ? "$ENV{HOME}/idvaluser.cfg"
+                 : Idval::FileIO::idv_test_exists("idvaluser.cfg")                                    ? "idvaluser.cfg"
+                 : '';
     }
 
     chatty("user config file name is: \"$cfgname\"\n");

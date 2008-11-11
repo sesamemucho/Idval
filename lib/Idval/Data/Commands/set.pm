@@ -25,7 +25,7 @@ use Pod::Usage;
 use Data::Dumper;
 use English '-no_match_vars';;
 
-use Idval::Logger qw(idv_print);
+use Idval::Logger qw(:vars idv_print);
 
 my $first = 0;
 
@@ -46,35 +46,78 @@ sub main
 #                             'quiet'    => \$quiet,
 #         );
 
-    return $datastore unless @ARGV;
+    my $param = shift @ARGV;
 
-    my $args = join(' ', @ARGV);
-
-    if ($args =~ m/^(\S+)(?:\s+(\S+))?/)
+    if (!defined($param) or !$param)
     {
-        my $param = lc $1;
-        my $value = $2;
-        my $newvalue;
+        idv_print("set commands are:\n", join("    \n", qw(conf debug level)), "\n");
+    }
+    elsif ($param eq 'debug')
+    {
+        my $modhash = Idval::Common::get_logger()->set_debugmask(join(' ', @ARGV));
+#         my @info = sort { $modhash->{$a}->{STR} cmp $modhash->{$b}->{STR} } keys %{$modhash};
+        my @info = map  { $_->[0] }
+                   sort { $a->[1] cmp $b->[1] }
+                   map  { [$_, $modhash->{$_}->{STR} ] }
+                   keys %{$modhash};
 
-        if ($param eq 'debug')
+        idv_print("  Module spec       level\n");
+        foreach my $item (@info)
         {
-            $newvalue = Idval::Common::get_logger()->accessor('DEBUGMASK', $2);
+            idv_print(sprintf("%-20s  %d\n", $modhash->{$item}->{STR}, $modhash->{$item}->{LEVEL}));
         }
-        elsif ($param eq 'level')
+        #idv_print("Debug mask is: ", join(' ', @newmods), "\n");
+    }
+    elsif ($param eq 'level')
+    {
+        my $helpsub = sub {
+            idv_print("Available debug levels are:\n");
+            foreach my $level (sort {$a <=> $b} keys %level_to_name)
+            {
+                idv_print(sprintf("    %8s: %d\n", $level_to_name{$level}, $level));
+            }
+
+            my $current_level = Idval::Common::get_logger()->accessor('LOGLEVEL');
+            idv_print("\nCurrent level is: $current_level (", $level_to_name{$current_level}, ")\n");
+        };
+
+        if (@ARGV)
         {
-            $newvalue = Idval::Common::get_logger()->accessor('LOGLEVEL', $2);
+            my $newlevel = shift @ARGV;
+            if (exists($level_to_name{$newlevel}))
+            {
+                Idval::Common::get_logger()->accessor('LOGLEVEL', $newlevel);
+                my $current_level = Idval::Common::get_logger()->accessor('LOGLEVEL');
+                idv_print("\nNew level is: $current_level (", $level_to_name{$current_level}, ")\n");
+            }
+            elsif (exists($name_to_level{lc($newlevel)}))
+            {
+                Idval::Common::get_logger()->accessor('LOGLEVEL', $name_to_level{lc($newlevel)});
+                my $current_level = Idval::Common::get_logger()->accessor('LOGLEVEL');
+                idv_print("\nNew level is: $current_level (", $level_to_name{$current_level}, ")\n");
+            }
+            else
+            {
+                idv_print("Unrecognized level \"$newlevel\"\n");
+                &$helpsub();
+            }
         }
         else
         {
-            idv_print("Unrecognized \"set\" parameter: \"$param\" (try \"help set\")\n");
-            return $datastore;
+            &$helpsub();
         }
-
-        idv_print("Value for \"$param\" is $newvalue\n");
+    }
+    elsif ($param eq 'conf')
+    {
+        require Idval::FirstTime;
+        my $config = Idval::Common::get_common_object('config');
+        my $cfgfile = Idval::FirstTime::init($config);
+        print "conf: got \"$cfgfile\"\n";
+        #$config->add_file($cfgfile);
     }
     else
     {
-        idv_print("Unrecognized \"set\" command: \"$args\" (try \"help set\")\n");
+        idv_print("Unrecognized \"set\" command: \"", join(' ', @ARGV), "\" (try \"help set\")\n");
     }
 
     return $datastore;

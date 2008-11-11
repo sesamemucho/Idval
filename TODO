@@ -1,3 +1,14 @@
+Finish up FirstTime.pm
+
+Put in filtering capability, i.e. sox (perhaps use attributes)
+Put in transcoding capability (i.e. lame stuff like bit-rate changing)
+--> Look in Graph.pm for a statement of work
+--> GraphTest.pm has a failing test to start with.
+
+Done: For sync, let users put in variable references in destination specifications
+
+Done: Logger has per-module debug levels
+
 Done: Make Taggers use endpoints. The converters should make more use of
       them. For instance, there should be only one FLAC encoder/decoder,
       that should be specified with three sets of endpoints (WAV:FLAC,
@@ -42,6 +53,10 @@ Commands are Plugins         ""
 #The routine in a Command to be executed must be named 'main'
 }
 
+done{
 MP3::Tag is filling in id3v1 tags, even though I don't think I've asked it to. what to do?
+
+-- just leave it
+}
 
 

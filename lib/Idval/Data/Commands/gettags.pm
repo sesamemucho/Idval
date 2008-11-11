@@ -22,9 +22,9 @@ use warnings;
 
 use Data::Dumper;
 use English '-no_match_vars';
-use Carp;
+use Getopt::Long;
 
-use Idval::Logger qw(info_q debug);
+use Idval::Logger qw(idv_print info_q debug);
 use Idval::Common;
 use Idval::FileIO;
 use Idval::DoDots;
@@ -46,7 +46,21 @@ sub main
     my @args = @_;
     my $status;
 
-    #print "Looking at ", join(":", @args), "\n";
+    my $bypass_mapping = 0;
+
+    local @ARGV = @args;
+    my $p = new Getopt::Long::Parser;
+    my $result = $p->getoptions('no-mapping' => \$bypass_mapping);
+    @args = @ARGV;
+
+    if (!$result or !@args)
+    {
+        idv_print("Need to specify at least one directory\n") if ($result and !@args);
+        my $help_file = Idval::Common::get_common_object('help_file');
+        idv_print($help_file->get_full_description('gettags'));
+        return $datastore;
+    }
+
     my $typemap = Idval::Common::get_common_object('typemap');
     my $dotmap = $typemap->get_dot_map();
     Idval::DoDots::init();
@@ -69,7 +83,7 @@ sub main
         $prov = $providers->get_provider('reads_tags', $type, 'NULL');
         $prov_list{$prov} = $prov;
 
-        $status = $prov->read_tags($tag_record);
+        $status = $prov->read_tags({tag_record => $tag_record, bypass_mapping => $bypass_mapping});
         Idval::DoDots::dodots($dotmap->{$type});
 
         delete $datastore->{RECORDS}->{$key} if $status == 1;
@@ -80,66 +94,6 @@ sub main
     map { $_->close() } values %prov_list;
     return $datastore;
 }
-
-# sub prolog
-# {
-#     my $self = shift;
-#     my $providers = shift;
-#     my $options = shift;
-#     my @args = @_;
-
-#     $self->{TYPEMAP} = Idval::TypeMap->new($providers);
-#     $self->{PROVIDERS} = $providers;
-#     my $typemap = Idval::TypeMap->new($providers);
-#     $self->{DOTMAP} = $typemap->get_dot_map();
-#     Idval::DoDots::init();
-
-#     $self->set_param('outputfile', exists($options->{'output'}) ? $options->{'output'} : '');
-
-#     $self->{DATA} = Idval::Ui::get_source_from_dirs($providers, $self->{CONFIG}, @args);
-#     return $self->{DATA};
-# }
-
-# sub each
-# {
-#     my $self = shift;
-#     my $hash = shift;
-#     my $key = shift;
-#     my $tag_record = $hash->{$key};
-
-#     my $type = $tag_record->get_value('TYPE');
-#     my $prov = $self->{PROVIDERS}->get_provider('reads_tags', $type, 'NULL');
-
-#     my $retval = $prov->read_tags($tag_record);
-#     Idval::DoDots::dodots($self->{DOTMAP}->{$type});
-
-#     delete $hash->{$key} if $retval == 1;
-
-#     return 0;
-# }
-
-# sub epilog
-# {
-#     my $self = shift;
-
-#     # Let's write out the data as required
-#     Idval::Ui::put_source_to_file($self->{DATA}->{RECORDS},
-#                                   $self->query('outputfile'),
-#                                   $self->{CONFIG}->get_single_value('data_store'));
-# }
-
-# sub epilog
-# {
-#     my $self = shift;
-#     my $reclist = shift;
-
-#     print "self: $self, reclist: $reclist\n";
-#     # Let's write out the data as required
-#     # First, opaquely to the data store
-#     my $ds = $self->{CONFIG}->get_single_value('data_store');
-#     print "ref reclist: ", ref $reclist, " ds: $ds\n";
-#     store($reclist, $ds);
-# }
 
 sub set_pod_input
 {
@@ -153,11 +107,30 @@ gettags - Creates a tag data file from the files in one or more directories.
 
 =head1 SYNOPSIS
 
-gettags directory [directory [...]]
+gettags [options] directory [directory [...]]
+
+ Options:
+   -n|--no-mapping    Don't map tags onto ID3V2 tags (Be careful! You probably don't want to use this!)
 
 =head1 OPTIONS
 
-This command has no options.
+=over 4
+
+=item B<--no-mapping>
+
+B<Gettags> wants to store tags from music files as ID3v2 tags,
+generally speaking. To do this, it maps certain common flags from
+other formats, such as ABC, OGG, and FLAC, into corresponding ID3v2
+tags when reading tags, and maps them back when writing. The
+B<--no-mapping> flag disables this behavior, and lets you see exactly
+what tags are in the input files.
+
+This flag should only be used to inspect tags in new files. If you do
+use this flag when running B<gettags>, be sure not to B<store> the tag
+information afterwards, as B<idval> will not deal with it well. You
+can use the B<print> command to view the tag data without saving it.
+
+=back
 
 =head1 DESCRIPTION
 
@@ -171,6 +144,22 @@ it, otherwise it will be lost at the end of the session.
 If the B<gettags> command is given on the B<idv> command line, a
 B<store> command is issued automatically (unless a B<--nostore> option
 is present).
+
+=head1 EXAMPLES
+
+  gettags /path/to/your/music/files
+
+will get tag information from all files underneath the directory
+/path/to/your/music/files.
+
+  gettags /first/tree /second/tree
+
+will get tag information from all files underneath each directory on
+the command line. The tag information will be merged.
+
+  gettags "/if/there/are spaces/in the directory name / use  quotes"
+
+  gettags "c:/use forward slashes/on/windows/not backward/slashes"
 
 =cut
 

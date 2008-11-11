@@ -60,50 +60,50 @@ sub after : Test(teardown) {
 sub test_set_debugmask : Test(3)
 {
     my $logger = Idval::Logger->new();
-    my @foo;
+    my $mods;
 
-    @foo = $logger->set_debugmask('Common,Provider,Logger');
+    $mods = $logger->set_debugmask('Common,Provider,Logger');
 
-    is_deeply(\@foo, [qw(Common::.*?::.*?::.*? Logger::.*?::.*?::.*? Provider::.*?::.*?::.*?)]); # Output is sorted
+    is_deeply([sort keys %{$mods}], [qw(Common::.*?::.*?::.*? Logger::.*?::.*?::.*? Provider::.*?::.*?::.*?)]);
 
     # Whitespace is OK too
-    @foo = $logger->set_debugmask('Common Provider     Logger');
+    $mods = $logger->set_debugmask('Common Provider     Logger');
 
-    is_deeply(\@foo, [qw(Common::.*?::.*?::.*? Logger::.*?::.*?::.*? Provider::.*?::.*?::.*?)]); # Output is sorted
+    is_deeply([sort keys %{$mods}], [qw(Common::.*?::.*?::.*? Logger::.*?::.*?::.*? Provider::.*?::.*?::.*?)]);
 }
 
 sub macros_expand_to_modules : Test(1)
 {
-
     my $logger = Idval::Logger->new();
-    my @foo;
+    my $mods;
 
-    @foo = $logger->set_debugmask('Common Provider DBG_PROCESS Logger');
+    $mods = $logger->set_debugmask('Common Provider DBG_PROCESS Logger');
 
-    is_deeply(\@foo, [qw(Common::.*?::.*?::.*? Converter::.*?::.*?::.*? DoDots::.*?::.*?::.*? Logger::.*?::.*?::.*? Provider::.*?::.*?::.*? ServiceLocator::.*?::.*?::.*?)]); # Output is sorted, and uniqued
+    is_deeply([sort keys %{$mods}],
+              [qw(Common::.*?::.*?::.*? Converter::.*?::.*?::.*? DoDots::.*?::.*?::.*? Logger::.*?::.*?::.*? Provider::.*?::.*?::.*? ServiceLocator::.*?::.*?::.*?)]);
 }
 
 
 sub macros_expand_to_modules_recursively : Test(1)
 {
-
     my $logger = Idval::Logger->new();
-    my @foo;
+    my $mods;
 
     $Idval::Logger::DEBUG_MACROS{DBG_FOR_UNIT_TEST} = [qw(Common DBG_STARTUP DoDots)];
-    @foo = $logger->set_debugmask('Common Provider DBG_FOR_UNIT_TEST Logger');
+    $mods = $logger->set_debugmask('Common Provider DBG_FOR_UNIT_TEST Logger');
 
-    is_deeply(\@foo, [qw(Common::.*?::.*?::.*? DoDots::.*?::.*?::.*? Logger::.*?::.*?::.*? Provider::.*?::.*?::.*? ProviderMgr::.*?::.*?::.*?)]); # Output is sorted, and uniqued
+    is_deeply([sort keys %{$mods}],
+              [qw(Common::.*?::.*?::.*? DoDots::.*?::.*?::.*? Logger::.*?::.*?::.*? Provider::.*?::.*?::.*? ProviderMgr::.*?::.*?::.*?)]);
 }
 
 sub macros_expand_to_modules_recursively_checked : Test(1)
 {
 
     my $logger = Idval::Logger->new();
-    my @foo;
+    my $mods;
 
     $Idval::Logger::DEBUG_MACROS{DBG_FOR_UNIT_TEST} = [qw(Common DBG_FOR_UNIT_TEST DoDots)];
-    @foo = eval{$logger->set_debugmask('Common Provider DBG_FOR_UNIT_TEST Logger')};
+    $mods = eval{$logger->set_debugmask('Common Provider DBG_FOR_UNIT_TEST Logger')};
 
     like($@, qr/mask spec contains a recursive macro/);
 }
@@ -111,41 +111,44 @@ sub macros_expand_to_modules_recursively_checked : Test(1)
 sub match_to_packages : Test(4)
 {
     my $logger = Idval::Logger->new();
+    my @pkgresult;
     my $q;
+    my $l;
 
     $logger->set_debugmask('Common Provider Logger Commands::*');
+    my $loglevel = $logger->accessor('LOGLEVEL');
 
-    $q = $logger->_pkg_matches('Idval::Provider');
-    ok($q);
+    @pkgresult = $logger->_pkg_matches('Idval::Provider');
+    is_deeply(\@pkgresult, [1, $loglevel]);
 
-    $q = $logger->_pkg_matches('Idval::ProviderMgr');
-    ok(!$q);
+    @pkgresult = $logger->_pkg_matches('Idval::ProviderMgr');
+    is_deeply(\@pkgresult, [0, -99]);
 
-    $q = $logger->_pkg_matches('Idval::Commands::About');
-    ok($q);
+    @pkgresult = $logger->_pkg_matches('Idval::Commands::About');
+    is_deeply(\@pkgresult, [1, $loglevel]);
 
-    $q = $logger->_pkg_matches('Idval::Commands::Foo');
-    ok($q);
+    @pkgresult = $logger->_pkg_matches('Idval::Commands::Foo');
+    is_deeply(\@pkgresult, [1, $loglevel]);
 }
 
 sub get_debugmask : Test(2)
 {
     my $logger = Idval::Logger->new();
-    my @foo;
+    my $mods;
 
-    @foo = $logger->set_debugmask('Common Provider Logger Commands::*');
-    is_deeply(\@foo, [qw(.*?::Commands::.*?::.*? Common::.*?::.*?::.*? Logger::.*?::.*?::.*? Provider::.*?::.*?::.*?)]); # Output is sorted
+    $mods = $logger->set_debugmask('Common Provider Logger Commands::*');
+    is_deeply([sort keys %{$mods}], [qw(.*?::Commands::.*?::.*? Common::.*?::.*?::.*? Logger::.*?::.*?::.*? Provider::.*?::.*?::.*?)]);
 
     my $boo1 = $logger->get_debugmask();
     my $boo = [sort keys %{$boo1}];
-    is_deeply($boo, [qw(.*?::Commands::.*?::.*? Common::.*?::.*?::.*? Logger::.*?::.*?::.*? Provider::.*?::.*?::.*?)]); # Output is sorted
+    is_deeply($boo, [qw(.*?::Commands::.*?::.*? Common::.*?::.*?::.*? Logger::.*?::.*?::.*? Provider::.*?::.*?::.*?)]);
 
 }
 
 sub remove_from_debugmask : Test(1)
 {
     my $logger = Idval::Logger->new();
-    my @foo;
+    my $mods;
 
     $logger->set_debugmask('Common Provider Logger Commands::*');
 
@@ -154,13 +157,13 @@ sub remove_from_debugmask : Test(1)
     my $boo1 = $logger->get_debugmask();
     my $boo = [sort keys %{$boo1}];
 
-    is_deeply($boo, [qw(Common::.*?::.*?::.*? Logger::.*?::.*?::.*? Provider::.*?::.*?::.*?)]); # Output is sorted
+    is_deeply($boo, [qw(Common::.*?::.*?::.*? Logger::.*?::.*?::.*? Provider::.*?::.*?::.*?)]);
 }
 
 sub add_to_debugmask : Test(1)
 {
     my $logger = Idval::Logger->new();
-    my @foo;
+    my $mods;
 
     $logger->set_debugmask('Common Provider Logger Commands::*');
 
@@ -168,25 +171,25 @@ sub add_to_debugmask : Test(1)
 
     my $boo1 = $logger->get_debugmask();
     my $boo = [sort keys %{$boo1}];
-    is_deeply($boo, [qw(.*?::Commands::.*?::.*? Common::.*?::.*?::.*? Logger::.*?::.*?::.*? Provider::.*?::.*?::.*? ProviderMgr::.*?::.*?::.*?)]); # Output is sorted
+    is_deeply($boo, [qw(.*?::Commands::.*?::.*? Common::.*?::.*?::.*? Logger::.*?::.*?::.*? Provider::.*?::.*?::.*? ProviderMgr::.*?::.*?::.*?)]);
 }
 
 sub reps_and_adds_and_removals_in_debugmask : Test(1)
 {
     my $logger = Idval::Logger->new();
-    my @foo;
+    my $mods;
 
     $logger->set_debugmask('Common +ProviderMgr Provider -Logger Logger Commands::*');
 
     my $boo1 = $logger->get_debugmask();
     my $boo = [sort keys %{$boo1}];
-    is_deeply($boo, [qw(.*?::Commands::.*?::.*? Common::.*?::.*?::.*? Provider::.*?::.*?::.*? ProviderMgr::.*?::.*?::.*?)]); # Output is sorted
+    is_deeply($boo, [qw(.*?::Commands::.*?::.*? Common::.*?::.*?::.*? Provider::.*?::.*?::.*? ProviderMgr::.*?::.*?::.*?)]);
 }
 
 sub multiple_removals_dont_fail : Test(1)
 {
     my $logger = Idval::Logger->new();
-    my @foo;
+    my $mods;
 
     $logger->set_debugmask('Common +ProviderMgr Provider -Logger Logger Commands::*');
 
@@ -195,13 +198,13 @@ sub multiple_removals_dont_fail : Test(1)
 
     my $boo1 = $logger->get_debugmask();
     my $boo = [sort keys %{$boo1}];
-    is_deeply($boo, [qw(Common::.*?::.*?::.*? Provider::.*?::.*?::.*? ProviderMgr::.*?::.*?::.*?)]); # Output is sorted
+    is_deeply($boo, [qw(Common::.*?::.*?::.*? Provider::.*?::.*?::.*? ProviderMgr::.*?::.*?::.*?)]);
 }
 
 sub multiple_additions_add_once : Test(1)
 {
     my $logger = Idval::Logger->new();
-    my @foo;
+    my $mods;
 
     $logger->set_debugmask('Common +ProviderMgr Provider -Logger Logger Commands::*');
 
@@ -210,7 +213,7 @@ sub multiple_additions_add_once : Test(1)
 
     my $boo1 = $logger->get_debugmask();
     my $boo = [sort keys %{$boo1}];
-    is_deeply($boo, [qw(.*?::Commands::.*?::.*? Common::.*?::.*?::.*? Provider::.*?::.*?::.*? ProviderMgr::.*?::.*?::.*?)]); # Output is sorted
+    is_deeply($boo, [qw(.*?::Commands::.*?::.*? Common::.*?::.*?::.*? Provider::.*?::.*?::.*? ProviderMgr::.*?::.*?::.*?)]);
 }
 
 sub test_chatty : Test(2)
@@ -236,5 +239,31 @@ sub test_verbose : Test(3)
 
     $result = capture_logger('verbose', 'Test', $L_CHATTY, $msg);
     is($result, "Idval::Logger::Test: $msg");
+}
+
+sub separate_levels_per_module : Test(5)
+{
+    my $logger = Idval::Logger->new();
+    my $mods;
+    my @pkgresult;
+
+    $mods = $logger->set_debugmask('Common:2,Provider:4,Logger:0 Commands::*');
+
+    #Doesn't affect the module list names
+    is_deeply([sort keys %{$mods}], [qw(.*?::Commands::.*?::.*? Common::.*?::.*?::.*? Logger::.*?::.*?::.*? Provider::.*?::.*?::.*?)]);
+
+    my $loglevel = $logger->accessor('LOGLEVEL');
+
+    @pkgresult = $logger->_pkg_matches('Idval::Provider');
+    is_deeply(\@pkgresult, [1, 4]);
+
+    @pkgresult = $logger->_pkg_matches('Idval::ProviderMgr');
+    is_deeply(\@pkgresult, [0, -99]);
+
+    @pkgresult = $logger->_pkg_matches('Idval::Commands::About');
+    is_deeply(\@pkgresult, [1, $loglevel]);
+
+    @pkgresult = $logger->_pkg_matches('Idval::Logger');
+    is_deeply(\@pkgresult, [1, 0]);
 }
 

@@ -56,7 +56,7 @@ sub init
 
     # Forward mapping is OGG to ID3v2
     # Reverse mapping is ID3v2 to OGG
-    $self->get_tagname_mappings(Idval::Common::get_common_object('config'),
+    $self->set_tagname_mappings(Idval::Common::get_common_object('config'),
                                 'OGG');
 
     return;
@@ -65,7 +65,10 @@ sub init
 sub read_tags
 {
     my $self = shift;
-    my $tag_record = shift;
+    my $argref = shift;
+    my $tag_record = $argref->{tag_record};
+    $self->{BYPASS_MAPPING} = exists($argref->{bypass_mapping}) ? $argref->{bypass_mapping} : 0;
+
     my $line;
     my $current_tag;
     my $tag_value;
@@ -96,10 +99,8 @@ sub read_tags
         {
             $current_tag = uc($1);
             $tag_value = $2;
-            if (exists($self->{FWD_MAPPING}->{$current_tag}))
-            {
-                $tag_record->add_tag($self->{FWD_MAPPING}->{$current_tag}, $tag_value);
-            }
+
+            $tag_record->add_tag($self->map_to_id3v2($current_tag), $tag_value);
             next;
         }
 
@@ -115,7 +116,8 @@ sub read_tags
 sub write_tags
 {
     my $self = shift;
-    my $tag_record = shift;
+    my $argref = shift;
+    my $tag_record = $argref->{tag_record};
 
     return 0 if !$self->query('is_ok');
 
@@ -126,11 +128,8 @@ sub write_tags
     my $vorbisname;
     foreach my $tagname ($tag_record->get_all_keys())
     {
-        if(exists($self->{REV_MAPPING}->{$tagname}))
-        {
-            $vorbisname = $self->{REV_MAPPING}->{$tagname};
-            push(@taglist, $tag_record->get_value_as_arg('-t ' . $vorbisname . '=', $tagname));
-        }
+        $vorbisname = $self->map_from_id3v2($tagname);
+        push(@taglist, $tag_record->get_value_as_arg('-t ' . $vorbisname . '=', $tagname));
     }
 
     my $status = Idval::Common::run($path,

@@ -25,7 +25,7 @@ use Getopt::Long qw(:config pass_through permute);
 
 use Idval;
 use Idval::Common;
-use Idval::Logger qw(fatal);
+use Idval::Logger qw(chatty fatal);
 
 sub new
 {
@@ -121,7 +121,7 @@ sub cmd_loop
             @line_args = @{Idval::Common::split_line($line)};
 
             my $cmd_name = shift @line_args;
-            $self->{LOG}->chatty($DBG_PROVIDERS, "command name: \"$cmd_name\", line args: ", join(" ", @line_args), "\n");
+            chatty("command name: \"$cmd_name\", line args: ", join(" ", @line_args), "\n");
             my $rtn = 'Idval::Scripts::' . $cmd_name;
             no strict 'refs';
             eval { $temp_ds = &$rtn($datastore, $providers, @line_args); };
