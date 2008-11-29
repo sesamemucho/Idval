@@ -16,7 +16,7 @@ package Idval;
 
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
-
+#use threads;
 use strict;
 use warnings;
 use 5.006;
@@ -61,6 +61,7 @@ $VERSION = '0.7.0';
      'xml!',                 # use XML for output
 
      # For error logging
+     'optimize!',
      'verbose+',
      'quiet+',
      'debug=s',
@@ -81,10 +82,10 @@ $options{'no-run'} = 0;
 $options{'xml'} = 0;
 $options{'verbose'} = 1;
 $options{'quiet'} = 0;
-#$options{'debug'} = undef;
 $options{'development'} = 0;
 $options{'log_out'} = '';
 $options{'print_to'} = '';
+$options{'optimize'} = 1;
 
 END {
     unlink @{$tempfiles};
@@ -140,9 +141,10 @@ sub _init
         'log_out' => $options{'log_out'},
         'print_to' => $options{'print_to'},
         'xml' => $options{'xml'},
+        'optimize' => $options{'optimize'},
         );
 
-    Idval::Logger::initialize_logger($logger_args);
+    Idval::Logger::re_init($logger_args);
     $log = Idval::Common::get_logger();
 
     # Set up a common location for help info
@@ -165,7 +167,7 @@ sub _init
     # Tell the system to use the regular filesystem services (i.e., not the unit-testing version)
     Idval::ServiceLocator::provide('io_type', 'FileSystem');
 
-    verbose("option list:", Dumper(\%options));
+    #verbose("option list:", Dumper(\%options));
     verbose("Looking for: ", Idval::Ui::get_sysconfig_file($data_dir), "\n");
 
     my $sysconfig_file  = $options{'sysconfig'} || Idval::Ui::get_sysconfig_file($data_dir);
@@ -177,14 +179,12 @@ sub _init
 
 # XXX This really should be done during installation ? Let's try it this way for now
     # Is this the first time through?
-    print "HELLO from Idval\n";
     if (not $config->value_exists('data_store', {config_group => 'idval_settings'}))
     {
         require Idval::FirstTime;
         my $cfgfile = Idval::FirstTime::init($config);
         print "conf: Got \"$cfgfile\"\n";
         exit;
-        #$config->add_file($cfgfile);
     }
     print "data_store is: ", $config->get_single_value('data_store', {config_group => 'idval_settings'}), "\n";
 
@@ -248,19 +248,14 @@ sub AUTOLOAD  ## no critic (RequireFinalReturn)
 
     return if $name =~ m/^[[:upper:]]+$/;
 
-    #print STDERR "Checking \"$name\"\n";
     chatty("In autoload, checking \"$name\"\n");
     my $providers = Idval::Common::get_common_object('providers');
     fatal("ERROR: Command \"$rtn\" called too early\n") unless defined $providers;
 
     chatty("In autoload; rtn is \"$rtn\"\n");
 
-    #my $subr = $providers->find_command($name);
-    #$subr .= '::main';
     my $subr = $providers->get_provider('command', $name, 'NULL');
-    #print STDERR "autoload: subr is: ", Dumper($subr);
     no strict 'refs';
-    #*$rtn = $subr;              # For next time, so we don't go through AUTOLOAD again
     *$rtn = sub {$subr->main(@_);};
 
     goto &$rtn;

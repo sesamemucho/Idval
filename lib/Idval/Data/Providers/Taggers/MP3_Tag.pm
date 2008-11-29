@@ -86,8 +86,8 @@ sub init
     # Forward mapping is ID3v1 to ID3v2
     # Reverse mapping is ID3v2 to ID3v1
     $self->set_tagname_mappings($config, 'MP3');
-    #debug("MP3_Tags FWD_MAPPING: ", Dumper($self->{FWD_MAPPING}));
-    #debug("MP3_Tags REV_MAPPING: ", Dumper($self->{REV_MAPPING}));
+    #idv_dbg("MP3_Tags FWD_MAPPING: ", Dumper($self->{FWD_MAPPING}));
+    #idv_dbg("MP3_Tags REV_MAPPING: ", Dumper($self->{REV_MAPPING}));
     $self->{DEBUG} = 0;
     return;
 }
@@ -140,7 +140,7 @@ sub read_tags
 
     if (exists $mp3->{ID3v1})
     {
-        #debug(STDERR "MP3: Yes to ID3v1\n");
+        #idv_dbg(STDERR "MP3: Yes to ID3v1\n");
         ($title, $artist, $album, $year, $comment, $track, $genre) = $mp3->{ID3v1}->all;
 
         $tag_record->add_tag($self->map_to_id3v2('TITLE'), $title);
@@ -314,6 +314,7 @@ sub write_tags
 
     my $dbg = 0;
     my $vs = $self->{VISIBLE_SEPARATOR};
+    fatal("Undefined tag record\n") unless defined($tag_record);
     my $filename = $tag_record->get_name();
 
     if (!exists $self->{ID3_ENCODING_TYPE})

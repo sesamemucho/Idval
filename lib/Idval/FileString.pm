@@ -360,35 +360,6 @@ sub idv_get_tree
     return $tree;
 }
 
-# sub idv_mkdir
-# {
-#     my $path = shift;
-#     my $dpath;
-#     #my $lastdir;
-
-#     $path = File::Spec->canonpath(File::Spec->catdir($pwd, $path));
-#     $path =~ s{//+}{/}g;
-#     $path =~ s{/$}{};
-#     $path =~ s{^/}{};
-
-#     $dpath = $tree;
-#     #$lastdir = $dpath;
-
-#     foreach my $dir (File::Spec->splitdir($path))
-#     {
-#         if (!exists($dpath->{$dir}))
-#         {
-#             $dpath->{$dir} = {};
-#         }
-
-#         #$lastdir = $dpath;
-#         $dpath = $dpath->{$dir};
-#     }
-
-#     #return $lastdir;
-#     return $dpath;
-# }
-
 sub idv_is_ref_dir
 {
     my $dir = shift;
@@ -535,31 +506,6 @@ sub _get_dir
     #print STDERR "6\n";
     return ($status, $dpath, $restpath);
 }
-
-# sub idv_getdir
-# {
-#     my $path = shift;
-
-#     $path =~ s{//+}{/}g;
-#     $path =~ s{^/}{};
-#     $path =~ s{/$}{};
-
-#     my $dpath = $tree;
-
-#     #print STDERR "For $path, ", Dumper($tree);
-#     foreach my $dir (File::Spec->splitdir($path))
-#     {
-#         if (!exists($dpath->{$dir}))
-#         {
-#             return undef;
-#         }
-
-#         $dpath = $dpath->{$dir};
-#         #print STDERR "dpath ($dir)is: ", Dumper($dpath);
-#     }
-
-#     return $dpath;
-# }
 
 sub idv_add_file
 {

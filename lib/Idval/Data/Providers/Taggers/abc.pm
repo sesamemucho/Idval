@@ -25,7 +25,7 @@ use Class::ISA;
 use Data::Dumper;
 
 use Idval::FileIO;
-use Idval::Logger qw(fatal);
+use Idval::Logger qw(idv_dbg fatal);
 use base qw(Idval::Provider);
 
 my $name = 'abc';
@@ -275,7 +275,7 @@ sub parse_file
     
     my $text = $self->{TEXT}->{$fname}->{BLOCK}->{$id};
     $text =~ s/\r//g;
-    #print "\nFile $fileid:\n";
+    #idv_dbg("File $fileid:\n");
     my $field;
     my $data;
     my %tags;
@@ -299,13 +299,13 @@ sub parse_file
         {
             my $fieldid = $1;
             my $tagvalue = $2;
-#             if($fieldid eq 'M')
+#             if($fieldid eq 'X')
 #             {
 #                 my $text1 = defined($3) ? $3 : 'undef';
 #                 my $text2 = $tagvalue;
 #                 $text1 =~ s/\r//g;
 #                 $text2 =~ s/\r//g;
-#                 print "Parsing: Field $fieldid, tagvalue <$text2>, comment <$text1>\n";
+#                 idv_dbg("Parsing: Field $fieldid, tagvalue <$text2>, comment <$text1>\n");
 #             }
             push(@{$tags{$fieldid}}, $tagvalue);
             redo LOOP2;
@@ -316,11 +316,11 @@ sub parse_file
             # These should transform straight to IDV tags
             my $fieldid = uc $1;
             my $tagvalue = $2;
-            {
-                my $text1 = $tagvalue;
-                $text1 =~ s/\r//g;
-                print "Parsing: idv Field \"$fieldid\", text <$text1>\n";
-            }
+#             {
+#                 my $text1 = $tagvalue;
+#                 $text1 =~ s/\r//g;
+#                 print "Parsing: idv Field \"$fieldid\", text <$text1>\n";
+#             }
             push(@{$tags{$fieldid}}, $tagvalue);
             redo LOOP2;
         }
@@ -329,11 +329,11 @@ sub parse_file
         {
             my $fieldid = $1;
             my $tagvalue = $2;
-            {
-                my $text1 = $tagvalue;
-                $text1 =~ s/\r//g;
-                print "Parsing: other Field \"$fieldid\", text <$text1>\n";
-            }
+#             {
+#                 my $text1 = $tagvalue;
+#                 $text1 =~ s/\r//g;
+#                 idv_dbg("Parsing: other Field \"$fieldid\", text <$text1>\n");
+#             }
             push(@{$tags{$fieldid}}, $tagvalue);
             redo LOOP2;
         }
@@ -351,7 +351,7 @@ sub parse_file
         }
     }
 
-    #print "Got", Dumper(\%tags);
+    idv_dbg("Got", Dumper(\%tags));
 
     return (\%tags, $fname, $id);
 }

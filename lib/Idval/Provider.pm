@@ -205,12 +205,12 @@ sub find_exe_path
 
         foreach my $testexe (@{$exelist})
         {
-            verbose("Checking \"$testexe\"\n");
+            verbose("Checking \"$testexe\"\n"); ##debug1
             $testexe = Idval::Common::expand_tilde($testexe);
             if (-e $testexe)
             {
                 $exe = $testexe;
-                verbose("Found \"$testexe\"\n");
+                verbose("Found \"$testexe\"\n"); ##debug1
                 last;
             }
         }

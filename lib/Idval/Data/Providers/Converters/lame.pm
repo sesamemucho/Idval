@@ -127,7 +127,7 @@ sub encode
     if ($status == 0)
     {
         $tag_record->set_name($dest); # This is a copy, so we can play with it
-        $status = $self->{WRITER}->write_tags($tag_record);
+        $status = $self->{WRITER}->write_tags({tag_record => $tag_record});
     }
 
     return $status;

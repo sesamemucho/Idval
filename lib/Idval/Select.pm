@@ -23,6 +23,7 @@ use Data::Dumper;
 use English '-no_match_vars';
 use Memoize;
 use Scalar::Util;
+use List::Util qw(first);
 
 use Idval::Logger qw(verbose fatal);
 use Idval::Common;
@@ -121,24 +122,43 @@ my %assignments =
      '+=' => 1,
     );
 
-sub cmp_re_eq { return "$_[0]" =~ m{$_[1]}i; }
-sub cmp_re_ne { return "$_[0]" !~ m{$_[1]}i; }
+sub cmp_re_eq { my ($aref, $val) = @_; return first { "$_" =~ m{$val}i } @{$aref}; }
+sub cmp_re_ne { my ($aref, $val) = @_; return first { "$_" !~ m{$val}i } @{$aref}; }
 
-sub cmp_eq_num { return $_[0] == $_[1]; }
-sub cmp_ne_num { return $_[0] != $_[1]; }
-sub cmp_lt_num { return ($_[0] eq "" ? 0 : $_[0]) < ($_[1] eq "" ? 0 : $_[1]); }
-sub cmp_gt_num { return ($_[0] eq "" ? 0 : $_[0]) > ($_[1] eq "" ? 0 : $_[1]); }
-sub cmp_le_num { return ($_[0] eq "" ? 0 : $_[0]) <= ($_[1] eq "" ? 0 : $_[1]); }
-sub cmp_ge_num { return ($_[0] eq "" ? 0 : $_[0]) >= ($_[1] eq "" ? 0 : $_[1]); }
+sub cmp_eq_num { my ($aref, $val) = @_; return first { $_ == $val } @{$aref}; }
+sub cmp_ne_num { my ($aref, $val) = @_; return first { $_ != $val } @{$aref}; }
+sub cmp_lt_num { my ($aref, $val) = @_; return first { ($_ eq "" ? 0 : $_) < ($val eq "" ? 0 : $val) } @{$aref}; }
+sub cmp_gt_num { my ($aref, $val) = @_; return first { ($_ eq "" ? 0 : $_) > ($val eq "" ? 0 : $val) } @{$aref}; }
+sub cmp_le_num { my ($aref, $val) = @_; return first { ($_ eq "" ? 0 : $_) <= ($val eq "" ? 0 : $val) } @{$aref}; }
+sub cmp_ge_num { my ($aref, $val) = @_; return first { ($_ eq "" ? 0 : $_) >= ($val eq "" ? 0 : $val) } @{$aref}; }
 
-sub cmp_eq_str { return lc $_[0] eq lc $_[1]; }
-sub cmp_ne_str { return lc $_[0] ne lc $_[1]; }
-sub cmp_lt_str { return lc $_[0] lt lc $_[1]; }
-sub cmp_gt_str { return lc $_[0] gt lc $_[1]; }
-sub cmp_le_str { return lc $_[0] le lc $_[1]; }
-sub cmp_ge_str { return lc $_[0] ge lc $_[1]; }
+sub cmp_eq_str { my ($aref, $val) = @_; return first { lc $_ eq lc $val } @{$aref}; }
+sub cmp_ne_str { my ($aref, $val) = @_; return first { lc $_ ne lc $val } @{$aref}; }
+sub cmp_lt_str { my ($aref, $val) = @_; return first { lc $_ lt lc $val } @{$aref}; }
+sub cmp_gt_str { my ($aref, $val) = @_; return first { lc $_ gt lc $val } @{$aref}; }
+sub cmp_le_str { my ($aref, $val) = @_; return first { lc $_ le lc $val } @{$aref}; }
+sub cmp_ge_str { my ($aref, $val) = @_; return first { lc $_ ge lc $val } @{$aref}; }
 
-sub cmp_has_str { return (index(lc "$_[0]", lc "$_[1]") != -1); }
+sub cmp_has_str { my ($aref, $val) = @_; return first { (index(lc "$_", lc "$val") != -1) } @{$aref}; }
+
+# sub cmp_re_eq { return "$_[0]" =~ m{$_[1]}i; }
+# sub cmp_re_ne { return "$_[0]" !~ m{$_[1]}i; }
+
+# sub cmp_eq_num { return $_[0] == $_[1]; }
+# sub cmp_ne_num { return $_[0] != $_[1]; }
+# sub cmp_lt_num { return ($_[0] eq "" ? 0 : $_[0]) < ($_[1] eq "" ? 0 : $_[1]); }
+# sub cmp_gt_num { return ($_[0] eq "" ? 0 : $_[0]) > ($_[1] eq "" ? 0 : $_[1]); }
+# sub cmp_le_num { return ($_[0] eq "" ? 0 : $_[0]) <= ($_[1] eq "" ? 0 : $_[1]); }
+# sub cmp_ge_num { return ($_[0] eq "" ? 0 : $_[0]) >= ($_[1] eq "" ? 0 : $_[1]); }
+
+# sub cmp_eq_str { return lc $_[0] eq lc $_[1]; }
+# sub cmp_ne_str { return lc $_[0] ne lc $_[1]; }
+# sub cmp_lt_str { return lc $_[0] lt lc $_[1]; }
+# sub cmp_gt_str { return lc $_[0] gt lc $_[1]; }
+# sub cmp_le_str { return lc $_[0] le lc $_[1]; }
+# sub cmp_ge_str { return lc $_[0] ge lc $_[1]; }
+
+# sub cmp_has_str { return (index(lc "$_[0]", lc "$_[1]") != -1); }
 
 # Check to see if we have a valid function in the package space 'Idval::ValidateFuncs'
 sub check_function
@@ -158,6 +178,7 @@ sub passes
     my $funcname = $_[2];
     fatal("Unknown function Idval::ValidateFuncs::$funcname") unless check_function($funcname);
     my $func = \&{"Idval::ValidateFuncs::$funcname"};
+    # The commas are for (in case someone wants to use multiple ... (figure out why or remove) XXX
     return (&$func($selectors, split(/,/, $_[1])) != 0 );
 }
 
@@ -173,6 +194,15 @@ sub get_compare_function
     my $func_type = Scalar::Util::looks_like_number($compare_value) ? 'NUM' : 'STR';
 
     return $compare_function{$operand}->{FUNC}->{$func_type};
+}
+
+sub get_compare_function_name
+{
+    my $operand = shift;
+    my $compare_value = shift;
+    my $func_type = Scalar::Util::looks_like_number($compare_value) ? 'NUM' : 'STR';
+
+    return $compare_function{$operand}->{NAME}->{$func_type};
 }
 
 # Operators that are *not* composed of metacharacters (such as 'gt',

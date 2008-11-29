@@ -73,7 +73,8 @@ sub convert
 
     return 0 if !$self->query('is_ok');
 
-    my $extra_args = $self->{CONFIG}->get_single_value('extra_args', {'command_name' => 'timidity'});
+    my $timidity_args = $self->{CONFIG}->get_single_value('timidity_args', $tag_record);
+    my @timidity_args_list = split(' ', $timidity_args);
 
     my $src = $self->get_source_filepath($tag_record);
     $dest = Idval::Common::mung_path($dest);
@@ -84,7 +85,7 @@ sub convert
                                     Idval::Common::mkarglist(
                                         @{$self->{CFG_ARGS}},
                                         '-Ow',
-                                        $extra_args,
+                                        $timidity_args,
                                         '-o', "$dest",
                                         "$src"));
 

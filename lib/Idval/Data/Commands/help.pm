@@ -51,7 +51,7 @@ sub main
     my $help_file = Idval::Common::get_common_object('help_file');
 
     my %cmd_info;
-    foreach my $cmd ($providers->_get_providers('command'))
+    foreach my $cmd ($providers->_get_providers({types => ['command']}))
     {
         $cmd_info{$cmd->{NAME}} = $cmd;
     }

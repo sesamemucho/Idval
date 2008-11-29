@@ -65,7 +65,7 @@ sub convert
 
     chatty("Copying \"$src\" to \"$dest\"\n");
     #sleep(rand(10));
-    return copy($src, $dest);
+    return !copy($src, $dest);  # We want 0 for success
 }
 
 1;

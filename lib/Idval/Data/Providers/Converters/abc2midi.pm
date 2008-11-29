@@ -74,7 +74,7 @@ sub convert
     $dest = Idval::Common::mung_path($dest);
     $src = Idval::Common::mung_path($src);
 
-    my $ref_num = $tag_record->get_value('X');
+    my $ref_num = $tag_record->get_value('TRCK');
     my $path = $self->query('path');
     my $status = Idval::Common::run($path,
                                     Idval::Common::mkarglist(
@@ -104,8 +104,9 @@ sub get_dest_filename
     my $rec = shift;
     my $dest_name = shift;
     my $dest_ext = shift;
+    my $title = $rec->get_first_value('TIT2') || 'No \'TIT2\' tag in record for: "' . $rec->get_name() . '"';
 
-    $dest_name = $rec->get_first_value('TITLE') . '.' . $dest_ext;
+    $dest_name = $rec->get_first_value('TIT2') . '.' . $dest_ext;
 
     return $dest_name;
 

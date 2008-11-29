@@ -26,18 +26,17 @@ use POSIX qw(strftime);
 use Memoize qw(memoize flush_cache);
 
 use base qw( Exporter );
-our @EXPORT_OK = qw( idv_print silent silent_q quiet info info_q verbose chatty debug idv_warn fatal
+our @EXPORT_OK = qw( idv_print silent silent_q quiet info info_q verbose chatty idv_dbg idv_warn fatal
                      $L_SILENT $L_QUIET $L_INFO $L_VERBOSE $L_CHATTY $L_DEBUG %level_to_name %name_to_level);
 our %EXPORT_TAGS = (vars => [qw($L_SILENT $L_QUIET $L_INFO $L_VERBOSE $L_CHATTY $L_DEBUG %level_to_name %name_to_level)]);
 
 $Carp::CarpLevel = 1;
 
 my $lo;
-my $lo_begin;
 my @warnings;
 our $depth = 0;
 
-autoflush STDOUT 1;
+our $optimize = 1;
 
 our $L_SILENT      = -1;
 our $L_QUIET       = 0;
@@ -87,21 +86,23 @@ sub _init
     my $lfh;
 
     my $initial_dbg = exists($ENV{IDV_DEBUGMASK}) ? $ENV{IDV_DEBUGMASK} : 'DBG_STARTUP DBG_PROCESS Command::*';
-    my $initial_lvl = exists($ENV{IDV_DEBUGLEVEL}) ? $ENV{IDV_DEBUGLEVEL} : $L_QUIET;
+    my $initial_lvl = exists($ENV{IDV_DEBUGLEVEL}) ? $ENV{IDV_DEBUGLEVEL} : $L_INFO;
+    my $initial_trace = exists($ENV{IDV_DEBUGTRACE}) ? $ENV{IDV_DEBUGTRACE} : 1;
 
+    #print STDERR "initial_dbg is: \"$initial_dbg\"\n";
     $self->accessor('LOGLEVEL', exists $argref->{level} ? $argref->{level} : $initial_lvl);
     $self->set_debugmask(exists $argref->{debugmask} ? $argref->{debugmask} : $initial_dbg);
-
-    $self->accessor('SHOW_TRACE', exists $argref->{show_trace} ? $argref->{show_trace} : 0);
+    $self->accessor('SHOW_TRACE', exists $argref->{show_trace} ? $argref->{show_trace} : $initial_trace);
     $self->accessor('SHOW_TIME', exists $argref->{show_time} ? $argref->{show_time} : 0);
     $self->accessor('USE_XML', exists $argref->{xml} ? $argref->{xml} : 0);
     $self->accessor('FROM',  exists $argref->{from} ? $argref->{from} : 'nowhere');
 
     $self->set_fh('LOG_OUT',  safe_get($argref, 'log_out', 'STDOUT'));
+    $self->{LOG_OUT}->autoflush(1);
     $self->set_fh('PRINT_TO', safe_get($argref, 'print_to', 'STDOUT'));
 
     $self->{WARNINGS} = ();
-
+    $self->str('after init');
     return;
 }
 
@@ -121,7 +122,7 @@ sub str
     confess "No log_out?" unless defined($self->accessor('LOG_OUT'));
     printf $io "  output:     %s\n", $self->accessor('LOG_OUT');
     printf $io "  from:       %s\n", $self->accessor('FROM');
-    printf $io "  debug mask: \n",   $self->str_debugmask('              ');
+    printf $io "  debug mask: %s\n",   $self->str_debugmask('              ');
     use strict;
     return;
 }
@@ -206,6 +207,7 @@ sub set_debugmask
     my @rev;
     my $quad;
     my %modules = exists $self->{MODULE_HASH} ? %{$self->{MODULE_HASH}} : ();
+    #print STDERR "init modules is: ", Dumper(\%modules);
 
     my @replacements;
     my @additions;
@@ -219,7 +221,7 @@ sub set_debugmask
         push(@replacements, $item);
     }
 
-    #print STDERR "Replacements: <", join(',', @replacements), "\n";
+    #print STDERR "Replacements: <", join(',', @replacements), ">\n";
     #print STDERR "Additions: <", join(',', @additions), ">\n";
     #print STDERR "Removals: <", join(',', @removals), ">\n";
     # If we have any replacements, do that
@@ -283,7 +285,16 @@ sub set_debugmask
 
     $self->{MODULE_HASH} = \%modules;
 
-    my @regexlist = keys %modules;
+    # Here's a quick way to make more-specific specifications take
+    # precedence over more general ones. Consider
+    # '.*?::Command::.*?::.*?' and 'Sync::.*?::.*?::.*?' in the
+    # context of checking the debug mask for Idval::Command::Sync.
+    # We want 'Sync::.*?::.*?::.*?' to match before
+    # '.*?::Command::.*?::.*?'. Since the wildcard '.*?' sorts before
+    # any letters, just sort %module's keys in reverse, and there you
+    # go.
+    my @regexlist = sort { $b cmp $a } keys %modules;
+
     $self->{MODULE_LIST} = \@regexlist;
     # Now make a regular expression to match packages
     my $mod_re = '^(?:(' . join(')|(', @regexlist) . '))$';
@@ -314,7 +325,7 @@ sub str_debugmask
     #my $str = $lead . join($lead2 . $lead, sort keys %{$self->{MODULE_HASH}});
     my $str = Dumper($self->{MODULE_HASH});
 
-    return $str;
+    return $lead . $str;
 }
 
 sub accessor
@@ -394,7 +405,7 @@ sub _pkg_matches
 
     my $matched_module = ${$self->{MODULE_LIST}}[$#- - 1];
     $result += 0;               # Force it to be numeric
-    my $loglevel = $result ? $self->{MODULE_HASH}->{$matched_module}->{LEVEL} : -99;
+    my $loglevel = $result ? $self->{MODULE_HASH}->{$matched_module}->{LEVEL} : $self->accessor('LOGLEVEL');
     #print STDERR "pm: for $pkg, returning ($result, $loglevel)\n";
     return ($result, $loglevel);
 }
@@ -419,8 +430,9 @@ sub _log
         %caller_args,           # Caller customization
         );
 
-
-    my $level = $argref{level};
+    #print STDERR "Logger:_log: argref is:", Dumper(\%argref);
+    #print STDERR "Logger:_log: caller is: <", join(',',caller(2)), ">\n" unless exists($argref{level});
+    my $level = exists $argref{level} ? $argref{level} : 0;
     my $isquery = $argref{query};
     my $force_match = $argref{force_match} || $isquery;
 
@@ -429,7 +441,11 @@ sub _log
     my ($got_match, $l_level) = $self->_pkg_matches($package);
     my $debugmask_ok = $force_match || $got_match;
 
-    return if !(($level <= $l_level) or $isquery or $force_match);
+#     if ($package ne 'Idval::Config')
+#     {
+#         print STDERR "ok if ($level <= $l_level), q: $isquery, fm: $force_match, dmok: $debugmask_ok, $package\n";
+#     }
+    return if ($level > $l_level) and !$isquery and !$force_match;
     return if !$debugmask_ok;
 
     my $fh = $self->{LOG_OUT};
@@ -437,7 +453,6 @@ sub _log
 
     my $prepend = '';
 
-    #print STDERR "level: $level, deco: $decorate, package: $package, debugmask_ok: $debugmask_ok\n";
     #print STDERR "modlist: ", Dumper($self->{MODULE_HASH}) if $package =~ m/Validate/;
     #print STDERR "Log: should print\n";
     if ($self->accessor('USE_XML'))
@@ -478,6 +493,11 @@ sub _log
     }
 }
 
+sub idv_null
+{
+    return;
+}
+
 # Really, a replacement for 'print'
 sub idv_print
 {
@@ -486,7 +506,7 @@ sub idv_print
 
 sub silent
 {
-    return get_logger()->_log({}, @_);
+    return get_logger()->_log({level => $L_SILENT}, @_);
 }
 
 sub silent_q
@@ -509,17 +529,17 @@ sub info_q
     return get_logger()->_log({level => $L_INFO, decorate => 0}, @_);
 }
 
-sub verbose
+sub verbose_real
 {
     return get_logger()->_log({level => $L_VERBOSE}, @_);
 }
 
-sub chatty
+sub chatty_real
 {
     return get_logger()->_log({level => $L_CHATTY}, @_);
 }
 
-sub debug
+sub idv_dbg_real
 {
     return get_logger()->_log({level => $L_DEBUG}, @_);
 }
@@ -540,8 +560,14 @@ sub _warn
 
 sub fatal
 {
+    # If caller passes in an argref as the first parameter, allow override of the defaults by the caller
+    my %caller_args;
+    %caller_args = %{$_[0]}, shift if ref $_[0] eq 'HASH';
+    my $show_trace = exists $caller_args{show_trace} ? $caller_args{show_trace} : get_logger()->accessor('SHOW_TRACE');
+
     get_logger()->_log({level => $L_QUIET, force_match => 1, call_depth => 2}, @_);
-    if (get_logger()->accessor('SHOW_TRACE'))
+
+    if ($show_trace)
     {
         Carp::confess(@_);
     }
@@ -572,28 +598,33 @@ sub make_custom_logger
 # Not for general use - should only be used (once) by the driver program, after
 # enough options are known.
 
-sub initialize_logger
+sub re_init
 {
     my $argref = shift;
 
-    if (ref $argref eq 'Idval::Logger')
-    {
-        $lo = $argref;
-    }
-    else
-    {
-        $lo = new Idval::Logger($argref);
-    }
+    #print STDERR "re_init: ", Dumper($argref);
+    $lo->accessor('LOGLEVEL', $argref->{level}) if exists $argref->{level};
+    $lo->set_debugmask($argref->{debugmask}) if exists $argref->{debugmask};
+    $lo->accessor('SHOW_TRACE', $argref->{show_trace})if exists $argref->{show_trace};
+    $lo->accessor('SHOW_TIME', $argref->{show_time}) if exists $argref->{show_time};
+    $lo->accessor('USE_XML', $argref->{xml}) if exists $argref->{xml};
+    $lo->accessor('FROM', $argref->{from}) if exists $argref->{from};
 
+    $lo->set_fh('LOG_OUT',  safe_get($argref, 'log_out', 'STDOUT')) if exists $argref->{log_out};
+    $lo->set_fh('PRINT_TO', safe_get($argref, 'print_to', 'STDOUT')) if exists $argref->{print_to};
+
+    flush_cache('_pkg_matches');
+    $lo->str("after end of re_init");
     return;
 }
 
 sub get_logger
 {
-    return $lo || $lo_begin;
+    return $lo;
 }
 
-BEGIN {
+sub _create_logger
+{
     $L_SILENT      = -1;
     $L_QUIET       = 0;
     $L_INFO        = 1;
@@ -623,8 +654,30 @@ BEGIN {
 
     memoize('_pkg_matches');
 
-    $lo_begin = Idval::Logger->new({development => 0,
-                             log_out => 'STDERR'});
+    $optimize = (grep(/^--no(op|opt|opti|optim|optimi|optimiz|optimize)$/, @main::ARGV)) ? 0 : 1;
+    $optimize &&= !exists($ENV{'IDV_DEBUGMASK'});
+
+    $lo = Idval::Logger->new({development => 0,
+                              log_out => 'STDERR'});
+
+    #print STDERR "========= optimize is: $optimize\n";
+    if ($optimize)
+    {
+        *verbose = \&idv_null;
+        *chatty = \&idv_null;
+        *idv_dbg = \&idv_null;
+    }
+    else
+    {
+        *verbose = \&verbose_real;
+        *chatty = \&chatty_real;
+        *idv_dbg = \&idv_dbg_real;
+    }
+}
+
+BEGIN {
+    #print STDERR "HELLO from Logger::BEGIN\n";
+    _create_logger();
 }
 
 1;

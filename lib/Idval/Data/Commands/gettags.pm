@@ -24,7 +24,7 @@ use Data::Dumper;
 use English '-no_match_vars';
 use Getopt::Long;
 
-use Idval::Logger qw(idv_print info_q debug);
+use Idval::Logger qw(idv_print info_q idv_dbg);
 use Idval::Common;
 use Idval::FileIO;
 use Idval::DoDots;
@@ -77,7 +77,7 @@ sub main
 
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
-        debug("Checking \"$key\"\n");
+        idv_dbg("Checking \"$key\"\n");
         $tag_record = $datastore->{RECORDS}->{$key};
         $type = $tag_record->get_value('TYPE');
         $prov = $providers->get_provider('reads_tags', $type, 'NULL');

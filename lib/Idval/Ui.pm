@@ -27,7 +27,7 @@ use File::Basename;
 use File::Path;
 use File::Spec;
 
-use Idval::Logger qw(verbose chatty debug fatal);
+use Idval::Logger qw(verbose chatty idv_dbg fatal);
 use Idval::Common;
 use Idval::Config;
 use Idval::FileIO;
@@ -156,7 +156,7 @@ sub make_wanted
 
     # Get a list of all the kinds of files we can read with the currently installed
     # 'reads_tags' providers.
-    foreach my $item ($providers->_get_providers('reads_tags'))
+    foreach my $item ($providers->_get_providers({types=>['reads_tags']}))
     {
         # This perly expression will create one entry in the hash %type_list for
         # each extension associated with the filetype handled by this tag reader.
@@ -167,12 +167,12 @@ sub make_wanted
     
     my @exts = map { '\.' . lc($_) } keys %type_list;
 
-    debug("UI: exts: ", join(",", @exts), ">\n");
+    idv_dbg("UI: exts: ", join(",", @exts), ">\n");
     return sub {
-        debug("UI: file is \"$_\"\n");
+        idv_dbg("UI: file is \"$_\"\n");
         return if -d $_;
         my($filename, $junk, $suffix) = fileparse(basename($_), @exts);
-        debug("UI: name is $_, Suffix is: <$suffix>\n");
+        idv_dbg("UI: name is $_, Suffix is: <$suffix>\n");
         return unless $suffix;  # It wasn't one of the ones we were looking for
 
         $suffix = substr($suffix, 1); # Remove the '.'

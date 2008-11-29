@@ -23,7 +23,8 @@ use Data::Dumper;
 use English '-no_match_vars';
 
 use Idval::Common;
-use Idval::Logger qw(chatty verbose);
+use Idval::Logger qw(info_q chatty verbose);
+#use Idval::Logger qw(chatty verbose);
 use Idval::Data::Genres;
 
 use base qw( Idval::Config );
@@ -72,12 +73,12 @@ sub val_evaluate
     my $is_regexp = 0;
     my @tags_matched = ();
 
-    chatty("in val_evaluate: ", Dumper($noderef)) if $self->{DEBUG};
-    chatty("val_evaluate: 1 select_list: ", Dumper($select_list)) if $self->{DEBUG};
+    #chatty("in val_evaluate: ", Dumper($noderef));
+    #chatty("val_evaluate: 1 select_list: ", Dumper($select_list));
     # If the block has no selector keys itself, then all matches should succeed
     if (not (exists($noderef->{'select'}) && ref($noderef->{'select'}) eq 'HASH'))
     {
-        chatty("Block has no selector keys, returning 2\n") if $self->{DEBUG};
+        chatty("Block has no selector keys, returning 2\n");
         return 2;
     }
 
@@ -86,11 +87,12 @@ sub val_evaluate
     return 0 unless %selectors;
 
     #my $tags_to_ignore = $select_list->get_calculated_keys_re();
-    my $tags_to_ignore = eval {$select_list->get_calculated_keys_re(); };
-    if ($@)
-    {
-        confess $@;
-    }
+#     my $tags_to_ignore = eval {$select_list->get_calculated_keys_re(); };
+#     if ($@)
+#     {
+#         confess $@;
+#     }
+# No more ignoring keys
 
   KEY_MATCH: foreach my $block_key (keys %{$noderef->{'select'}})
     {
@@ -110,31 +112,31 @@ sub val_evaluate
 
         my $bstor = $noderef->{'select'}->{$block_key}; # Naming convenience
 
-        verbose("val_evaluate: 2 select_list: ", Dumper(\%selectors)) if $self->{DEBUG};
+        #verbose("val_evaluate: 2 select_list: ", Dumper(\%selectors));
 
         @s_key_list = $self->{ALLOW_KEY_REGEXPS} ? grep(/^$block_key$/, keys %selectors) :
             ($block_key);
         $is_regexp = $block_key =~ m/\W/;
 
-        verbose("Checking block selector \"$block_key\" (is_regexp = \"$is_regexp\")\n") if $self->{DEBUG};
+        verbose("Checking block selector \"$block_key\" (is_regexp = \"$is_regexp\")\n");
 
         my $key_list_loop_result = 0;
 
         foreach my $s_key (@s_key_list)
         {
-            chatty("Checking block selector key \"$s_key\"\n") if $self->{DEBUG};
+            chatty("Checking block selector key \"$s_key\"\n");
             if (!exists($selectors{$s_key}))
             {
                 # The select list has nothing to match a required selector, so this must fail
-                chatty("Select list has nothing to match block selector key \"$s_key\", so return 0.\n") if $self->{DEBUG};
+                chatty("Select list has nothing to match block selector key \"$s_key\", so return 0.\n");
                 return 0;
             }
 
-            if ($is_regexp && ($s_key =~ m/$tags_to_ignore/))
-            {
-                chatty("Block selector key \"$s_key\" is a tag to ignore.\n") if $self->{DEBUG};
-                next;
-            }
+#             if ($is_regexp && ($s_key =~ m/$tags_to_ignore/))
+#             {
+#                 chatty("Block selector key \"$s_key\" is a tag to ignore.\n");
+#                 next;
+#             }
 
             # Make sure arg_value is a list reference
             my $arg_value_list = ref $selectors{$s_key} eq 'ARRAY' ? $selectors{$s_key} :
@@ -150,7 +152,7 @@ sub val_evaluate
             foreach my $value (@{$arg_value_list})
             {
                 verbose("Comparing \"$s_key\" => \"$value\" \"$block_op\" \"$block_value\" resulted in ",
-                         &$block_cmp_func($value, $block_value) ? "True\n" : "False\n") if $self->{DEBUG};
+                         &$block_cmp_func($value, $block_value) ? "True\n" : "False\n");
 
                 $cmp_result ||= &$block_cmp_func($value, $block_value);
                 last if $cmp_result;
@@ -169,13 +171,13 @@ sub val_evaluate
                 push(@tags_matched, $s_key);
             }
 
-            chatty("accumulated retval is now \"$retval\"\n") if $self->{DEBUG};
+            chatty("accumulated retval is now \"$retval\"\n");
         }
 
         $retval &&= $key_list_loop_result;
     }
 
-    chatty("val_evaluate returning \"$retval\"\n") if $self->{DEBUG};
+    chatty("val_evaluate returning \"$retval\"\n");
     return ($retval, \@tags_matched);
 }
 
@@ -188,8 +190,10 @@ sub get_gripes
     my $tree = $self->{TREE};
     my @gripelist;
 
-    chatty("Start of _get_gripes, selects: ", Dumper($selects)) if $self->{DEBUG};
-
+    info_q({force_match => 1}, 'blah');
+    chatty({force_match => 1}, "Start of _get_gripes, selects: ", Dumper($selects));
+    print STDERR "Start of _get_gripes, selects: ", Dumper($selects);
+    print STDERR "HELLO from get_gripes\n";
     my $visitor = sub {
         my $self = shift;
         my $noderef = shift;
@@ -197,11 +201,11 @@ sub get_gripes
         my $gripe = 'no gripe found?';
         my @match_tags = ();
 
-        chatty("get_gripes: noderef is: ", Dumper($noderef)) if $self->{DEBUG};
+        #chatty("get_gripes: noderef is: ", Dumper($noderef));
         my ($retval, $matches) = $self->val_evaluate($noderef, $selects);
         return 0 if ($retval == 0);
 
-        chatty("get_gripes: val_evaluate returned nonzero\n") if $self->{DEBUG};
+        chatty("get_gripes: val_evaluate returned nonzero\n");
 
         # There might not be a GRIPE at this node (for instance, a top-level 'group')
         if(exists $noderef->{GRIPE})
@@ -236,7 +240,7 @@ sub get_gripes
         }
     }
 
-    chatty("Result of merge blocks - VARS: ", Dumper(\@retlist)) if $self->{DEBUG};
+    #chatty("Result of merge blocks - VARS: ", Dumper(\@retlist));
 
     return \@retlist;
 }
@@ -245,6 +249,7 @@ package Idval::ValidateFuncs;
 
 use strict;
 use Data::Dumper;
+use Scalar::Util;
 
 #use Idval::Logger(fatal);
 
@@ -264,6 +269,18 @@ sub Check_For_Existance
     my $selectors = shift;
     my $tagname = shift;
     my $retval = exists $selectors->{$tagname};
+    return $retval;
+}
+
+sub Is_A_Number
+{
+    #print "Args are: ", Dumper(@_);
+    #confess "Bye";
+    my $selectors = shift;
+    my $tagname = shift;
+    my $tagvalue = lc($selectors->{$tagname});
+
+    my $retval = Scalar::Util::looks_like_number($tagvalue);
     return $retval;
 }
 

@@ -31,7 +31,7 @@ use English '-no_match_vars';;
 use Memoize;
 use Storable;
 
-use Idval::Logger qw(info_q verbose chatty debug);
+use Idval::Logger qw(info_q verbose chatty idv_dbg);
 use Idval::Common;
 use Idval::FileIO;
 use Idval::DoDots;
@@ -60,10 +60,14 @@ sub main
     my @args = @_;
     my $status;
 
-    $Devel::Trace::TRACE = 1;
-    # We want to add to the config object, but not pollute it for those who follow
+    #$Devel::Trace::TRACE = 1;
     # Storable::dclone doesn't work with regexps
-    my $config = Idval::Common::get_common_object('config')->copy();
+    # Make a copy of the config, to restore it at the end of the
+    # command.  In particular, any filter converters will need access
+    # to the sync data.
+    my $config = Idval::Common::get_common_object('config');
+    my $old_config = $config->copy();
+    $Devel::Trace::TRACE = 0;
 
     my $typemap = Idval::Common::get_common_object('typemap');
     my $dotmap = $typemap->get_dot_map();
@@ -72,11 +76,10 @@ sub main
     my ($syncfile, $should_delete_syncfile) = _parse_args(@args);
 
     # Now, make a new config object that incorporates the sync file info.
-    #$config->{DEBUG} = 1;
     $config->add_file($syncfile);
-    #$config->{DEBUG} = 0;
-    #print "sync: ", Dumper($config);
     progress_init($progress_data, $datastore);
+
+    my %records_to_process;
 
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
@@ -86,12 +89,13 @@ sub main
         if ($do_sync)
         {
             progress_inc_number_to_process($progress_data);
+            $records_to_process{$key} = 1;
         }
     }
 
     progress_print_title($progress_data);
 
-    foreach my $key (sort keys %{$datastore->{RECORDS}})
+    foreach my $key (sort keys %records_to_process)
     {
         $status = each_item($datastore->{RECORDS}, $key, $config);
 
@@ -104,6 +108,8 @@ sub main
     unlink $syncfile if $should_delete_syncfile;
 
     map { $_->close() } values %prov_list;
+
+    Idval::Common::register_common_object('config', $old_config);
     return $datastore;
 }
 
@@ -167,19 +173,20 @@ sub each_item
 
     #if ($first and ($key =~ m/ogg/))
     #{
-    #debug("Record is: ", Dumper($tag_record));
-        #debug(Dumper($config));
+    #idv_dbg("Record is: ", Dumper($tag_record));
+        #idv_dbg(Dumper($config));
         #$first = 0;
     #}
 
     my $do_sync = $config->get_single_value('sync', $tag_record);
 #     if ($sync_dest or $do_sync)
 #     {
-#         debug("sync_dest = \"$sync_dest\", do_sync = \"$do_sync\"\n");
+#         idv_dbg("sync_dest = \"$sync_dest\", do_sync = \"$do_sync\"\n");
 #     }
 
     progress_inc_seen($progress_data);
 
+    idv_dbg("Checking ", $tag_record->get_name(), "\n");
     if (! $do_sync)
     {
         return $retval;
@@ -189,20 +196,23 @@ sub each_item
     my $dest_type = $config->get_single_value('convert', $tag_record);
     my $prov;
 
-    chatty("source type is \"$src_type\" dest type is \"$dest_type\"\n");
-    if ($src_type eq $dest_type)
+    my $filter = $config->get_single_value('filter', $tag_record);
+    chatty("source type is \"$src_type\" dest type is \"$dest_type\"; filter is \"$filter\"\n");
+    if ($filter and ($filter eq 'sox'))
     {
-        # Once we allow transcoding between files of the same type,
-        # this will need to get a little sophisticated.
-        #
+        $prov = get_converter($src_type, $dest_type, 'filter');
+    }
+    elsif ($src_type eq $dest_type)
+    {
         # Don't get excited. The '*' is just a label. No globbing is involved.
         $prov = get_converter('*', '*');
     }
     else
     {
         $prov = get_converter($src_type, $dest_type);
-        chatty("src: $src_type to dest: $dest_type yields converter $prov\n");
     }
+
+    chatty("src: $src_type to dest: $dest_type yields converter ", $prov->query('name'), "\n");
 
     # Keep track of all the providers, so we can call close() on them later.
     $prov_list{$prov} = $prov;
@@ -223,6 +233,7 @@ sub each_item
         # This tag (since it begins with '__') will not be saved.
         $tag_record->add_tag('__DEST_PATH', $dest_path);
 
+        #print STDERR "tag_record: ", Dumper($tag_record);
         $retval = $prov->convert($tag_record, $dest_path);
         $retval = 0;
 
@@ -266,8 +277,8 @@ sub get_converter
 
     my $src_type = shift;
     my $dest_type = shift;
-    #debug("Getting provider for src:$src_type dest:$dest_type\n");
-    return $providers->get_provider('converts', $src_type, $dest_type);
+    #idv_dbg("Getting provider for src:$src_type dest:$dest_type\n");
+    return $providers->get_provider('converts', $src_type, $dest_type, @_);
 }
 
 sub _parse_args
@@ -318,7 +329,7 @@ sub _parse_args
                      : $mp3            ? 'MP3'
                      : 'MP3';
 
-    my $syncfile = '';
+    my $syncfile = "{\n";
     foreach my $blockspec (@blocks)
     {
         my ($selectors, $remote_top) = split(/:/, $blockspec);
@@ -330,7 +341,7 @@ sub _parse_args
 
         $syncfile .= "convert    = $convert_type\n";
 
-        $syncfile .= "\n{\n";
+        $syncfile .= "}\n{\n";
         $syncfile .= "\tremote_top = $remote_top\n";
         foreach my $src (split(/;/, $selectors))
         {
@@ -471,15 +482,15 @@ sub get_file_paths
     my $remote_top = Idval::Common::mung_to_unix($config->get_single_value('remote_top', $tag_record));
     chatty("   remote top is \"$remote_top\"\n");
     my $dest_name = $prov->get_dest_filename($tag_record, $src_name, get_file_ext($dest_type));
-    chatty("   dest name is \"$dest_name\"\n");
+    chatty("   dest name is \"$dest_name\" (", $prov->query('name'), ")\n");
     my $sync_dest = Idval::Common::mung_to_unix($config->get_single_value('sync_dest', $tag_record));
 
 
 #     my $src_path =  $tag_record->get_name();
 #     my ($volume, $src_dir, $src_name) = File::Spec->splitpath($src_path);
-#     #debug("For $src_path\n");
+#     #idv_dbg("For $src_path\n");
 #     my $remote_top = Idval::Common::mung_to_unix($config->get_single_value('remote_top', $tag_record));
-#     #debug("   remote top is \"$remote_top\"\n");
+#     #idv_dbg("   remote top is \"$remote_top\"\n");
 #     my $src_type = $tag_record->get_value('TYPE');
 #     my $dest_type = $config->get_single_value('convert', $tag_record);
 
@@ -507,12 +518,12 @@ sub get_file_paths
     # Do we have any tagname expansions?
     if (my @tags = ($dest_path =~ m/%([^%]+)%/g))
     {
-        debug("Found tags to expand: ", join(',', @tags), "\n");
+        idv_dbg("Found tags to expand: ", join(',', @tags), "\n");
         foreach my $tag (@tags)
         {
             $dest_path =~ s{%$tag%}{$tag_record->{$tag}} if exists($tag_record->{$tag});
         }
-        debug("dest path is now: \"$dest_path\"\n");
+        idv_dbg("dest path is now: \"$dest_path\"\n");
     }
 
     $dest_path = File::Spec->canonpath($dest_path); # Make sure the destination path is nice and clean

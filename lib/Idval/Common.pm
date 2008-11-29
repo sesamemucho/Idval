@@ -40,25 +40,6 @@ my @top_dir_path = ();
 
 memoize('mung_path_query');
 
-# #our %providers = ();
-
-# #INIT {$log = Idval::Logger::get_logger();}
-
-# # sub exe_name
-# # {
-# #     my $file = shift;
-
-# #     if ($^O ne 'VMS')
-# #     {
-# #         if (!-e $file)
-# #         {
-# #             $file .= $Config{_exe} unless $file =~ m/$Config{_exe}$/i;
-# #         }
-# #     }
-
-# #     return $file;
-# # }
-
 sub mung_path_query
 {
     my $path = shift;
@@ -240,25 +221,6 @@ sub deep_copy {
     fatal("what type is ", ref $this ,"?");
 }
 
-# sub deep_copy {
-#     my $this = shift;
-#     if (not ref $this) {
-#         $this;
-#     } elsif (ref $this eq "ARRAY") {
-#         [map deep_copy($_), @$this];
-#     } elsif (ref $this eq "HASH") {
-#         +{map { $_ => deep_copy($this->{$_}) } keys %$this};
-#     } elsif (ref $this eq "CODE") {
-#         $this;
-#     } elsif (ref $this eq "Regexp") {
-#         $this;
-#     } elsif (ref($this) =~ m{^Idval}) {
-#         $this;
-#     } else { die "what type is ", ref $this ,"?" }
-
-#     return;
-#   }
-
 # Given two references to hash tables, copy assignments from $from to
 # $to, without trashing previously-existing assignments in $to (that
 # don't exist in $from)
@@ -383,20 +345,5 @@ sub prefer_v2tags
 {
     return 1;
 }
-
-
-# sub safe_get_common_object_hashval
-# {
-#     my $key = shift;
-#     my $subkey = shift;
-#     my $default = shift;
-
-#     my $value =  !exists($common_objs{$key})            ? $default
-#               :  !exists($common_objs{$key}->{$subkey}) ? $default
-#               :  $common_objs{$key}->{$subkey};
-
-#     return $value;
-# }
-
 
 1;

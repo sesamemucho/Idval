@@ -43,11 +43,14 @@ sub main
     my $verbose = 0;
     my $show_config = 0;
     my $show_xml = 0;
+    my $filters = 0;
+    my $attributes = [];
 
     my $result = GetOptions(
         'verbose' => \$verbose,
         'config'  => \$show_config,
         'xml'     => \$show_xml,
+        'filters' => \$filters,
         );
 
     my $typemap = Idval::TypeMap->new($providers);
@@ -62,6 +65,11 @@ sub main
     my @msgs;
 
     my $help_file = Idval::Common::get_common_object('help_file');
+
+    if ($filters)
+    {
+        $attributes = ['filter'];
+    }
 
     if (@ARGV)
     {
@@ -101,8 +109,10 @@ sub main
     else
     {
         # Find converters
-        foreach my $item ($providers->_get_providers('converts'))
+        foreach my $item ($providers->_get_providers({types => ['converts'], attributes => $attributes}))
         {
+            print STDERR ("null converter?\n"), next unless defined($item);
+            #print STDERR "converter: item is: ", Dumper($item);
             foreach my $endpoint ($item->get_endpoint())
             {
                 my ($from, $to) = split(':', $endpoint);
@@ -113,8 +123,9 @@ sub main
         }
 
         # Find readers
-        foreach my $item ($providers->_get_providers('reads_tags'))
+        foreach my $item ($providers->_get_providers({types => ['reads_tags'], attributes => $attributes}))
         {
+            print STDERR ("null reader?\n"), next unless defined($item);
             $providers_by_name{$item->{NAME}}{'PROV'} = $item;
             $providers_by_name{$item->{NAME}}{'TYPE'} = 'Reader';
             foreach my $type ($item->get_source())
@@ -124,8 +135,9 @@ sub main
         }
 
         # Find writer
-        foreach my $item ($providers->_get_providers('writes_tags'))
+        foreach my $item ($providers->_get_providers({types => ['writes_tags'], attributes => $attributes}))
         {
+            print STDERR ("null writer?\n"), next unless defined($item);
             $providers_by_name{$item->{NAME}}{'PROV'} = $item;
             $providers_by_name{$item->{NAME}}{'TYPE'} = 'Writer';
             foreach my $type ($item->get_source())

@@ -25,7 +25,7 @@ sub capture_logger
     select STDOUT; $| = 1;      # make unbuffered
 
     my $save_logger = Idval::Logger::get_logger();
-    Idval::Logger::initialize_logger({log_out => 'STDOUT', debugmask=>$pkg, level=>$level});
+    Idval::Logger::re_init({log_out => 'STDOUT', debugmask=>$pkg, level=>$level});
 
     eval "$log_rtn(\$msg)";
     my $eval_status = $@ if $@;
@@ -33,7 +33,7 @@ sub capture_logger
     open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
 
     my $retval = $eval_status ? $eval_status : $str_buf;
-    Idval::Logger::initialize_logger($save_logger);
+    Idval::Logger::re_init($save_logger);
     return $retval;
 }
 

@@ -36,16 +36,16 @@ sub dodots
     my $char = shift;
 
     $dotnum++;
-    info_q("$char");
-    info_q(" ") if $dotnum % 4 == 0;
-    info_q("\n") if $dotnum % 60 == 0;
-
+    info_q({force_match => 1}, "$char");
+    info_q({force_match => 1}, " ") if $dotnum % 4 == 0;
+    info_q({force_match => 1}, "\n") if $dotnum % 60 == 0;
+ 
     return;
 }
 
 sub finish
 {
-    info_q("\n") if $dotnum % 60 != 0;
+    info_q({force_match => 1}, "\n") if $dotnum % 60 != 0;
 
     return;
 }

@@ -23,7 +23,7 @@ use warnings;
 no  warnings qw(redefine);
 use Class::ISA;
 
-use Idval::Logger qw(chatty idv_warn debug);
+use Idval::Logger qw(chatty idv_warn idv_dbg);
 use base qw(Idval::Provider);
 
 my $name = 'vorbiscomment';
@@ -107,8 +107,8 @@ sub read_tags
         $tag_record->add_to_tag($current_tag, "\n$line");
     }
 
-    #debug("\nGot tag:\n");
-    #debug(join("\n", $tag_record->format_record()));
+    #idv_dbg("\nGot tag:\n");
+    #idv_dbg(join("\n", $tag_record->format_record()));
 
     return $retval;
 }

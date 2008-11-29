@@ -25,7 +25,7 @@ use warnings;
 use Data::Dumper;
 use List::Util;
 
-use Idval::Logger qw(verbose chatty debug fatal);
+use Idval::Logger qw(verbose chatty idv_dbg fatal);
 use Idval::Common;
 
 my @path_list;
@@ -150,7 +150,7 @@ sub get_paths
     foreach my $list (@{$self->{PATH_LIST}})
     {
         my %path_info;
-        verbose("Inspecting (", join(',', @{$list}), "); length is: ", scalar(@{$list}), "\n");
+        verbose("Inspecting (", join(',', @{$list}), "); length is: ", scalar(@{$list}), "\n"); ##debug1
         # We don't want just a NODEX->NODEX loop (it must be at least NODEX->converter->NODEX).
         next if scalar(@{$list}) <= 1;
         #%path_info = ();
@@ -165,7 +165,7 @@ sub get_paths
 
         #%attrs = (%{$self->{GRAPH}->{$start}->{$type}->{ATTRS}});
         my %attrs = ();
-        #verbose("Initial attributes are: ", join(':', sort keys %attrs), "\n");
+        #verbose("Initial attributes are: ", join(':', sort keys %attrs), "\n"); ##debug1
 
         for (my $i = 0; $i < $num_paths; $i++)
         {
@@ -173,7 +173,7 @@ sub get_paths
             push(@{$path_info{PATHS}}, [$start, $type, $end]);
             $path_weight += $self->{GRAPH}->{$start}->{$type}->{WEIGHT};
             $path_weight += $self->{GRAPH}->{$type}->{$end}->{WEIGHT};
-            verbose("Got: ($start, $type, $end)\n");
+            verbose("Got: ($start, $type, $end)\n"); ##debug1
 
             # Only one path arc needs an attribute for the whole path
             # to have that attribute.
@@ -183,7 +183,7 @@ sub get_paths
                 $attrs{$attr} = $self->{GRAPH}->{$start}->{$type}->{ATTRS}->{$attr}; # This will probably always only be 1
             }
 
-            verbose("In loop: attributes are: ", join(':', sort keys %attrs), "\n");
+            verbose("In loop: attributes are: ", join(':', sort keys %attrs), "\n"); ##debug1
             $path_index += 2;
         }
 
@@ -191,11 +191,10 @@ sub get_paths
         # $path_info{ATTRS} is a hash of the attributes shared by all members of the list.
         # There will always be a 'weight' attribute; there may or may not be any others.
         $path_info{ATTRS} = {%attrs}; # be sure to make a copy
-        debug("Storing into ", $path_info{START} . '.' . $path_info{END}, ": ", Dumper(\%path_info));
+        #idv_dbg("Storing into ", $path_info{START} . '.' . $path_info{END}, ": ", Dumper(\%path_info)); ##Dumper
         push(@{$self->{EXTRACTED_PATHS}->{$path_info{START} . '.' . $path_info{END}}}, \%path_info);
-        verbose("\n");
+        verbose("\n"); ##debug1
     }
-    #verbose(Dumper($self));
 
     return;
 }
@@ -209,16 +208,15 @@ sub do_walk
 
     foreach my $item (keys %{$self->{START_NODES}})
     {
-        verbose("Starting with node \"$item\"\n");
+        verbose("Starting with node \"$item\"\n"); ##debug1
         $self->walkit($item, $self->{GRAPH}, 1);
-        verbose("Clearing all visited stickers from nodes\n");
+        verbose("Clearing all visited stickers from nodes\n"); ##debug1
         $self->clear_all_visited();
     }
 
-    #verbose(Dumper($self));
 #     foreach my $list (@{$self->{PATH_LIST}})
 #     {
-#         #verbose("(", join(',', @{$list}), ")\n");
+#         #verbose("(", join(',', @{$list}), ")\n"); ##debug1
 #     }
 
     return;
@@ -246,24 +244,38 @@ sub walkit
     my $gakker = shift;
     my $level = shift;
 
+    my ($short_item) = ($item =~ m/([^:]+)$/);
     my @saved_path = (@{$self->{CURRENT_PATH}});
 
-    verbose($leader x $level, "Checking \"$item\" against ", $self->path_as_str());
+    #verbose($leader x $level, "Checking \"$short_item\" against ", $self->path_as_str()); ##Dumper
     if (defined(${$self->{CURRENT_PATH}}[0]) and ($item eq ${$self->{CURRENT_PATH}}[0]))
     {
         # Let's allow loops back to the start
         # But make sure it really is to the start
-        verbose($leader x $level, "Found a loop: ", Dumper($self->{CURRENT_PATH}));
-        fatal("Beginning of current path \($item\) is not a START_NODE\n") unless $self->is_major_node($item);
+        #verbose($leader x $level, "Found a loop: ", Dumper($self->{CURRENT_PATH})); ##Dumper
+        fatal("Beginning of current path \($short_item\) is not a START_NODE\n") unless $self->is_major_node($item);
     }
 #     elsif (List::Util::first { $item eq $_ } @{$self->{CURRENT_PATH}})
 #     {
-#         verbose($leader x $level, "Found an internal loop. Returning.\n");
+#         verbose($leader x $level, "Found an internal loop. Returning.\n"); ##debug1
 #         return;
 #     }
 
     # Mark the link from wherever we were last to here as visited.
-    $self->{GRAPH}->{${$self->{CURRENT_PATH}}[-1]}->{$item}->{VISITED} = 1 if scalar(@{$self->{CURRENT_PATH}}) > 1;
+    if(scalar(@{$self->{CURRENT_PATH}}) > 1)
+    {
+        my $from_item = ${$self->{CURRENT_PATH}}[-1];
+        # This is to prevent the walkit routine from looping around
+        # filters. It doesn't work to just mark everything we've
+        # visited as 'visited', since that prevent us from getting:
+        # A->foo->B->goo->C if we've already got
+        # A->foo->B->filter->B->goo->C
+        if (exists $self->{GRAPH}->{$from_item}->{$item}->{ATTRS}->{filter})
+        {
+            idv_dbg("Marking $from_item to $item as visited.\n"); ##debug1
+            $self->{GRAPH}->{$from_item}->{$item}->{VISITED} = 1;
+        }
+    }
     push(@{$self->{CURRENT_PATH}}, $item);
 
     #if (List::Util::first { $item eq $_ } keys %{$self->{START_NODES}})
@@ -277,36 +289,39 @@ sub walkit
             if(!$self->has_duplicate_nodes($self->{CURRENT_PATH}, $leader x $level))
             ##if ($self->is_lighter_than_max($self->{CURRENT_PATH}))
             {
-                verbose($leader x $level, "Saving current path ", $self->path_as_str());
+                #verbose($leader x $level, "Saving current path ", $self->path_as_str()); ##Dumper
                 push(@{$self->{PATH_LIST}}, [@{$self->{CURRENT_PATH}}]);
             }
             else
             {
-                verbose($leader x $level, "Current path has illegal duplicate nodes: ", $self->path_as_str());
+                #verbose($leader x $level, "Current path has illegal duplicate nodes: ", $self->path_as_str()); ##Dumper
                 return;
             }
         }
         else
         {
-            verbose($leader x $level, "Current path is too short to save: ", $self->path_as_str());
+            #verbose($leader x $level, "Current path is too short to save: ", $self->path_as_str()); ##Dumper
         }
     }
 
-    verbose($leader x $level, "Will travel from \"$item\" to: (", join(',', keys %{$gakker->{$item}}), ")\n");
+    #verbose($leader x $level, "Will travel from \"$short_item\" to: (", join(',', keys %{$gakker->{$item}}), ")\n"); ##debug1
+    #verbose($leader x $level, "Will travel from \"$short_item\" to: ", $self->path_as_str({path => [ keys %{$gakker->{$item}}]}), "\n"); ##Dumper
     foreach my $next (keys %{$gakker->{$item}})
     {
+        my ($short_next) = ($next =~ m/([^:]+)$/);
         if ($self->{GRAPH}->{$item}->{$next}->{VISITED})
         {
-            verbose($leader x $level, "\"$item\" to \"$next\" has already been visited.\n");
+            verbose($leader x $level, "\"$short_item\" to \"$short_next\" has already been visited.\n"); ##debug1
         }
         else
         {
-            verbose($leader x $level, "Going from \"$item\" to \"$next\"\n");
+            verbose($leader x $level, "Going from \"$short_item\" to \"$short_next\"\n"); ##debug1
             $self->walkit($next, $gakker, ($level + 1));
         }
     }
 
-    verbose($leader x $level, 'Restoring ', $self->path_as_str({trailer => ''}), ' to (', join(',', @saved_path), ")\n");
+    #verbose($leader x $level, 'Restoring ', $self->path_as_str({trailer => ''}), ' to (', join(',', @saved_path), ")\n"); ##Dumper
+    #verbose($leader x $level, 'Restoring ', $self->path_as_str({trailer => ''}), ' to ', $self->path_as_str({path => \@saved_path}), "\n"); ##Dumper
     @{$self->{CURRENT_PATH}} = (@saved_path);
 
     return;
@@ -410,12 +425,13 @@ sub has_duplicate_nodes
     my @pl = @{$path};
     my ($start, $type, $end);
     my %phash = ();
+    my $begin = $pl[0];
 
-    debug($leader, "Checking for duplicate nodes in ", $self->path_as_str({path=>$path}));
+    #idv_dbg($leader, "Checking for duplicate nodes in ", $self->path_as_str({path=>$path})); ##Dumper
 
     # Special case: A path that contains only one arc cannot have any
     # invalid duplicate nodes.
-    debug($leader, "One-arc path; must be OK for dup nodes\n") if $#pl == 2;
+    idv_dbg($leader, "One-arc path; must be OK for dup nodes\n") if $#pl == 2; ##debug1
     return 0 if $#pl == 2;
 
     $phash{$pl[0]}++;
@@ -435,6 +451,13 @@ sub has_duplicate_nodes
 
         ($start, $type, $end) = @pl[$i .. $i+2];
 
+        if (($i+2 == $#pl) and ($end eq $begin))
+        {
+            # This is the last node and it is the same as the beginning node.
+            # This is OK.
+            last NODES;
+        }
+
         $phash{$end}++;
 
         # Note that attributes only apply to the type-node, and (so)
@@ -446,7 +469,7 @@ sub has_duplicate_nodes
         if ($phash{$end} > 1)
         {
             # We found a duplicate. Is it OK?
-
+            idv_dbg($leader, "Checking dup node $end\n"); ##debug1
             # There is only one case where it could be OK. If, for a
             # given arc, the start node is the same as the end node,
             # and the type-node is a filter.
@@ -454,11 +477,12 @@ sub has_duplicate_nodes
                 exists $self->{GRAPH}->{$start}->{$type}->{ATTRS}->{filter})
             {
                 $phash{$end} = 1;
-                next;
+                idv_dbg($leader, "Dup node is OK ($start->$end)\n");
+                next NODES;
             }
 
-            debug($leader, "Bad duplicate node found for \"$start\" -> \"$end\"\n");
-            debug($leader, "ATTRS: ", Dumper($self->{GRAPH}->{$start}->{$type}->{ATTRS}));
+            idv_dbg($leader, "Bad duplicate node found for \"$start\" -> \"$end\"\n");
+            #idv_dbg($leader, "ATTRS: ", Dumper($self->{GRAPH}->{$start}->{$type}->{ATTRS})); ##Dumper
             return 1;           # We have an invalid duplicate
         }
     }
@@ -526,31 +550,35 @@ sub get_best_path
 
     $self->process_graph();
 
-    verbose("Looking for path: \"", $arc, "\"\n");
+    verbose("Looking for path: \"", $arc, "\"\n"); ##debug1
     if(!exists($self->{EXTRACTED_PATHS}->{$arc}))
     {
-        chatty("Path: \"", $arc, "\" does not exist in EXTRACTED_PATHS\n");
+        chatty("Path: \"", $arc, "\" does not exist in EXTRACTED_PATHS\n"); ##debug1
         return;
     }
 
     # Get a list of all the paths that have all the required attributes
-    chatty("Getting best path from:", Dumper($self->{EXTRACTED_PATHS}->{$arc}));
-    chatty("Need attributes: ", join(',', @attrs), "\n");
+    #chatty("Getting best path from:", Dumper($self->{EXTRACTED_PATHS}->{$arc})); ##Dumper
+    chatty("Need attributes: ", join(',', @attrs), "\n"); ##debug1
   CHECK_PATHS:
     foreach my $pathinfo (@{$self->{EXTRACTED_PATHS}->{$arc}})
     {
-        debug("Path \"", $pathinfo->{START} . '.' . $pathinfo->{END},
-              " has attributes: ", join(',', sort keys %{$pathinfo->{ATTRS}}), "\n");
+        idv_dbg("Path \"", $pathinfo->{START} . '.' . $pathinfo->{END},
+              " has attributes: ", join(',', sort keys %{$pathinfo->{ATTRS}}), "\n"); ##debug1
 
         foreach my $attr (@attrs)
         {
-            next CHECK_PATHS if !exists($pathinfo->{ATTRS}->{$attr});
+            if (!exists($pathinfo->{ATTRS}->{$attr}))
+            {
+                idv_dbg("Path $arc does not have attribute $attr, checking next path.\n"); ##debug1
+                next CHECK_PATHS;
+            }
         }
 
         push(@goodpaths, $pathinfo);
     }
 
-    debug("Resulting path list is: ", Dumper(\@goodpaths));
+    #idv_dbg("Resulting path list is: ", Dumper(\@goodpaths)); ##Dumper
 
     #
     # Sort in order of weight
@@ -570,10 +598,26 @@ sub path_as_str
 {
     my $self = shift;
     my $argref = shift;
-    my $path = exists $argref->{path} ? $argref->{path} : $self->{CURRENT_PATH};
+    my @path = exists $argref->{path} ? (@{$argref->{path}}) : (@{$self->{CURRENT_PATH}});
     my $trailer = exists $argref->{trailer} ? $argref->{trailer} : "\n";
+    my $full    = exists $argref->{full} ? $argref->{full} : 0;
 
-    return '(', join(',', @{$path}), ')' . $trailer;
+    #@path = map { $_ =~ s/([^:]+::)+//g } @path if !$full;
+    @path = map { ( $_ =~ m/([^:]+)$/) } @path if !$full;
+#     if (!$full)
+#     {
+#         my @temp = (@path);
+#         @path = ();
+#         foreach my $item (@temp)
+#         {
+#             print STDERR "old item: $item\n";
+#             $item =~ s/([^:]+::)+//g;
+#             print STDERR "new item: $item\n";
+#             push(@path, $item);
+#         }
+#     }
+
+    return '(', join(',', @path), ')' . $trailer;
 }
 
 1;

@@ -23,14 +23,11 @@ use warnings;
 no warnings qw(redefine);
 use Class::ISA;
 
-use Idval::Logger qw(idv_warn chatty);
+use Idval::Logger qw(idv_warn chatty fatal);
 use base qw(Idval::Provider);
 
-my $name = 'metaflac';
-my $type = 'FLAC';
-
-Idval::Common::register_provider({provides=>'reads_tags', name=>$name, type=>$type});
-Idval::Common::register_provider({provides=>'writes_tags', name=>$name, type=>$type});
+Idval::Common::register_provider({provides=>'reads_tags', name=>'metaflac', type=>'FLAC'});
+Idval::Common::register_provider({provides=>'writes_tags', name=>'metaflac', type=>'FLAC'});
 
 sub new
 {
@@ -49,7 +46,7 @@ sub init
     $self->set_param('dot_map', {'FLAC' => [qw{ f }]});
     $self->set_param('filetype_map', {'FLAC' => [qw{ flac flac16 flac24}]});
     $self->set_param('classtype_map', {'MUSIC' => [qw( FLAC )]});
-    $self->set_param('type', $type);
+    $self->set_param('type', 'FLAC');
 
     $self->find_and_set_exe_path();
 
@@ -110,9 +107,12 @@ sub read_tags
 sub write_tags
 {
     my $self = shift;
-    my $tag_record = shift;
+    my $argref = shift;
+    my $tag_record = $argref->{tag_record};
 
     return 0 if !$self->query('is_ok');
+
+    fatal("Unblessed tag_record reference (ref is \"", ref $tag_record, "\"") unless ref $tag_record eq 'Idval::Record';
 
     my $filename = $tag_record->get_value('FILE');
     my $path = $self->query('path');

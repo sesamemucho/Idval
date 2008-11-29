@@ -1,4 +1,4 @@
-package Idval::Config;
+package Idval::NConfig;
 
 # Copyright 2008 Bob Forgey <rforgey@grumpydogconsulting.com>
 
@@ -23,27 +23,28 @@ use Data::Dumper;
 use English '-no_match_vars';
 use Memoize;
 use File::Temp;
+use List::Util qw(first);
 
 use Idval::Common;
 use Idval::Select;
 use Idval::FileIO;
 use Idval::Logger qw(idv_print chatty idv_dbg idv_warn fatal);
 
-my $xml_req_status = eval {require XML::Simple};
-my $xml_req_msg = !defined($xml_req_status) ? "$!" :
-    $xml_req_status == 0 ? "$@" :
-    "Load OK";
+# my $xml_req_status = eval {require XML::Simple};
+# my $xml_req_msg = !defined($xml_req_status) ? "$!" :
+#     $xml_req_status == 0 ? "$@" :
+#     "Load OK";
 
-if ($xml_req_msg ne 'Load OK')
-{
-    print STDERR "Oops; let's try again for XML::Simple\n";
-    use lib Idval::Common::get_top_dir('lib/perl');
+# if ($xml_req_msg ne 'Load OK')
+# {
+#     print STDERR "Oops; let's try again for XML::Simple\n";
+#     use lib Idval::Common::get_top_dir('lib/perl');
 
-    $xml_req_status = eval {require XML::Simple};
-    $xml_req_msg = 'Load OK' if (defined($xml_req_status) && ($xml_req_status != 0));
-}
+#     $xml_req_status = eval {require XML::Simple};
+#     $xml_req_msg = 'Load OK' if (defined($xml_req_status) && ($xml_req_status != 0));
+# }
 
-fatal("Need XML support (via XML::Simple)") unless $xml_req_msg eq 'Load OK';
+# fatal("Need XML support (via XML::Simple)") unless $xml_req_msg eq 'Load OK';
 
 our %vars;
 
@@ -71,11 +72,11 @@ sub _init
         $self->add_file($initfile);
     }
 
-    $self->{DEF_VARS} = $self->merge_blocks({config_group => 'idval_calculated_variables'});
-    foreach my $key (keys %{$self->{DEF_VARS}})
-    {
-        delete $self->{DEF_VARS}->{$key} unless $key =~ m/^__/;
-    }
+#     $self->{DEF_VARS} = $self->merge_blocks({config_group => 'idval_calculated_variables'});
+#     foreach my $key (keys %{$self->{DEF_VARS}})
+#     {
+#         delete $self->{DEF_VARS}->{$key} unless $key =~ m/^__/;
+#     }
 
     #chatty("Calculated variables are: ", Dumper($self->{DEF_VARS}));
     return;
@@ -117,7 +118,6 @@ sub add_file
     fatal("Need a file") unless @{$self->{INITFILES}}; # We do need at least one config file
 
 
-    my $xmltext = "<config>\n";
     my $text = '';
     my $fh;
 
@@ -135,107 +135,436 @@ sub add_file
             $fh = Idval::FileIO->new($fname, "r") || fatal("Can't open \"$fname\" for reading: $! in " . __PACKAGE__ . " line(" . __LINE__ . ")");
         }
 
-        $text = do { local $/ = undef; <$fh> };
+        $text .= do { local $/ = undef; <$fh> };
         $fh->close();
 
-        if ($fname =~ m/tmp/)
-        {
-            #print "For \"$fname\", text is: \"$text\"\n";
-        }
-
-        if ($fname =~ m/\.xml$/i)
-        {
-            $text =~ s|\A.*?<config>||i;
-            $text =~ s|</config>.*?\z||i;
-            $xmltext .= $text;
-        }
-        elsif ($fname =~ m/\.yml$/i)
-        {
-            if ($self->{HAS_YAML_SUPPORT})
-            {
-                my $c = YAML::Tiny->read_string($text);
-                my $hr = $$c[1];
-                my $data = XMLout($hr);
-                $data =~ s|\A.*?<opt>||i;
-                $data =~ s|</opt>.*?\z||i;
-                $xmltext .= $data;
-            }
-            else
-            {
-                fatal("This installation of idv does not have YAML support.");
-            }
-        }
-        else # Must be a idv-style config file
-        {
-            $xmltext .= $self->config_to_xml($text);
-        }
     }
 
-    $xmltext .= "</config>\n";
-    #eval { $self->{TREE} = XML::Simple::XMLin($xmltext, keyattr => {select=>'name'}, forcearray => ['select']); };
-    $@ = '';
-    my $xmlin = XML::Simple->new();             # Work-around for DProf bug (rt 58446)
-    eval { $self->{TREE} = $xmlin->XMLin($xmltext, forcearray => ['select', 'name']); };
+    my $subr_text = $self->config_to_subr($text);
+    $self->{SUBR} = eval $subr_text;
     if ($@)
     {
-        idv_print("Error from XML conversion: $@\n");
-        my ($linenum, $col, $byte) = ($@ =~ m/ line (\d+), column (\d+), byte (\d+)/);
-        $linenum = 0 unless (defined($linenum) && $linenum);
-        my $i = 1;
-        foreach my $line (split("\n", $xmltext))
-        {
-            printf "%3d: %s\n", $i, $line;
-            if ($i == $linenum)
-            {
-                print '.....' . '.' x ($col - 1) . "^\n";
-            }
-
-            $i++;
-        }
-        print "\n\n";
-        fatal("XML conversion error");
+        print STDERR "Error converting to subr: $@\nsubr text is: <$subr_text>\n";
+        exit 1;
     }
+#     my $xmltext = "<config>\n";
+#     my $text = '';
+#     my $fh;
 
-    $self->{XMLTEXT} = $xmltext; # In case someone wants to see it later
-    $self->{PRETTY} = $xmlin->XMLout($self->{TREE},
-                                     NoAttr => 1,
-                                     KeepRoot => 1,
-        );
-
+#     foreach my $fname (@{$self->{INITFILES}})
 #     {
-#         print "xmltext: ", $self->{XMLTEXT};
-#         print "\n\n\n";
-#         print "XML: ", $self->{PRETTY};
-#         print "\n\n\n";
-#         print "TREE: ", Dumper($self->{TREE});
+
+#         if ($fname =~ m|^/tmp/|)
+#         {
+#             $fh = IO::File->new($fname, '<');
+#         }
+#         else
+#         {
+
+
+#             $fh = Idval::FileIO->new($fname, "r") || fatal("Can't open \"$fname\" for reading: $! in " . __PACKAGE__ . " line(" . __LINE__ . ")");
+#         }
+
+#         $text = do { local $/ = undef; <$fh> };
+#         $fh->close();
+
+#         if ($fname =~ m/tmp/)
+#         {
+#             #print "For \"$fname\", text is: \"$text\"\n";
+#         }
+
+#         if ($fname =~ m/\.xml$/i)
+#         {
+#             $text =~ s|\A.*?<config>||i;
+#             $text =~ s|</config>.*?\z||i;
+#             $xmltext .= $text;
+#         }
+#         elsif ($fname =~ m/\.yml$/i)
+#         {
+#             if ($self->{HAS_YAML_SUPPORT})
+#             {
+#                 my $c = YAML::Tiny->read_string($text);
+#                 my $hr = $$c[1];
+#                 my $data = XMLout($hr);
+#                 $data =~ s|\A.*?<opt>||i;
+#                 $data =~ s|</opt>.*?\z||i;
+#                 $xmltext .= $data;
+#             }
+#             else
+#             {
+#                 fatal("This installation of idv does not have YAML support.");
+#             }
+#         }
+#         else # Must be a idv-style config file
+#         {
+#             $xmltext .= $self->config_to_xml($text);
+#         }
 #     }
+
+#     $xmltext .= "</config>\n";
+#     #eval { $self->{TREE} = XML::Simple::XMLin($xmltext, keyattr => {select=>'name'}, forcearray => ['select']); };
+#     $@ = '';
+#     my $xmlin = XML::Simple->new();             # Work-around for DProf bug (rt 58446)
+#     eval { $self->{TREE} = $xmlin->XMLin($xmltext, forcearray => ['select', 'name']); };
+#     if ($@)
+#     {
+#         idv_print("Error from XML conversion: $@\n");
+#         my ($linenum, $col, $byte) = ($@ =~ m/ line (\d+), column (\d+), byte (\d+)/);
+#         $linenum = 0 unless (defined($linenum) && $linenum);
+#         my $i = 1;
+#         foreach my $line (split("\n", $xmltext))
+#         {
+#             printf "%3d: %s\n", $i, $line;
+#             if ($i == $linenum)
+#             {
+#                 print '.....' . '.' x ($col - 1) . "^\n";
+#             }
+
+#             $i++;
+#         }
+#         print "\n\n";
+#         fatal("XML conversion error");
+#     }
+
+#     $self->{XMLTEXT} = $xmltext; # In case someone wants to see it later
+#     $self->{PRETTY} = $xmlin->XMLout($self->{TREE},
+#                                      NoAttr => 1,
+#                                      KeepRoot => 1,
+#         );
+
+# #     {
+# #         print "xmltext: ", $self->{XMLTEXT};
+# #         print "\n\n\n";
+# #         print "XML: ", $self->{PRETTY};
+# #         print "\n\n\n";
+# #         print "TREE: ", Dumper($self->{TREE});
+# #     }
 
     return;
 }
 
-sub config_to_xml
+# sub config_to_xml
+# {
+#     my $self = shift;
+#     my $cfg_text = shift;
+#     my $xml = '';
+#     my $cmp_regex = Idval::Select::get_cmp_regex();
+#     my $assign_regex = Idval::Select::get_assign_regex();
+#     foreach my $line (split(/\n|\r\n|\r/, $cfg_text))
+#     {
+#         #print "Looking at: <$line>\n";
+
+#         $line =~ /^\s*{\s*$/ and do {
+#             $xml .= "<group>\n";
+#             next;
+#         };
+
+#         $line =~ /^\s*}\s*$/ and do {
+#             $xml .= "</group>\n";
+#             next;
+#         };
+
+#         $line =~ /^\s*(#.*)$/ and do {
+#             $xml .= "<!-- $1 -->\n";
+#             next;
+#         };
+
+#         $line =~ m/^\s*$/ and do {
+#             next;
+#         };
+
+#         #$line =~ m{^\s*([%[:alnum:]][\w%-]*)($cmp_regex)(.*)\s*$}imx and do {
+#         $line =~ m{^\s*(\S+)\s*($cmp_regex)(.*)\s*$}imx and do {
+#             my $name = $1;
+#             my $op = $2;
+#             my $value = $3;
+#             $op =~ s/^\s+//;
+#             $op =~ s/\s+$//;
+#             $op =~ s/>/\&gt;/;
+#             $op =~ s/</\&lt;/;
+#             $xml .= "<select>\n<name>$name</name>\n<op>$op</op>\n<value>$value</value>\n</select>\n";
+#             next;
+#         };
+
+#         #$line =~ m{^\s*([%[:alnum:]][\w%-]*)($assign_regex)(.*)\s*$}imx and do {
+#         $line =~ m{^\s*(\S+)\s*($assign_regex)(.*)\s*$}imx and do {
+#             my $name = $1;
+#             my $op = $2;
+#             $op =~ s/>/\&gt;/;
+#             $op =~ s/</\&lt;/;
+#             my $value = $3;
+#             if ($op =~ m/\+\=/)
+#             {
+#                 $xml .= "<$name append=\"1\">$value</$name>\n";
+#             }
+#             else
+#             {
+#                 $xml .= "<$name>$value</$name>\n";
+#             }
+#             next;
+#         };
+
+
+#         idv_warn("Unrecognized input line <$line>\n");
+#     }
+
+#     return $xml;
+# }
+
+sub ck_selects
+{
+    my $selectors = shift;
+    my $varsref = shift;
+    my $tagsref = shift;        # What we're looking to use
+
+    # First, make sure that all the tag names in tagsref exist in the
+    # selectors or in the variables already defined
+    return if (first { !(exists($selectors->{$_}) || exists($varsref->{$_})) } @{$tagsref});
+
+     # Then, assemble a pared-down selector hash in which all selector values are array refs
+    my $ar_selects;
+    my $valref;
+    foreach my $tag (@{$tagsref})
+    {
+        # The value must be either in selectors or in vars
+        $valref = exists $selectors->{$tag} ? $selectors->{$tag} : $varsref->{$tag};
+        $ar_selects->{$tag} = ref $valref eq 'ARRAY' ? $valref : [$valref];
+    }
+
+    return $ar_selects;
+}
+
+sub parse_conditionals
+{
+    my $self = shift;
+    my @conds = @_;
+    my @results = ();
+    my $cmp_name;
+    my %parts;
+
+    return '' unless @conds;
+    my $ci = $self->current_indent();
+    my $ciif = $ci . '    ';
+    my $result = "${ci}if (\n$ciif";
+    foreach my $condinfo (@conds)
+    {
+        my ($var, $op, $value) = @{$condinfo};
+        #print STDERR "COND Looking at ($var, $op, $value)\n";
+        $cmp_name = Idval::Select::get_compare_function_name($op, $value);
+        push(@{$parts{$var}}, [$cmp_name, $op, $value]);
+    }
+
+    push(@results, "(\$ar_selects = ck_selects(\$selects, \\\%vars, [qw{" . join(' ', keys %parts) . '}]))');
+    #print STDERR "COND: parts is ", Dumper(\%parts);
+    foreach my $item (keys %parts)
+    {
+        # If there is more than one factor with the same name (i.e., GENRE == 22 and GENRE == 23)
+        # they are ORed together
+        if(scalar(@{$parts{$item}}) > 1)
+        {
+            my @oritems = ();
+            foreach my $oritem (@{$parts{$item}})
+            {
+                my ($fname, $op, $value) = @{$oritem};
+                #print STDERR "COND oritem: ($fname, $op, $value)\n";
+                push(@oritems, "$fname(\$ar_selects->{$item}, q{$value})");
+            }
+
+            push(@results, '(' . join(" ||\n$ciif ", @oritems) . ')');
+        }
+        else
+        {
+            my ($fname, $op, $value) = @{${$parts{$item}}[0]};
+            push(@results, "$fname(\$ar_selects->{$item}, q{$value})");
+        }
+    }
+
+    $result .= join(" &&\n$ciif", @results) . "\n${ci}   )\n";
+    return $result;
+}
+
+sub parse_conditionals_old
+{
+    my $self = shift;
+    my @conds = @_;
+    my @results = ();
+    my $cmp_name;
+    my %parts;
+
+    return '' unless @conds;
+    my $ci = $self->current_indent();
+    my $ciif = $ci . '    ';
+    my $result = "${ci}if (\n$ciif";
+    foreach my $condinfo (@conds)
+    {
+        my ($var, $op, $value) = @{$condinfo};
+        #print STDERR "COND Looking at ($var, $op, $value)\n";
+        $cmp_name = Idval::Select::get_compare_function_name($op, $value);
+        push(@{$parts{$var}}, [$cmp_name, $op, $value]);
+    }
+
+    #print STDERR "COND: parts is ", Dumper(\%parts);
+    foreach my $item (keys %parts)
+    {
+        push(@results, "exists(\$selects->{$item})");
+        # If there is more than one factor with the same name (i.e., GENRE == 22 and GENRE == 23)
+        # they are ORed together
+        if(scalar(@{$parts{$item}}) > 1)
+        {
+            my @oritems = ();
+            foreach my $oritem (@{$parts{$item}})
+            {
+                my ($fname, $op, $value) = @{$oritem};
+                #print STDERR "COND oritem: ($fname, $op, $value)\n";
+                push(@oritems, "$fname(\$selects->{$item}, q{$value})");
+            }
+
+            push(@results, '(' . join(" or\n$ciif ", @oritems) . ')');
+        }
+        else
+        {
+            my ($fname, $op, $value) = @{${$parts{$item}}[0]};
+            push(@results, "$fname(\$selects->{$item}, q{$value})");
+        }
+    }
+
+    $result .= join(" and\n$ciif", @results) . "\n${ci}   )\n";
+    return $result;
+}
+
+sub add_to_list
+{
+    my $maybe_list = shift;
+    my $item = shift;
+    my $result;
+
+    if(ref $maybe_list eq 'ARRAY')
+    {
+        $result = [@{$maybe_list}, $item];
+    }
+    else
+    {
+        $result = [$maybe_list, $item];
+    }
+
+    return $result;
+}
+
+sub parse_vars
+{
+    my $self = shift;
+    my @vars = @_;
+    my @results = ();
+
+    #print STDERR "In parse_vars, got ", scalar(@vars), " vars\n";
+    foreach my $varinfo (@vars)
+    {
+        my ($var, $op, $value) = @{$varinfo};
+        $value =~ s/\%DATA\%/$self->{datadir}/gx;
+
+        #print STDERR "Looking at ($var, $op, $value)\n";
+        if ($op eq '=')
+        {
+            #print STDERR "Got \"=\" op\n";
+            push(@results, '$vars{q{' . $var . '}} = q{' . $value . '};');
+        }
+        else                    # op is '+='
+        {
+            #print STDERR "Got \"$op\" op\n";
+            #push(@results, '$vars{' . $var . '} = exists($vars{' . $var . '}) ? [$vars{' . $var . '}, q{' . $value . '}] : q{' . $value . '};');
+            push(@results, '$vars{q{' . $var . '}} = exists($vars{q{' . $var . '}}) ? add_to_list($vars{q{' . $var . '}}, q{' . $value . '}) : q{' . $value . '};');
+        }
+    }
+
+    return @results;
+}
+
+sub current_indent
+{
+    my $self = shift;
+
+    return $self->{INDENT} x $self->{LEVEL};
+}
+
+sub indent_lines
+{
+    my $self = shift;
+    my $ci = $self->current_indent();
+
+    return $ci . join("\n$ci", @_) . "\n";
+}
+
+sub into
+{
+    my $self = shift;
+    my $retval = $self->current_indent() . "{\n";
+    $self->{LEVEL}++;
+
+    return $retval;
+}
+
+sub out_of
+{
+    my $self = shift;
+    $self->{LEVEL}--;
+    my $retval = $self->{INDENT} x $self->{LEVEL} . "}\n";
+
+    return $retval;
+}
+
+sub config_to_subr
 {
     my $self = shift;
     my $cfg_text = shift;
-    my $xml = '';
     my $cmp_regex = Idval::Select::get_cmp_regex();
     my $assign_regex = Idval::Select::get_assign_regex();
+
+    my @conditionals = ();
+    my @vars = ();
+    $self->{LEVEL} = 1;
+    $self->{INDENT} = '  ';
+
+    my $subr = "sub\n{\n  my \$selects = shift;\n  my \%vars;\n  my \$ar_selects;\n\n";
+    #$subr .= 'print STDERR "from SUBR: ", Dumper($selects);' . "\n";
     foreach my $line (split(/\n|\r\n|\r/, $cfg_text))
     {
-        #print "Looking at: <$line>\n";
-
+        #print STDERR "Looking at: <$line>\n";
+        #print STDERR "vars: ", Dumper(\@vars);
         $line =~ /^\s*{\s*$/ and do {
-            $xml .= "<group>\n";
+            $subr .= $self->parse_conditionals(@conditionals);
+            my @var_results = $self->parse_vars(@vars);
+            #print STDERR "Var results: ", Dumper(\@var_results);
+            if (@var_results)
+            {
+                $subr .= $self->into();
+                $subr .= $self->indent_lines(@var_results);
+                $subr .= $self->out_of();
+            }
+            $subr .= $self->into();
+            @conditionals = ();
+            @vars = ();
             next;
         };
 
         $line =~ /^\s*}\s*$/ and do {
-            $xml .= "</group>\n";
+            #print STDERR "going into \"}\"\n";
+            $subr .= $self->parse_conditionals(@conditionals);
+            my @var_results = $self->parse_vars(@vars);
+            print STDERR "Var results: ", Dumper(\@var_results);
+            if (@var_results)
+            {
+                $subr .= $self->into();
+                $subr .= $self->indent_lines(@var_results);
+                $subr .= $self->out_of();
+            }
+            $subr .= $self->out_of();
+            @conditionals = ();
+            @vars = ();
             next;
         };
 
         $line =~ /^\s*(#.*)$/ and do {
-            $xml .= "<!-- $1 -->\n";
+            #$xml .= "<!-- $1 -->\n";
             next;
         };
 
@@ -250,9 +579,7 @@ sub config_to_xml
             my $value = $3;
             $op =~ s/^\s+//;
             $op =~ s/\s+$//;
-            $op =~ s/>/\&gt;/;
-            $op =~ s/</\&lt;/;
-            $xml .= "<select>\n<name>$name</name>\n<op>$op</op>\n<value>$value</value>\n</select>\n";
+            push(@conditionals, [$name, $op, $value]);
             next;
         };
 
@@ -260,17 +587,10 @@ sub config_to_xml
         $line =~ m{^\s*(\S+)\s*($assign_regex)(.*)\s*$}imx and do {
             my $name = $1;
             my $op = $2;
-            $op =~ s/>/\&gt;/;
-            $op =~ s/</\&lt;/;
             my $value = $3;
-            if ($op =~ m/\+\=/)
-            {
-                $xml .= "<$name append=\"1\">$value</$name>\n";
-            }
-            else
-            {
-                $xml .= "<$name>$value</$name>\n";
-            }
+            $op =~ s/^\s+//;
+            $op =~ s/\s+$//;
+            push(@vars, [$name, $op, $value]);
             next;
         };
 
@@ -278,7 +598,24 @@ sub config_to_xml
         idv_warn("Unrecognized input line <$line>\n");
     }
 
-    return $xml;
+    $subr .= 'print STDERR "from SUBR: ", Dumper(\%vars);' . "\n";
+    $subr .= $self->current_indent() . 'return \%vars;' . "\n}\n";
+
+    print STDERR "returning <\n$subr\n>";
+    return $subr;
+}
+
+sub merge_blocks
+{
+    my $self = shift;
+    my $selects = shift;
+    my $subr = $self->{SUBR};
+
+    my $vars = &$subr($selects);
+
+    #print STDERR "vars is: ", Dumper($vars);
+
+    return $vars;
 }
 
 # For any node, there are three possible kinds of keys
@@ -352,7 +689,7 @@ sub visit
     }
 }
 
-sub merge_blocks
+sub merge_blocks_old
 {
     my $self = shift;
     my $selects = shift;
@@ -676,31 +1013,31 @@ sub selectors_matched
     return $self->match_blocks($selects);
 }
 
-package Idval::Config::Methods;
+# package Idval::Config::Methods;
 
-use strict;
-use Config;
+# use strict;
+# use Config;
 
-use Idval::Logger qw(fatal);
-use Idval::FileIO;
+# use Idval::Logger qw(fatal);
+# use Idval::FileIO;
 
-sub get_system_type
-{
-    return $Config{osname};
-}
+# sub get_system_type
+# {
+#     return $Config{osname};
+# }
 
-sub get_mtime
-{
-    my $selectors = shift;
+# sub get_mtime
+# {
+#     my $selectors = shift;
 
-    fatal("No filename in selectors") unless exists $selectors->{FILE};
-    return Idval::FileIO::idv_get_mtime($selectors->{FILE});
-}
+#     fatal("No filename in selectors") unless exists $selectors->{FILE};
+#     return Idval::FileIO::idv_get_mtime($selectors->{FILE});
+# }
 
-sub get_file_age
-{
-    my $selectors = shift;
-    return time - Idval::FileIO::idv_get_mtime($selectors->{FILE});
-}
+# sub get_file_age
+# {
+#     my $selectors = shift;
+#     return time - Idval::FileIO::idv_get_mtime($selectors->{FILE});
+# }
 
 1;

@@ -25,7 +25,7 @@ use Pod::Usage;
 use Data::Dumper;
 use English '-no_match_vars';;
 
-use Idval::Logger qw(fatal debug);
+use Idval::Logger qw(idv_dbg fatal);
 use Idval::Common;
 use Idval::FileIO;
 use Idval::DoDots;
@@ -51,8 +51,8 @@ sub main
         Idval::Ui::get_source_from_file($inputfile);};
 
     fatal($@) if $@;
-    #debug("update: datastore:", Dumper($datastore));
-    #debug("update: new datastore:", Dumper($new_datastore));
+    #idv_dbg("update: datastore:", Dumper($datastore));
+    #idv_dbg("update: new datastore:", Dumper($new_datastore));
 
     my $typemap = Idval::Common::get_common_object('typemap');
     my $dotmap = $typemap->get_dot_map();
@@ -65,7 +65,7 @@ sub main
     foreach my $key (sort keys %{$new_datastore->{RECORDS}})
     {
         $tag_record = $new_datastore->{RECORDS}->{$key};
-        #debug("in update with: ", Dumper($tag_record));
+        #idv_dbg("in update with: ", Dumper($tag_record));
         $type = $tag_record->get_value('TYPE');
         $prov = $providers->get_provider('writes_tags', $type, 'NULL');
         $prov_list{$prov} = $prov;

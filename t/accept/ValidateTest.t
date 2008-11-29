@@ -53,8 +53,8 @@ use AcceptUtils;
 sub run_validation_test
 {
     my $cfg = shift;
-    my $do_logging = shift || 1;
-
+    my $do_logging = shift;
+    $do_logging = 1 unless defined($do_logging);
     my $eval_status;
 
     my ($fh, $fname) = tempfile();
@@ -78,7 +78,7 @@ sub run_validation_test
     if ($do_logging)
     {
         $old_logger = Idval::Logger::get_logger();
-        Idval::Logger::initialize_logger({log_out => 'STDOUT', debugmask=>'+Validate', level=>$L_QUIET});
+        Idval::Logger::re_init({log_out => 'STDOUT', debugmask=>'+Validate:0'});
     }
 
     eval {$taglist = Idval::Scripts::validate($taglist, $idval_obj->providers(), $fname);};
@@ -86,142 +86,163 @@ sub run_validation_test
 
     if ($do_logging)
     {
-        Idval::Logger::initialize_logger($old_logger);
+        Idval::Logger::re_init($old_logger);
     }
 
     open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
 
     my $retval = $eval_status ? $eval_status : $str_buf;
-    return $retval;
+    return wantarray ? ($retval, $str_buf) : $retval;
 }
 
-sub validation_with_one_error : Test(1)
-{
-    my $val_cfg =<<EOF;
-{
-        TYER == 2007
-        GRIPE = Date is wrong!
-}
-EOF
+# sub validation_with_one_error : Test(1)
+# {
+#     my $val_cfg =<<EOF;
+# {
+#         TYER == 2007
+#         GRIPE = Date is wrong!
+# }
+# EOF
 
-    my ($prov_p, $reason) = AcceptUtils::are_providers_present();
-    return $reason unless $prov_p;
+#     my ($prov_p, $reason) = AcceptUtils::are_providers_present();
+#     return $reason unless $prov_p;
 
-    my $expected_result = ".+?:\\d+: error: For TYER, Date is wrong!\n";
-    my $test_result = run_validation_test($val_cfg, 1);
-    like($test_result, qr/$expected_result/);
-    return;
-}
+#     my $expected_result = ".+?:\\d+: error: For TYER, Date is wrong!\n";
+#     my $test_result = run_validation_test($val_cfg, 1);
+#     like($test_result, qr/$expected_result/);
+#     return;
+# }
 
-sub test_validation_showing_that_two_selectors_AND_together : Test(1)
-{
-    my $val_cfg =<<EOF;
-{
-        TYER == 2006
-        TCON == Old-Time
-        GRIPE = Too new for old-time
-}
-EOF
-    my ($prov_p, $reason) = AcceptUtils::are_providers_present();
-    return $reason unless $prov_p;
+# sub test_validation_showing_that_two_selectors_AND_together : Test(1)
+# {
+#     my $val_cfg =<<EOF;
+# {
+#         TYER == 2006
+#         TCON == Old-Time
+#         GRIPE = Too new for old-time
+# }
+# EOF
+#     my ($prov_p, $reason) = AcceptUtils::are_providers_present();
+#     return $reason unless $prov_p;
 
-    my $expected_result = ".+?:\\d+: error: For TCON, Too new for old-time\n" .
-    ".+?:\\d+: error: For TYER, Too new for old-time\n";
-    my $test_result = run_validation_test($val_cfg);
-    like($test_result, qr/$expected_result/);
-    return;
-}
+#     my $expected_result = ".+?:\\d+: error: For TCON, Too new for old-time\n" .
+#     ".+?:\\d+: error: For TYER, Too new for old-time\n";
+#     my $test_result = run_validation_test($val_cfg);
+#     like($test_result, qr/$expected_result/);
+#     return;
+# }
 
-sub test_validation_showing_that_regexp_selectors_OR_together : Test(1)
-{
-    my $val_cfg =<<EOF;
-{
-        .* has Flac
-        GRIPE = Grumble Flac
-}
-EOF
-    my ($prov_p, $reason) = AcceptUtils::are_providers_present();
-    return $reason unless $prov_p;
+# sub test_validation_showing_that_regexp_selectors_OR_together : Test(1)
+# {
+#     my $val_cfg =<<EOF;
+# {
+#         .* has Flac
+#         GRIPE = Grumble Flac
+# }
+# EOF
+#     my ($prov_p, $reason) = AcceptUtils::are_providers_present();
+#     return $reason unless $prov_p;
 
-    # We expect 9 errors: one for each tag of ARTIST, TALB, and TIT2
-    # in each flac file, since these are the tags that contain "Flac"
-    # (note that this is case-sensitive).
+#     # We expect 9 errors: one for each tag of ARTIST, TALB, and TIT2
+#     # in each flac file, since these are the tags that contain "Flac"
+#     # (note that this is case-sensitive).
 
-    my $expected_result =<<EOF;
-.+?:\\d+: error: For TALB, Grumble Flac
-.+?:\\d+: error: For TIT2, Grumble Flac
-.+?:\\d+: error: For TPE1, Grumble Flac
-.+?:\\d+: error: For TALB, Grumble Flac
-.+?:\\d+: error: For TIT2, Grumble Flac
-.+?:\\d+: error: For TPE1, Grumble Flac
-.+?:\\d+: error: For TALB, Grumble Flac
-.+?:\\d+: error: For TIT2, Grumble Flac
-.+?:\\d+: error: For TPE1, Grumble Flac
-EOF
+#     my $expected_result =<<EOF;
+# .+?:\\d+: error: For TALB, Grumble Flac
+# .+?:\\d+: error: For TIT2, Grumble Flac
+# .+?:\\d+: error: For TPE1, Grumble Flac
+# .+?:\\d+: error: For TALB, Grumble Flac
+# .+?:\\d+: error: For TIT2, Grumble Flac
+# .+?:\\d+: error: For TPE1, Grumble Flac
+# .+?:\\d+: error: For TALB, Grumble Flac
+# .+?:\\d+: error: For TIT2, Grumble Flac
+# .+?:\\d+: error: For TPE1, Grumble Flac
+# EOF
 
-    my $test_result;
-    $test_result = run_validation_test($val_cfg);
-    like($test_result, qr/$expected_result/);
-    return;
-}
+#     my $test_result;
+#     $test_result = run_validation_test($val_cfg);
+#     like($test_result, qr/$expected_result/);
+#     return;
+# }
 
-sub test_validation_showing_that_regexp_selectors_OR_together_2 : Test(1)
-{
-    my $val_cfg =<<EOF;
-{
-        TALB|TPE1 has Flac
-        GRIPE = Grumble Flac
-}
-EOF
-    my ($prov_p, $reason) = AcceptUtils::are_providers_present();
-    return $reason unless $prov_p;
+# sub test_validation_showing_that_regexp_selectors_OR_together_2 : Test(1)
+# {
+#     my $val_cfg =<<EOF;
+# {
+#         TALB|TPE1 has Flac
+#         GRIPE = Grumble Flac
+# }
+# EOF
+#     my ($prov_p, $reason) = AcceptUtils::are_providers_present();
+#     return $reason unless $prov_p;
 
-    # We expect 6 errors this time, since we are only looking at tags
-    # that start with A: one for each tag of TPE1 and TALB in each
-    # flac file, since these are the tags that contain "Flac" (note
-    # that this is case-sensitive).
+#     # We expect 6 errors this time, since we are only looking at tags
+#     # that start with A: one for each tag of TPE1 and TALB in each
+#     # flac file, since these are the tags that contain "Flac" (note
+#     # that this is case-sensitive).
 
-    my $expected_result =<<EOF;
-.+?:\\d+: error: For TALB, Grumble Flac
-.+?:\\d+: error: For TPE1, Grumble Flac
-.+?:\\d+: error: For TALB, Grumble Flac
-.+?:\\d+: error: For TPE1, Grumble Flac
-.+?:\\d+: error: For TALB, Grumble Flac
-.+?:\\d+: error: For TPE1, Grumble Flac
-EOF
+#     my $expected_result =<<EOF;
+# .+?:\\d+: error: For TALB, Grumble Flac
+# .+?:\\d+: error: For TPE1, Grumble Flac
+# .+?:\\d+: error: For TALB, Grumble Flac
+# .+?:\\d+: error: For TPE1, Grumble Flac
+# .+?:\\d+: error: For TALB, Grumble Flac
+# .+?:\\d+: error: For TPE1, Grumble Flac
+# EOF
 
-    my $test_result;
-    $test_result = run_validation_test($val_cfg);
-    like($test_result, qr/$expected_result/);
-    return;
-}
+#     my $test_result;
+#     $test_result = run_validation_test($val_cfg);
+#     like($test_result, qr/$expected_result/);
+#     return;
+# }
 
-sub test_validation_showing_that_ONLY_regexp_selectors_OR_together : Test(1)
-{
-    my $val_cfg =<<EOF;
-{
-        TALB|TPE1 has Flac
-        TYER == 2005
-        GRIPE = Grumble Flac
-}
-EOF
-    my ($prov_p, $reason) = AcceptUtils::are_providers_present();
-    return $reason unless $prov_p;
+# sub test_validation_showing_that_ONLY_regexp_selectors_OR_together : Test(1)
+# {
+#     my $val_cfg =<<EOF;
+# {
+#         TALB|TPE1 has Flac
+#         TYER == 2005
+#         GRIPE = Grumble Flac
+# }
+# EOF
+#     my ($prov_p, $reason) = AcceptUtils::are_providers_present();
+#     return $reason unless $prov_p;
 
-    # We expect 2 errors this time, since we are only looking at tags
-    # that start with TA that contain "Flac" AND for TYER == 2005
+#     # We expect 2 errors this time, since we are only looking at tags
+#     # that start with TA that contain "Flac" AND for TYER == 2005
 
-    my $expected_result =<<EOF;
-.+?:\\d+: error: For TALB, Grumble Flac
-.+?:\\d+: error: For TPE1, Grumble Flac
-.+?:\\d+: error: For TYER, Grumble Flac
-EOF
+#     my $expected_result =<<EOF;
+# .+?:\\d+: error: For TALB, Grumble Flac
+# .+?:\\d+: error: For TPE1, Grumble Flac
+# .+?:\\d+: error: For TYER, Grumble Flac
+# EOF
 
-    my $test_result;
-    $test_result = run_validation_test($val_cfg, 0);
-    like($test_result, qr/^$expected_result$/);
-    return;
-}
+#     my $test_result;
+#     $test_result = run_validation_test($val_cfg, 0);
+#     like($test_result, qr/^$expected_result$/);
+#     return;
+# }
+
+# sub test_validation_with_bogus_pass_function : Test(1)
+# {
+#     my $val_cfg =<<EOF;
+# {
+#     A.* passes NO_Function_Here
+#     GRIPE = Grumble Flac
+# }
+# EOF
+#     my $expected_result =<<EOF;
+# ^Unknown function Idval::ValidateFuncs::NO_Function_Here.*
+# EOF
+
+#     my $test_result;
+#     my ($prov_p, $reason) = AcceptUtils::are_providers_present();
+#     return $reason unless $prov_p;
+
+#     $test_result = run_validation_test($val_cfg);
+#     like($test_result, qr/$expected_result/);
+#     return;
+# }
 
 sub test_validation_showing_nested_config_blocks : Test(1)
 {
@@ -246,28 +267,10 @@ EOF
 EOF
 
     my $test_result;
-    $test_result = run_validation_test($val_cfg);
+my $str;
+    ($test_result, $str) = run_validation_test($val_cfg, 1);
+print STDERR "Got <$str>\n";
     like($test_result, qr/$expected_result/);
     return;
 }
 
-sub test_validation_with_bogus_pass_function : Test(1)
-{
-    my $val_cfg =<<EOF;
-{
-    A.* passes NO_Function_Here
-    GRIPE = Grumble Flac
-}
-EOF
-    my $expected_result =<<EOF;
-^Unknown function Idval::ValidateFuncs::NO_Function_Here.*
-EOF
-
-    my $test_result;
-    my ($prov_p, $reason) = AcceptUtils::are_providers_present();
-    return $reason unless $prov_p;
-
-    $test_result = run_validation_test($val_cfg);
-    like($test_result, qr/$expected_result/);
-    return;
-}

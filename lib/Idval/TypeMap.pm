@@ -5,7 +5,7 @@ use warnings;
 use Data::Dumper;
 use English '-no_match_vars';
 
-use Idval::Logger qw(debug fatal);
+use Idval::Logger qw(idv_dbg fatal);
 
 sub new
 {
@@ -26,7 +26,7 @@ sub _init
 
     $self->build_type_mapper($prov);
 
-    debug("TypeMap: FILETYPE map is: ", Dumper($self->{MAPPING}->{FILETYPE}));
+    #idv_dbg("TypeMap: FILETYPE map is: ", Dumper($self->{MAPPING}->{FILETYPE}));
     return;
 }
 
@@ -214,7 +214,7 @@ sub get_filetype_from_file
     $ext =~ s/\Q${vis_sep}\E.*$//;
     $ext = uc($ext);
 
-    debug("TypeMap::get_filetype_from_file: ext is \"$ext\"\n");
+    idv_dbg("TypeMap::get_filetype_from_file: ext is \"$ext\"\n");
     return exists($self->{MAPPING}->{FILETYPE}->{REV}->{$ext}) ? $self->{MAPPING}->{FILETYPE}->{REV}->{$ext} : '';
 }
 
