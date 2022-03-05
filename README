@@ -1,88 +1,26 @@
 Idval
 
-The README is used to introduce the module and provide instructions on
-how to install the module, any machine dependencies it may have (for
-example C compilers and installed libraries) and any other information
-that should be provided before the module is installed.
+This is a git archive of a very old (2008) Perl project.
 
-A README file is required for CPAN modules since CPAN extracts the README
-file from a module distribution so that people browsing the archive
-can use it to get an idea of the module's uses. It is usually a good idea
-to provide version information here so that people can decide whether
-fixes for the module are worth downloading.
+Idval is a tool for manipulating files that contain metadata, such as
+mp3, flac, and other music files; jpeg and other exif image files; and
+any other kind of files that contain metadata.
 
+Two of the principles behind Idval are: 1) that the authoritative
+source for a media file's metadata is the media file itself, and 2)
+metadata should be presented in a form that's easy to handle with a
+text editor. 
 
-INSTALLATION
+Keep a music collection in lossless FLAC format, and then convert to
+OGG or MP3 as needed for use with portable music players.
 
-To install this module, run the following commands:
-
-	perl Makefile.PL
-	make
-	make test
-	make install
-
-NOTES
-
-The presence of a broken XML::SAX module (see the README for XML::Simple) causes Encode::decode() to break!?!?
-
-Run the following script:
-
-use Data::Dumper;
-use Encode;
-use XML::Simple;
-my $xmltext =<<EOF;
-<config>
-<group>
-  <command_dir>%DATA%/Commands</command_dir>
-  <command_extension>pm</command_extension>
-</group>
-</config>
-EOF
- 
-my $tree = XML::Simple::XMLin($xmltext, keyattr => {select=>'name'}, forcearray => ['select']);
-my $found = Encode::decode('UTF-16', pack("H*", "fffe47007200"));
-print "found: ", Dumper($found);
-
-When broken XML::SAX is present, this will print
-
-could not find ParserDetails.ini in /usr/lib/perl5/vendor_perl/5.10/XML/SAX
-found: $VAR1 = "\x{fffd}\x{4700}\x{7200}";
-
-Encode::decode() thinks it's decoding UTF-2BE instead of UTF-16.
-
-When broken XML::SAX is removed (per XML::Simple README), it will print
-
-found: $VAR1 = 'Gr';
+The name "Idval" came from "ID Validation". Define rules for a valid
+set of ID tags, and Idval will show which tags break the rules. Edit
+the text file that represents the metadata and use Idval to correct
+the bad tags.
 
 
 
-
-SUPPORT AND DOCUMENTATION
-
-After installing, you can find documentation for this module with the
-perldoc command.
-
-    perldoc Idval
-
-You can also look for information at:
-
-    RT, CPAN's request tracker
-        http://rt.cpan.org/NoAuth/Bugs.html?Dist=Idval
-
-    AnnoCPAN, Annotated CPAN documentation
-        http://annocpan.org/dist/Idval
-
-    CPAN Ratings
-        http://cpanratings.perl.org/d/Idval
-
-    Search CPAN
-        http://search.cpan.org/dist/Idval
-
-
-COPYRIGHT AND LICENCE
-
-Copyright (C) 2008 Bob Forgey
-
-This program is free software; you can redistribute it and/or modify it
-under the same terms as Perl itself.
+Idval works by using "plugins". Idval plugins read metadata from
+files, write metadata to files, convert between file formats, and manipulate metadata XXX
 
