@@ -1,0 +1,420 @@
+=pod
+
+=head1 Introduction
+
+Idval is a tool for manipulating files that contain metadata, such as
+mp3, flac, and other music files; jpeg and other exif image files; and
+any other kind of files that contain metadata.
+
+I started Idval because I wanted to be able to treat metadata in my
+music files as a text file that I could edit with my favorite text
+editor, emacs. From there it grew into something I could use to handle
+audio and image files using emacs as a primary interface. In this
+sense, Idval is a part of the Magic Paper project.
+
+The name "Idval" came from "ID Validation". You can define rules for a
+valid set of ID tags, and Idval will show which tags break the
+rules. Edit the text file that represents the metadata and use Idval
+to correct the bad tags.
+
+Two of the principles behind Idval are: 1) that the authoritative
+source for a media file's metadata is the media file itself, and 2)
+metadata should be presented in a form that's easy to handle with a
+text editor. 
+
+Keep a music collection in lossless FLAC format, and then convert to
+OGG or MP3 as needed for use with portable music players.
+
+=head2 About the Documentation
+
+This document is the user manual and reference guide. Information of
+interest to developers is in XXX.
+
+=head2 Installing Idval
+
+B<Idval>, by itself, knows how to read and write tags for MP3 and JPEG
+files. To do anything like what B<Idval> was designed to do, you will
+need some more programs. All the programs mentioned here are Free
+software.
+
+Get I<Idval> from XXX. Unpack it in a directory of your choosing. You
+can try it out there, or install it in the usual way with
+
+  perl Makefile.PL
+  make
+  make test
+  make install
+
+=head3 Requirements
+
+The only requirement is Perl (L<http://www.perl.org/>), version 5.8 or
+later.
+
+=head3 Dependencies
+
+To process FLAC files, you will need the flac toolset
+L<http://flac.sourceforge.net/>.
+
+To process OGG files, you will need the Ogg Vorbis toolset L<http://www.vorbis.com/>.
+
+To convert to or from MP3 files, you will need the LAME tool
+L<http://lame.sourceforge.net/>.
+
+To convert ABC files, you will need abc2midi
+(L<http://abc.sourceforge.net/abcMIDI/>) and the MIDI decoder Timidity
+(L<http://timidity.sourceforge.net/>).
+
+None of these are strictly required, although you will want the FLAC
+tools and either or both of the OGG and lame tools. B<Idval> will
+automatically detect the presence of these tools when it starts, and
+will simply disable functionality if a required tool is unavailable.
+
+=head1 Running idv
+
+=head2 The first time you run it
+
+B<Idv> needs to set up a customization file and a place to store
+data. The first time it's run (or whenever you give a C<set conf>
+command) B<idv> will ask a series of questions about these files and
+locations. If this is the first time you've run the program, you
+should be able to accept the default responses for all the
+questions.
+
+=head2 Quick start
+
+For the impatient, this will get B<idv> to do something. Not much, but
+it should give you an idea about how it works.
+
+The first three items cover things you'll need before you start.
+
+=over 4
+
+=item Dependencies
+
+B<Idv> uses external programs to do most of the work. If you want to
+convert to or from MP3 files, you'll need to have B<lame>
+installed. See L<http://lame.sourceforge.net/>. If you want to convert
+to or from OGG, you'll need the Ogg Vorbis toolset
+L<http://www.vorbis.com/>. To convert to or from FLAC files, you will
+need the flac toolset L<http://flac.sourceforge.net/>. 
+
+=item Music source
+
+You'll need some music files to convert. B<Idv> will look inside
+ directories and folders to find files, so you only need to tell it
+ the top-level music directory.
+
+=item Music destination
+
+You'll need a place to put music files that you've converted. Since
+ this is a quick-start-just-fooling-around guide, you'll probably want
+ to create a directory to hold the files. Later on, you'll issue a
+ I<sync> command that has this directory name. If you haven't already
+ created it, B<idv> will create it for you.
+
+=item Run the program
+
+=over 4
+
+=item *
+
+ $ idv <ENTER>
+
+=item *
+
+If this is the very first time, go through the customization steps,
+ and then restart B<idv>. This will take you to the idv prompt:
+
+ idv: gettags music-source-directory
+
+I<music-source-directory> is the name of the directory where your
+ music files are stored. If you get an error message like:
+
+ Can't stat barblehoofer: No such file or directory
+
+try giving the full path name, for instance C:/music/barblehoofer
+
+=item *
+
+ idv: store
+
+Save the tag information. 
+
+=item *
+
+ idv: print barblehoofer.txt
+
+Save the information to a text file. At this point, bring up a text
+ editor to look at barblehoofer.txt.
+
+=item *
+
+ idv: sync -ogg "TRCK == 4" music-destination-directory
+
+This command will convert track number 4 from each album under your
+ music source directory, and put the resulting files in
+ "music-destination-directory". If you'd rather have MP3 files,
+ replace "-ogg" with "-mp3".
+
+=item *
+
+ idv: quit
+
+=back
+
+=item Troubleshooting
+
+See L</Troubleshooting>.
+
+=back
+
+
+=head2 Theory of Operation
+
+Each command in Idval operates on a database of metadata tag names and
+their values and a configuration file that selects items from the
+database for the command to work on. The tag information in the
+database is split into records. Each record is indexed by the name of
+the file that contains the metadata. The database is also called a
+"taglist"X<taglist>.
+
+A command will not specify which taglist it will use. It uses the
+currently active one. The B<read> command makes the stored taglist
+the active one. Each command returns a taglist, which the next one
+uses. Generally, commands will not change which records are in the
+current taglist, although they will often add temporary tags to the
+records. Commands that do change the current taglist include: B<read>,
+B<gettags>, and B<select>.
+
+=head2 Running the program
+
+B<Idval> is a Perl module that supplies the capabilities I've been
+ discussing. It comes with a command-line script, X<idv>B<idv> that can be
+used to invoke the various commands that come with B<Idval>.
+
+    $ idv<ENTER>
+
+will invoke the Idval interpreter, and present the C<idv: >
+prompt. Some handy commands are B<help> and B<about>.
+
+    idv: help<ENTER>
+
+will display help topics.
+
+    idv: about<ENTER>
+
+will display information about how B<idv> is set up and what it can
+ do. See L</"Built-in commands"> to get information about all of
+ B<Idval's> commands.
+
+There is currently no GUI, although it should be easy to connect one
+ to the B<idv> interpreter.
+
+It is pretty easy to add custom commands that the B<idv> interpreter
+ will use just like the built-in commands. It is also straightforward
+ to use the Idval module in a stand-alone Perl script. See
+ L</"Extending Idval"> for more information.
+
+It is also possible to give a command, and any of its arguments, on
+the idv command line. In this case, idv will run the command as though
+you typed it at the C<idv:> prompt, and exit. If, and only if, the
+command is B<gettags>, idv will automatically issue a B<store> to
+update the stored taglist.
+
+=head2 X<Command line options>Command line options
+
+=over 4
+
+=item B<-v>
+
+This item increases the overall verbosity of B<idv>. You can give this
+ option multiple times. Each instance will increase the verbosity. If
+ you use this option more than twice, see the B<--nooptimize> option,
+ below.
+
+=item B<-q>
+
+Makes the program quieter.
+
+=item B<-V>
+
+Prints out the program version and a copyright message, and exits.
+
+=item B<-help>
+
+Prints out a short description of all available B<idv> commands, and
+ exits.
+
+=back
+
+=head2 X<Command line options, hairy>Hairy command line options
+
+If you can't ignore this section, I've done something wrong.
+
+=over 4
+
+=item X<debug-spec>B<< --debug=<debug-spec> >>
+
+This option should only be needed if debugging or developing Idval. It
+controls the kind and amount of logging produced. In Idval, logging
+x1for each module is separately controlled. I<debug-spec> is applied by
+the logger after it processes the default debug-spec. A I<debug-spec>
+is a comma-separated list of module:level specifiers. Each specifier
+may add, replace, or subtract from the current set of specifiers.
+
+A I<debug-spec> has the following format:
+
+  I<specifier>[,I<specifier[...]]
+
+Each I<specifier> has the following format:
+
+  [+-]I<module-name>:I<debug-level>
+
+If the specifier starts with a +, I<module-name> is added to the current
+set with a level of I<debug-level>. If it starts with a -,
+logging of I<module-name> is turned off. If doesn't start with either
++ or -, B<all> of the current debug specifiers are B<replaced> by
+these specifiers. For a given I<debug-spec>, all of the specifiers are
+applied as a group, so C<--debug="Config:1,Graph:2"> will cause the
+new debug spec to be "Config:1,Graph:2" (not "Graph:2"). See
+L</"Debug-spec examples"> for examples. If any of the debug levels are
+ 3 or greater, you will need to use the B<--nooptimize> option, below.
+
+=item B<--nooptimize>
+
+By default, debug messages that are printed at levels 3 and 4 are not
+ enabled. This flag re-enables these messages.
+
+The reason this flag exists is that the program runs much faster if
+ the routines that print debug messages at levels 3 and 4 are
+ optimized to null methods when the program starts, _and_ that I
+ haven't figured out how to un-optimize them back during run-time.
+
+=item B<--development>
+
+With this flag, each debug message will be prefixed with a time
+ stamp, and a fatal error will print out a stack trace.
+
+=back
+
+=head2 Environmental variables
+
+=over 4
+
+=item IDV_DEBUGMASK
+
+If this variable exists, its contents are used as a I<debug-spec> (See
+ above). A convenient thing about this variable is that, if it is
+ found, the program will automatically set the B<--nooptimize> flag.
+
+=back
+
+=head1 Configuration files
+
+Idval operates on information that is kept in a L<taglist|"Theory of
+ Operation">. Idval commands select parts of this taglist to work on
+ using configuration files.
+
+Configuration files are used in various places in the program, but
+ always in the same way: a variable is given a value based on the
+ result of a set of conditions. For example, the variable "convert"
+ may be set to "MP3", except when the album name starts with an "A",
+ in which case the value will be "OGG".
+
+For details about the syntax of Idval config files, see the
+ L<Config/DESCRIPTION> section.
+
+=head2 Configuration examples
+
+You should be able to copy and paste these examples into config files
+ and use them. You will, of course, need to change the specifics.
+
+See L<sync/DESCRIPTION> for more information about configuration file
+ options for the sync command.
+
+See L<"Bad Examples"> for things not to do.
+
+=head3 Syncing into a single directory
+
+You want to take all the tracks from a few albums, convert them to
+ MP3, and put them in a directory.
+
+#--------------------------------------------------------------------
+  convert = MP3
+  remote_top = doc_watson
+  {
+     TALB == The Original Folkways Recordings 1960-1962 (Disc 1)
+     sync = 1
+  }
+  {
+     TALB == The Original Folkways Recordings 1960-1962 (Disc 2)
+     sync = 1
+  }
+#--------------------------------------------------------------------
+
+This will take all tracks from the two albums mentioned, convert them
+ to .mp3 files, and put them in a directory called 'doc_watson'.
+
+#--------------------------------------------------------------------
+  convert = MP3
+  remote_top = doc_watson
+  {
+     TALB == The Original Folkways Recordings 1960-1962 (Disc 1)
+     TRCK <= 10
+     sync = 1
+  }
+  {
+     TALB == The Original Folkways Recordings 1960-1962 (Disc 2)
+     TRCK <= 10
+     sync = 1
+  }
+#--------------------------------------------------------------------
+
+This will take the first 10 tracks from each of the two albums
+ mentioned, convert them to .mp3 files, and put them in a directory
+ called 'doc_watson'.
+
+
+#--------------------------------------------------------------------
+  convert = MP3
+  remote_top = /media/IAUDIO/Music/pods
+  {
+     FILE has /home/joe/Music/PODS
+     __file_age <= 24
+     sync = 1
+  }
+#--------------------------------------------------------------------
+
+Joe, perhaps your portable music player automatically mounts on your
+ computer as "/media/IAUDIO", and perhaps you download all your
+ podcasts in your home directory under "Music/PODS". This will copy
+ all podcasts less than a day old to "/media/IAUDIO/Music/pods". Note
+ that you need to run a "gettags ..." command  before this so that idv
+ knows about your new downloads.
+
+=head3 Syncing into multiple directories
+
+The B<sync> command recognizes a number of special keywords when it
+ decides where to put a converted file (again, see L<sync/DESCRIPTION>
+ for complete details). 
+
+
+
+=head3 Bad Examples
+
+
+=head1 Built-in commands
+
+=head1 Extending Idval
+
+=head1 Miscellaneous
+
+=head2 Debug-spec examples
+
+The default debug spec is: "XXX". 
+
+=head1 AUTHOR
+
+Bob Forgey <rforgey\@grumpydogconsulting.com>
+
+=cut

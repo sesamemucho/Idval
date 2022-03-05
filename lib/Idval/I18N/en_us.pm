@@ -23,4 +23,3 @@ use warnings;
 use base qw(Idval::I18N::en);
 
 1;
-

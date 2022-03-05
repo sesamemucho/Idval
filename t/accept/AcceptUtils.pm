@@ -147,7 +147,12 @@ sub mktree
     }
 
     my $taglist = $idval->datastore();
-    $taglist = Idval::Scripts::gettags($taglist, $idval->providers(), $testpath);
+    my $junk;
+    ($junk, $junk, $taglist) = run_test_and_get_log({idval_obj=>$idval,
+                                                     cmd_sub=>\&Idval::Scripts::gettags,
+                                                     tag_source=>$taglist,
+                                                     otherargs=>[$testpath]});
+    #$taglist = Idval::Scripts::gettags($taglist, $idval->providers(), $testpath);
     #print STDERR "AU: taglist: ", Dumper($taglist);
     my ($fh, $fname) = tempfile();
     push(@tempfiles, $fname);
@@ -168,18 +173,77 @@ sub mktree
         $tag_record->add_tag('TYER', $info{$key}->{TYER});
     }
 
-    $taglist = Idval::Scripts::print($taglist, $idval->providers(), $fh);
+    ($junk, $junk, $taglist) = run_test_and_get_log({idval_obj=>$idval,
+                                                     cmd_sub=>\&Idval::Scripts::print,
+                                                     tag_source=>$taglist,
+                                                     otherargs=>[$fh]});
+    #$taglist = Idval::Scripts::print($taglist, $idval->providers(), $fh);
     #print STDERR "AU: taglist 2: ", Dumper($taglist);
     #print STDERR "AU: xxx\n", qx{cat $fname};
     #print STDERR "ls -l $fname\n";
     #print "Updating tags:\n";
-    $taglist = Idval::Scripts::update($taglist, $idval->providers(), $fname);
+    ($junk, $junk, $taglist) = run_test_and_get_log({idval_obj=>$idval,
+                                                     cmd_sub=>\&Idval::Scripts::update,
+                                                     tag_source=>$taglist,
+                                                     otherargs=>[$fname]});
+    #$taglist = Idval::Scripts::update($taglist, $idval->providers(), $fname);
     #print STDERR "AU: taglist 3: ", Dumper($taglist);
     #$taglist = Idval::printlist($taglist, $idval->providers());
 
     return $taglist;
 }
 
+sub run_test_and_get_log
+{
+    my $argref = shift;
+    my $cfg = exists($argref->{cfg}) ? $argref->{cfg} : '';
+    my $idval_obj = $argref->{idval_obj};
+    my $do_logging = exists($argref->{do_logging}) ? $argref->{do_logging} : 1;
+    my $debugmask  = exists($argref->{debugmask}) ? $argref->{debugmask} : '';
+    my @otherargs  = exists($argref->{otherargs}) ? @{$argref->{otherargs}} : ();
+    my $cmd_sub = $argref->{cmd_sub};
+    my $tag_source = $argref->{tag_source};
 
+    my $taglist = ref $tag_source eq 'CODE' ? &$tag_source : $tag_source;
+
+    my $eval_status;
+
+    my ($fh, $fname) = tempfile();
+    print $fh $cfg;
+    $fh->close();
+
+    push(@tempfiles, $fname);
+
+    my $str_buf = 'nothing here';
+
+    open my $oldout, ">&STDOUT"     or die "Can't dup STDOUT: $!";
+    close STDOUT;
+    open STDOUT, '>', \$str_buf or die "Can't redirect STDOUT: $!";
+    select STDOUT; $| = 1;      # make unbuffered
+
+    #Idval::Logger::get_logger()->str('a_u');
+    my $old_settings;
+    if ($do_logging)
+    {
+        $old_settings = Idval::Logger::get_settings();
+        Idval::Logger::re_init({log_out => 'STDOUT', debugmask=>$debugmask});
+    }
+
+    unshift(@otherargs, $fname) if exists($argref->{cfg});
+
+    eval {$taglist = &$cmd_sub($taglist, $idval_obj->providers(), @otherargs);};
+    $eval_status = $@ if $@;
+
+    #print STDERR "eval status is \"$@\"\n";
+    if ($do_logging)
+    {
+        Idval::Logger::re_init($old_settings);
+    }
+
+    open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
+
+    my $retval = $eval_status ? $eval_status : $str_buf;
+    return wantarray ? ($retval, $str_buf, $taglist) : $retval;
+}
 
 1;

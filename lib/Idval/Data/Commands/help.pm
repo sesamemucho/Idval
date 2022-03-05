@@ -31,8 +31,6 @@ use Idval::Help;
 
 sub init
 {
-    set_pod_input();
-
     return;
 }
 
@@ -43,7 +41,9 @@ sub main
     local @ARGV = @_;
 
     my $verbose = 0;
-    my $result = GetOptions("verbose" => \$verbose);
+    my $no_command = 0;
+    my $result = GetOptions("verbose" => \$verbose,
+        'nocommand' => \$no_command);
 
     my $typemap = Idval::TypeMap->new($providers);
     my $cmd;
@@ -61,86 +61,55 @@ sub main
 
     if (@ARGV)
     {
-        $name = lc (shift @ARGV);
-        $cmd = $providers->get_command($name);
+        $name = shift @ARGV;
+        #$cmd = $providers->get_command($name);
         
-        fatal("Unrecognized command name \"[_1]\"\n", $name) unless defined($cmd);
-        $cmd_name = $cmd->{NAME};
-        $cmd = $cmd_info{$cmd_name};
-        fatal("No help information for command name \"[_1]\"\n", $name) unless defined($help_file->man_info($cmd_name));
-    
-        if ($verbose)
+        #fatal("Unrecognized command name \"[_1]\"\n", $name) unless defined($cmd);
+        #print STDERR "cmd is: ", Dumper($cmd);
+        #if ($cmd)
+        #{
+        #    $cmd_name = $cmd->{NAME};
+        #    $cmd = $cmd_info{$cmd_name};
+        #}
+        #fatal("No help information for command name \"[_1]\"\n", $name) unless defined($help_file->man_info($cmd_name));
+        my $argref = { name => $name,
+                       force_no_command => $no_command,
+        };
+        my $info = $verbose ? $help_file->get_full_description($argref) : $help_file->get_synopsis($argref);
+        if ($info)
         {
-            silent_q($help_file->get_full_description($cmd_name));
+            silent_q("[_1]\n", $info);
         }
         else
         {
-            silent_q($help_file->get_synopsis($cmd_name));
-            silent_q("\nUse \"help -v [_1]\" for more information.\n", $cmd_name);
+            silent_q("No information available for \"[_1]\"\n", $name);
         }
+
+        silent_q("\nUse \"help -v [_1]\" for more information.\n", $name) unless $verbose;
     }
     else
     {
         # Just a bare 'help' command => print help for the main program
-        silent_q($help_file->get_full_description('main'));
+        silent_q($help_file->get_full_description({name => 'main'}));
     }
 
-    if ($cmd_name eq 'help')
+    if ($name eq 'help')
     {
- 
        silent_q("\nAvailable commands:\n");
        foreach my $cmd_name (sort keys %cmd_info) {
-           my $gsd = $help_file->get_short_description($cmd_name);
-           silent_q("[_1]\n", $gsd);
+           my $gsd = $help_file->get_short_description({name => $cmd_name});
+           if ($gsd)
+           {
+               silent_q("[_1]\n", $gsd);
+           }
+           else
+           {
+               silent_q("[_1] - No information available.\n", $cmd_name);
+           }
        }
     }
 
     return 0;
-}
-
-sub set_pod_input
-{
-    my $help_file = Idval::Common::get_common_object('help_file');
-
-    my $pod_input =<<"EOD";
-
-=head1 NAME
-
-help - Using GetOpt::Long and Pod::Usage blah blah foo booaljasdf
-
-=head1 SYNOPSIS
-
-sample [options] [file ...]
-
- Options:
-   -help            brief help message
-   -man             full documentation
-
-=head1 OPTIONS
-
-=over 8
-
-=item B<-help>
-
-Print a brief help message and exits.
-
-=item B<-man>
-
-Prints the manual page and exits.
-
-=back
-
-=head1 DESCRIPTION
-
-B<This program> will read the given input file(s) and do something
-useful with the contents thereof.
-
-=cut
-
-EOD
-    $help_file->set_man_info('help', $pod_input);
-
-    return;
 }
 
 1;

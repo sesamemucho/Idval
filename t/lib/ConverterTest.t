@@ -51,84 +51,44 @@ sub get_converter : Test(1)
 {
     my $self = shift;
 
-    Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
-    add_UserPlugin3_up1();
+    TestUtils::add_Provider({provides=>'converts',
+                             name=>'flacker',
+                             from=>'WAV',
+                             to=>'FLAC'});
 
-    my $fc = Idval::Config->new("/testdir/gt1.txt");
+    my $fc = TestUtils::setup_Config();
     $provs = Idval::ProviderMgr->new($fc);
     my $conv = $provs->get_converter('WAV', 'FLAC');
 
     is($conv->query('name'), 'flacker');
-
     return;
 }
 
-# sub test_get_converter_1
-# {
-#     my $self = shift;
-
-#     my $fc = FakeConfig->new("$testdir/Idval/UserPlugins3");
-#     my $prov = Idval::ProviderMgr->new($fc);
-
-#     my $conv = $prov->get_converter('FLAC', 'OGG');
-
-#     $self->assert_equals('whacker', $conv->query('name'));
-# }
-
-
-# # Two converters get Smooshed together
-# sub test_get_WavetoOGGconverter
-# {
-#     my $self = shift;
-
-#     my $fc = FakeConfig->new("$testdir/Idval/UserPlugins3");
-#     my $prov = Idval::ProviderMgr->new($fc);
-
-#     my $conv = $prov->get_converter('WAV', 'OGG');
-
-#     $self->assert_equals('flacker/whacker', $conv->query('name'));
-# }
-
-##-------------------------------------------------##
-
-sub add_UserPlugin3_up1
-{
-    my $plugin =<<'EOF';
-package Idval::Plugins::Up1;
-use Idval::Common;
-use base qw(Idval::Converter);
-no warnings qw(redefine);
-
-our $name = 'flacker';
-Idval::Common::register_provider({provides=>'converts', name=>$name, from=>'WAV', to=>'FLAC'});
-
-sub new
-{
-    my $class = shift;
-    my $self = $class->SUPER::new(@_);
-    bless($self, ref($class) || $class);
-    $self->_init(@_);
-    return $self;
-}
-
-sub _init
+sub test_smoosh : Test(2)
 {
     my $self = shift;
 
-    $self->set_param('name', $name);
-    $self->set_param('filetype_map', {'WAV' => [qw{ wav }],
-                                      'FLAC' => [qw{ flac flac16 flac24}]});
-    $self->set_param('classtype_map', {'MUSIC' => [qw( WAV FLAC )]});
-    $self->set_param('is_ok', 1);
-    $self->set_param('from', 'WAV');
-    $self->set_param('to', 'FLAC');
-}
+    TestUtils::add_Provider({provides=>'converts',
+                             name=>'ogger',
+                             from=>'OGG',
+                             to=>'WAV'});
+    TestUtils::add_Provider({provides=>'converts',
+                             name=>'flacker',
+                             from=>'WAV',
+                             to=>'FLAC'});
 
-1;
-EOF
+    my $fc = TestUtils::setup_Config();
+    $provs = Idval::ProviderMgr->new($fc);
+    my $ogger = $provs->get_converter('OGG', 'WAV');
+    my $flacker = $provs->get_converter('WAV', 'FLAC');
 
-    Idval::FileString::idv_add_file('/testdir/Idval/up1.pm', $plugin);
+    my $conv = Idval::Converter::Smoosh->new(
+        'OGG',
+        'FLAC',
+        $ogger,
+        $flacker);
 
+    is($conv->query('name'), 'ogger/flacker');
     return;
 }
 

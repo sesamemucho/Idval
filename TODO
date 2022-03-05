@@ -1,3 +1,20 @@
+
+Put "local_top" back into sync
+
+A fatal error in a command should go to the next command.
+
+The help command should do paging somehow.
+
+idv should issue a 'read' command always.
+
+idv should warn if user tries to quit without having done a 'store' after a 'gettags'
+
+make it so that provider names don't have to be unique (see Converters/img.pm)
+
+done: take 'filter' out of Graph stuff and have it so that ProviderMgr creates (Smooshes) one on the fly. Transcode should stay in Graph.
+
+done:
+{
 Finish up FirstTime.pm
 
 Put in filtering capability, i.e. sox (perhaps use attributes)
@@ -16,7 +33,7 @@ Done: Make Taggers use endpoints. The converters should make more use of
 
 
 The test audio data files, sbeep*.*, should have a special tag value. See GettagsTest.pm for more info.
-
+}
 
 done:
 {

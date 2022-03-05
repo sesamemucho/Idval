@@ -27,6 +27,20 @@ use Idval;
 use Idval::Common;
 use Idval::Logger qw(chatty fatal);
 
+my %option_names;
+my @standard_options_in;
+my @standard_options;
+my %options_in;
+my %options;
+@standard_options_in =
+    (
+     'help',
+     'input=s',
+    );
+
+$options_in{'help'} = '';
+$options_in{'input'} = '';
+
 sub new
 {
     my $class = shift;
@@ -40,14 +54,33 @@ sub _init
 {
     my $self = shift;
 
-    # Get our args
-    my %options;
-    my $result = GetOptions(\%options, "input=s");
+    #--------------------------------------------------------------------------
+    # Translate option names into local language
+    my $lh = Idval::I18N->idv_get_handle() || die "Can't get language handle.";
+    $self->{LH} = $lh;
+
+    foreach my $opt_name (@standard_options_in)
+    {
+        $option_names{$opt_name} = $lh->idv_getkey('options', $opt_name);
+        push(@standard_options, $option_names{$opt_name});
+    }
+
+    foreach my $opt_name (keys %options_in)
+    {
+        $option_names{$opt_name} = $lh->idv_getkey('options', $opt_name);
+        $options{$option_names{$opt_name}} = $options_in{$opt_name};
+    }
+    #--------------------------------------------------------------------------
+
+    my $result = GetOptions(\%options, 
+                            $option_names{'input=s'},
+                            $option_names{'help'},
+        );
 
     my $idval = Idval->new();
     $self->{IDVAL} = $idval;
 
-    $self->{LOG} = Idval::Common::get_logger();
+    #$self->{LOG} = Idval::Common::get_logger();
     $self->{ARGS} = $idval->{REMAINING_ARGS};
     $self->{OPTIONS} = \%options;
 }
@@ -59,11 +92,18 @@ sub cmd_loop
     my $self = shift;
 
     my @args = @{$self->{ARGS}};
-    my $input_datafile = $self->{OPTIONS}->{'input'};
+    my $input_datafile = $self->{OPTIONS}->{$option_names{'input'}};
     my $datastore = $self->{IDVAL}->datastore();
     my $providers = $self->{IDVAL}->providers();
 
-    if (@args)
+    if ($self->{OPTIONS}->{$option_names{'help'}})
+    {
+        my $rtn = 'Idval::Scripts::help';
+        no strict 'refs';
+        &$rtn($datastore,
+              $providers);
+    }
+    elsif (@args)
     {
         my $cmd = shift @args;
         my $rtn = 'Idval::Scripts::' . $cmd;

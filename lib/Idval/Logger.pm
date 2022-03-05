@@ -24,19 +24,19 @@ use IO::Handle;
 use Carp qw(croak cluck confess);
 use POSIX qw(strftime);
 use Memoize qw(memoize flush_cache);
+use DB;
 
-sub Locale::Maketext::DEBUG () {0}
- # set to 1 or higher to see trace messages.
 use Idval::I18N;
 
-use base qw( Exporter );
-our @EXPORT_OK = qw( idv_print silent silent_q quiet info info_q verbose chatty idv_dbg idv_warn fatal
-                     would_I_print
+use base qw( Exporter DB);
+our @EXPORT_OK = qw( idv_print idv_print_noi18n query silent silent_q quiet info info_q verbose chatty idv_dbg idv_warn fatal
+                     would_I_print idv_dumper
                      $L_SILENT $L_QUIET $L_INFO $L_VERBOSE $L_CHATTY $L_DEBUG %level_to_name %name_to_level);
 our %EXPORT_TAGS = (vars => [qw($L_SILENT $L_QUIET $L_INFO $L_VERBOSE $L_CHATTY $L_DEBUG %level_to_name %name_to_level)]);
 
 $Carp::CarpLevel = 1;
 
+my $default_output;
 my $lo;
 my @warnings;
 our $depth = 0;
@@ -59,10 +59,60 @@ our %DEBUG_MACROS;
 END {
     if (@warnings and $lo)
     {
-        $lo->_log({level => $L_SILENT, debugmask => 0}, "The following warnings occurred:\n");
-        $lo->_log({level => $L_SILENT, debugmask => 0}, @warnings);
+        $lo->_log({level=>$L_SILENT, force_match=>1}, "The following warnings occurred:\n");
+        $lo->_log({level=>$L_SILENT, force_match=>1}, @warnings);
     }
     }
+
+# Certain modules may want to know when their debug level has been
+# changed (for instance, Config and Select).
+sub register
+{
+    my $self = shift;
+    my $pkg = shift;
+    my $cb  = shift;
+    my $userdata = shift;
+
+    $self->{CALLBACKS}->{$pkg}->{old} = 0;
+    $self->{CALLBACKS}->{$pkg}->{new} = 0;
+    $self->{CALLBACKS}->{$pkg}->{cb}->{$userdata} = $cb;
+    # Using $userdata as a key stringifies it. This lets us pass the original
+    # data back to the callback. It was, perhaps, an object ref back home.
+    $self->{CALLBACKS}->{$pkg}->{userdata}->{$userdata} = $userdata;
+    $self->check_for_callbacks();
+    return;
+}
+
+sub check_for_callbacks
+{
+    my $self = shift;
+
+    foreach my $pkg (keys %{$self->{CALLBACKS}})
+    {
+        my($result, $level) = $self->_pkg_matches($pkg);
+        $self->{CALLBACKS}->{$pkg}->{new} = $level if $result;
+
+        if ($self->{CALLBACKS}->{$pkg}->{old} ne $self->{CALLBACKS}->{$pkg}->{new})
+        {
+            # Allow for multiple objects of the same class (i.e. Config)
+            foreach my $userdata (keys %{$self->{CALLBACKS}->{$pkg}->{cb}})
+            {
+                my $cb = $self->{CALLBACKS}->{$pkg}->{cb}->{$userdata};
+                no strict 'refs';
+                &$cb($self->{CALLBACKS}->{$pkg}->{old},
+                     $self->{CALLBACKS}->{$pkg}->{new},
+                     # Using $userdata as a key stringifies it. This lets us pass the original
+                     # data back to the callback. It was, perhaps, an object ref back home.
+                     $self->{CALLBACKS}->{$pkg}->{userdata}->{$userdata});
+                use strict;
+            }
+
+            $self->{CALLBACKS}->{$pkg}->{old} = $self->{CALLBACKS}->{$pkg}->{new};
+        }
+    }
+
+    return;
+}
 
 sub safe_get
 {
@@ -90,26 +140,33 @@ sub _init
     my $argref = shift;
     my $lfh;
 
-    $self->{LH} = Idval::I18N->get_handle() || die "Can't get a language handle!";
-    print STDERR "Logger: LH is: ", Dumper($self->{LH});
-    print "Logger: current LH fail is: ", $self->{LH}->fail_with(), "\n";
-    my $initial_dbg = exists($ENV{IDV_DEBUGMASK}) ? $ENV{IDV_DEBUGMASK} : 'DBG_STARTUP DBG_PROCESS Command::*';
+    # Logger can't include Idval::Common due to circular dependency
+    $self->{LH} = Idval::I18N->idv_get_handle() || die "Idval::Logger: Can't get a language handle!";
+    #print STDERR "Logger: LH is: ", Dumper($self->{LH});
+    #print "Logger: current LH fail is: ", $self->{LH}->fail_with(), "\n";
+    my $initial_dbg = 'DBG_STARTUP DBG_PROCESS Command::*';
     my $initial_lvl = exists($ENV{IDV_DEBUGLEVEL}) ? $ENV{IDV_DEBUGLEVEL} : $L_INFO;
     my $initial_trace = exists($ENV{IDV_DEBUGTRACE}) ? $ENV{IDV_DEBUGTRACE} : 1;
 
     #print STDERR "initial_dbg is: \"$initial_dbg\"\n";
     $self->accessor('LOGLEVEL', exists $argref->{level} ? $argref->{level} : $initial_lvl);
     $self->set_debugmask(exists $argref->{debugmask} ? $argref->{debugmask} : $initial_dbg);
+    $self->set_debugmask($ENV{IDV_DEBUGMASK}) if exists $ENV{IDV_DEBUGMASK};
     $self->accessor('SHOW_TRACE', exists $argref->{show_trace} ? $argref->{show_trace} : $initial_trace);
     $self->accessor('SHOW_TIME', exists $argref->{show_time} ? $argref->{show_time} : 0);
     $self->accessor('USE_XML', exists $argref->{xml} ? $argref->{xml} : 0);
     $self->accessor('FROM',  exists $argref->{from} ? $argref->{from} : 'nowhere');
 
-    $self->set_fh('LOG_OUT',  safe_get($argref, 'log_out', 'STDOUT'));
+    $self->set_fh('LOG_OUT',  safe_get($argref, 'log_out', $default_output));
     $self->{LOG_OUT}->autoflush(1);
-    $self->set_fh('PRINT_TO', safe_get($argref, 'print_to', 'STDOUT'));
+    $self->set_fh('PRINT_TO', safe_get($argref, 'print_to', $default_output));
 
     $self->{WARNINGS} = ();
+    # Certain modules may want to know when their debug level has been
+    # changed (for instance, Config and Select).
+    $self->{CALLBACKS} = ();
+
+    $self->set_optimization_level($self->_max_debuglevel());
     #$self->str('after init');
     return;
 }
@@ -201,9 +258,12 @@ sub set_debugmask
         # We are restoring it
         $self->{MODULE_HASH} = $dbglist;
 
+        $self->set_optimization_level($self->_max_debuglevel());
+        $self->check_for_callbacks();
+
         # Now make a regular expression to match packages
         my $mod_re = '^((' . join(')|(', keys %{$dbglist}) . '))$';
-        $self->{MODULE_REGEXP} = qr/$mod_re/; # Don't compile it; it will never change (even if reassigned)
+        $self->{MODULE_REGEXP} = qr/$mod_re/; # Don't compile it; because then it will never change (even if reassigned)
         return sort keys %{$dbglist};
     }
 
@@ -309,6 +369,9 @@ sub set_debugmask
     my $mod_re = '^(?:(' . join(')|(', @regexlist) . '))$';
     $self->{MODULE_REGEXP} = qr/$mod_re/i; # Don't compile it; it will never change (even if reassigned)
 
+    $self->set_optimization_level($self->_max_debuglevel());
+    $self->check_for_callbacks();
+
     #print STDERR "module_regexp is: \"$self->{MODULE_REGEXP}\"\n";
     #print STDERR "module_hash: ", Dumper($self->{MODULE_HASH});
     #print STDERR "Returning: ", join(", ", sort keys %modules), "\n";
@@ -348,48 +411,15 @@ sub accessor
     return $retval;
 }
 
-sub is_chatty
-{
-    my $self = shift;
-    my $level = shift;
+# sub ok
+# {
+#     my $self = shift;
+#     my $level = shift;
 
-    return $self->ok($L_CHATTY);
-}
-
-sub log_level_is_over
-{
-    my $self = shift;
-    my $level = shift;
-
-    return $self->accessor('LOGLEVEL') > $level;
-}
-
-sub log_level_is_under
-{
-    my $self = shift;
-    my $level = shift;
-
-    return $self->accessor('LOGLEVEL') < $level;
-}
-
-sub log_level_is_between
-{
-    my $self = shift;
-    my $level_low = shift;
-    my $level_high = shift;
-
-    return ($self->accessor('LOGLEVEL') > $level_low) and ($self->accessor('LOGLEVEL') < $level_high);
-}
-
-sub ok
-{
-    my $self = shift;
-    my $level = shift;
-
-    confess "level is undef" unless defined($level);
-    confess "loglevel is undef" unless defined($self->accessor('LOGLEVEL'));
-    return $level <= $self->accessor('LOGLEVEL');
-}
+#     confess "level is undef" unless defined($level);
+#     confess "loglevel is undef" unless defined($self->accessor('LOGLEVEL'));
+#     return $level <= $self->accessor('LOGLEVEL');
+# }
 
 sub _pkg_matches
 {
@@ -419,6 +449,22 @@ sub _pkg_matches
     return ($result, $loglevel);
 }
 
+sub _max_debuglevel
+{
+    my $self = shift;
+    my $max_level = $self->accessor('LOGLEVEL');
+    my $level;
+
+    foreach my $quad (keys %{$self->{MODULE_HASH}})
+    {
+        $level = $self->{MODULE_HASH}->{$quad}->{LEVEL};
+        $level = $L_SILENT unless defined($level);
+        $max_level = $level > $max_level ? $level : $max_level;
+    }
+
+    return $max_level;
+}
+
 sub _log
 {
     my $self = shift;
@@ -434,6 +480,7 @@ sub _log
         query => 0,
         package => '',
         force_match => 0,
+        i18n => 1,
 
         %{$call_args},          # Logger call customization
         %caller_args,           # Caller customization
@@ -441,24 +488,26 @@ sub _log
 
     #print STDERR "Logger:_log: argref is:", Dumper(\%argref);
     #print STDERR "Logger:_log: caller is: <", join(',',caller(2)), ">\n" unless exists($argref{level});
+    #print STDERR "Logger:_log: call_depth is: ", $argref{call_depth}, " caller: ", (caller($argref{call_depth}))[0], "\n";
     my $level = exists $argref{level} ? $argref{level} : 0;
     my $isquery = $argref{query};
     my $force_match = $argref{force_match} || $isquery;
 
     # The caller can supply a package name. Otherwise, determine it automatically
-    my $package = $argref{package} ? $argref{package} : caller($argref{call_depth});
+    my $package = $argref{package} ? $argref{package} : (caller($argref{call_depth}))[0];
     my ($got_match, $l_level) = $self->_pkg_matches($package);
     my $debugmask_ok = $force_match || $got_match;
 
-#     if ($package ne 'Idval::Config')
-#     {
-#         print STDERR "ok if ($level <= $l_level), q: $isquery, fm: $force_match, dmok: $debugmask_ok, $package\n";
-#     }
+    #if ($package =~ m/sync/i)
+    #{
+    #    print STDERR "ok if ($level <= $l_level), q: $isquery, fm: $force_match, dmok: $debugmask_ok, $package (", join(' ', @_), ")\n";
+    #}
     return if ($level > $l_level) and !$isquery and !$force_match;
     return if !$debugmask_ok;
 
     my $fh = $self->{LOG_OUT};
     my $decorate = $argref{decorate};
+    my $i18n_lookup = $argref{i18n};
 
     my $prepend = '';
 
@@ -471,8 +520,14 @@ sub _log
         print "<LEVEL>", $level_to_name{$level}, "</LEVEL>\n";
         print "<SOURCE>$package</SOURCE>\n" if $decorate;
         print "<TIME>", strftime("%y-%m-%d %H:%M:%S ", localtime), "</TIME>\n" if $decorate;
-        #print "<$type>", $self->{LH}->maketext(@_), "</$type>\n";
-        print "<$type>", @_, "</$type>\n";
+        if ($i18n_lookup)
+        {
+            print "<$type>", $self->{LH}->maketext(@_), "</$type>\n";
+        }
+        else
+        {
+            print "<$type>", @_, "</$type>\n";
+        }
         print "</LOGMESSAGE>\n";
     }
     else
@@ -485,8 +540,14 @@ sub _log
             $prepend = $time . $package . ': ';
         }
 
-        print $fh ($prepend, $self->{LH}->maketext(@_));
-        #print $fh ($prepend, @_);
+        if ($i18n_lookup)
+        {
+            print $fh ($prepend, $self->{LH}->maketext(@_));
+        }
+        else
+        {
+            print $fh ($prepend, @_);
+        }
     }
 
     my $ans = '';
@@ -497,7 +558,7 @@ sub _log
             chomp $ans;
         }
         else { # user hit ctrl-D
-            $self->silent_q({debugmask=>1}, "\n");
+            $self->silent_q({force_match=>1}, "\n");
         }
 
     }
@@ -528,6 +589,20 @@ sub idv_print
     return get_logger()->_log({level => $L_SILENT, decorate => 0, force_match => 1}, @_);
 }
 
+sub idv_print_noi18n
+{
+    # Text is already translated.
+    return get_logger()->_log({level => $L_SILENT, decorate => 0, force_match => 1, i18n => 0}, @_);
+}
+
+sub query
+{
+    # It is assumed that all query text has already been translated.
+    my $ans = get_logger()->_log({level => $L_SILENT, decorate => 0, query => 1, i18n => 0}, @_);
+    #print STDERR "Logger::query returning <$ans>\n";
+    return $ans;
+}
+
 sub silent
 {
     return get_logger()->_log({level => $L_SILENT}, @_);
@@ -553,19 +628,39 @@ sub info_q
     return get_logger()->_log({level => $L_INFO, decorate => 0}, @_);
 }
 
+sub verbose
+{
+    return _verbose_sub(@_);
+}
+
+sub chatty
+{
+    return _chatty_sub(@_);
+}
+
+sub idv_dbg
+{
+    return _idv_dbg_sub(@_);
+}
+
+sub idv_dumper
+{
+    return _idv_dumper_sub(@_);
+}
+
 sub verbose_real
 {
-    return get_logger()->_log({level => $L_VERBOSE}, @_);
+    return get_logger()->_log({level => $L_VERBOSE, call_depth => 2}, @_);
 }
 
 sub chatty_real
 {
-    return get_logger()->_log({level => $L_CHATTY}, @_);
+    return get_logger()->_log({level => $L_CHATTY, call_depth => 2}, @_);
 }
 
 sub idv_dbg_real
 {
-    return get_logger()->_log({level => $L_DEBUG}, @_);
+    return get_logger()->_log({level => $L_DEBUG, call_depth => 2}, @_);
 }
 
 sub idv_warn
@@ -593,11 +688,11 @@ sub fatal
 
     if ($show_trace)
     {
-        Carp::confess(@_);
+        Carp::confess(get_logger()->{LH}->maketext(@_));
     }
     else
     {
-        Carp::croak(@_);
+        Carp::croak(get_logger()->{LH}->maketext(@_));
     }
 }
 
@@ -634,8 +729,8 @@ sub re_init
     $lo->accessor('USE_XML', $argref->{xml}) if exists $argref->{xml};
     $lo->accessor('FROM', $argref->{from}) if exists $argref->{from};
 
-    $lo->set_fh('LOG_OUT',  safe_get($argref, 'log_out', 'STDOUT')) if exists $argref->{log_out};
-    $lo->set_fh('PRINT_TO', safe_get($argref, 'print_to', 'STDOUT')) if exists $argref->{print_to};
+    $lo->set_fh('LOG_OUT',  safe_get($argref, 'log_out', $default_output)) if exists $argref->{log_out};
+    $lo->set_fh('PRINT_TO', safe_get($argref, 'print_to', $default_output)) if exists $argref->{print_to};
 
     flush_cache('_pkg_matches');
     #$lo->str("after end of re_init");
@@ -661,6 +756,45 @@ sub get_settings
     $settings{print_to} = $lo->accessor('PRINT_TO');
 
     return \%settings;
+}
+
+sub set_optimization_level
+{
+    my $self = shift;
+    my $level = shift;
+
+    print STDERR "Logger::set_optimization_level level is $level\n";
+    no warnings 'redefine';
+    if ($level < $L_VERBOSE)
+    {
+        *_verbose_sub = \&idv_null;
+        *_chatty_sub = \&idv_null;
+        *_idv_dbg_sub = \&idv_null;
+        *_idv_dumper_sub = \&idv_null;
+    }
+    elsif ($level == $L_VERBOSE)
+    {
+        *_verbose_sub = \&verbose_real;
+        *_chatty_sub = \&idv_null;
+        *_idv_dbg_sub = \&idv_null;
+        *_idv_dumper_sub = \&idv_null;
+    }
+    elsif ($level == $L_CHATTY)
+    {
+        *_verbose_sub = \&verbose_real;
+        *_chatty_sub = \&chatty_real;
+        *_idv_dbg_sub = \&idv_null;
+        *_idv_dumper_sub = \&Dumper;
+    }
+    else #($level >= $L_DEBUG)
+    {
+        *_verbose_sub = \&verbose_real;
+        *_chatty_sub = \&chatty_real;
+        *_idv_dbg_sub = \&idv_dbg_real;
+        *_idv_dumper_sub = \&Dumper;
+    }
+
+    return;
 }
 
 sub _create_logger
@@ -694,29 +828,18 @@ sub _create_logger
 
     memoize('_pkg_matches');
 
-    $optimize = (grep(/^--no(op|opt|opti|optim|optimi|optimiz|optimize)$/, @main::ARGV)) ? 0 : 1;
-    $optimize &&= !exists($ENV{'IDV_DEBUGMASK'});
-
+    #$default_output = 'STDOUT';
+    $default_output = 'STDERR';
+    *_verbose_sub = \&idv_null;
+    *_chatty_sub = \&idv_null;
+    *_idv_dbg_sub = \&idv_null;
+    *_idv_dumper_sub = \&idv_null;
     $lo = Idval::Logger->new({development => 0,
                               log_out => 'STDERR'});
 
-    #print STDERR "========= optimize is: $optimize\n";
-    if ($optimize)
-    {
-        *verbose = \&idv_null;
-        *chatty = \&idv_null;
-        *idv_dbg = \&idv_null;
-    }
-    else
-    {
-        *verbose = \&verbose_real;
-        *chatty = \&chatty_real;
-        *idv_dbg = \&idv_dbg_real;
-    }
 }
 
 BEGIN {
-    #print STDERR "HELLO from Logger::BEGIN\n";
     _create_logger();
 }
 

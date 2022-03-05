@@ -25,7 +25,7 @@ use Class::ISA;
 use Data::Dumper;
 use Encode;
 
-use Idval::Logger qw(idv_dbg fatal);
+use Idval::Logger qw(idv_dbg fatal idv_dumper);
 use base qw(Idval::Provider);
 
 # We need MP3::Tag. If it isn't installed with Perl, look for it
@@ -37,7 +37,7 @@ my $req_msg = !defined($req_status) ? "$!" :
 
 if ($req_msg ne 'Load OK')
 {
-    print "Oops; let's try again for MP3::Tag\n";
+    #print "Oops; let's try again for MP3::Tag\n";
     use lib Idval::Common::get_top_dir('lib/perl/MP3-Tag');
 
     $req_status = eval {require MP3::Tag};
@@ -88,8 +88,8 @@ sub init
     # Forward mapping is ID3v1 to ID3v2
     # Reverse mapping is ID3v2 to ID3v1
     $self->set_tagname_mappings($config, 'MP3');
-    #idv_dbg("MP3_Tags FWD_MAPPING: [_1]", Dumper($self->{FWD_MAPPING}));
-    #idv_dbg("MP3_Tags REV_MAPPING: [_1]", Dumper($self->{REV_MAPPING}));
+    #idv_dbg("MP3_Tags FWD_MAPPING: [_1]", idv_dumper($self->{FWD_MAPPING}));
+    #idv_dbg("MP3_Tags REV_MAPPING: [_1]", idv_dumper($self->{REV_MAPPING}));
     $self->{DEBUG} = 0;
     return;
 }
@@ -118,7 +118,8 @@ sub read_tags
     # the README file for XML::Simple for more about XML::SAX. The
     # badness causes the first decode of UTF-16 to be bad. This seems
     # to fix it... There's nothing special about the string here; we
-    # just need to do any decode.
+    # just need to do any decode. Not using XML::Simple any more, but
+    # maybe later, so keep this here.
     my $found = Encode::decode('UTF-16', pack("H*", "fffe47007200"));
 
     my $exact_tags = $self->{EXACT_TAGS};

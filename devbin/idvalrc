@@ -1,0 +1,26 @@
+{
+    # Collect settings of use only to overall Idval configuration
+    config_group == idval_settings
+
+    #   command_dir += ~/.idval/commands
+    data_dir = ~/.idval
+    data_store   = %data_dir%/data_store
+}
+
+#    convert      = MP3
+#    {
+#        type        == ABC
+#        convert      = MIDI
+#    }
+#
+#    {
+#        config_group == tag_mappings
+#
+#        argle = bargle
+#
+#        {
+#           convert == MIDI
+#
+#           argle = gargle
+#        }
+#    }

@@ -66,6 +66,7 @@ sub parse_vars
     my @vars = @_;
     my @results = ();
 
+    #print STDERR ("Validate: In parse_vars, got ", scalar(@vars), "\n");
     idv_dbg("In parse_vars, got [quant,_1,var,vars]\n", scalar(@vars));
     foreach my $varinfo (@vars)
     {
@@ -118,24 +119,5 @@ sub Is_A_Number
     my $retval = Scalar::Util::looks_like_number($tagvalue);
     return $retval;
 }
-
-=head1 VALIDATE
-
-=head2 NAME
-
-Validate - Support for tag validation.
-
-=head2 SYNOPSIS
-
-Allows callers to validate a tag record according to a validation configuration file.
-
-=head2 DESCRIPTION
-
-sd
-ad
-asdf
-
-=cut
-
 
 1;

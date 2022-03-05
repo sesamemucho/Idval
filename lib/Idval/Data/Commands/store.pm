@@ -31,8 +31,6 @@ use Idval::Ui;
 
 sub init
 {
-    set_pod_input();
-
     return;
 }
 
@@ -56,54 +54,30 @@ sub main
     # Let's write out the data as required
     Idval::Ui::put_source_to_file({datastore => $datastore,
                                    outputfile => $outputfile,
-                                   datastore_file => $config->get_single_value('data_store', {'config_group' => 'idval_settings'}),
+                                   datastore_file => $config->i18n_get_single_value('config', 'data_store', {'config_group' => 'idval_settings'}),
                                   });
 
     return $datastore;
 }
 
-sub set_pod_input
-{
-    my $help_file = Idval::Common::get_common_object('help_file');
-
-    my $pod_input =<<"EOD";
+=pod
 
 =head1 NAME
 
-store - Saves the current data store.
+X<store>store - Stores the current taglist into the data store.
 
 =head1 SYNOPSIS
 
-store [options] [file]
-
- Options:
-   -nocache
-
-=head1 OPTIONS
-
-=over 8
-
-=item B<-nocache>
-
-If specified, B<store> will not save the current data store in the cache file.
-
-=back
+store [tagfile-name]
 
 =head1 DESCRIPTION
 
-B<Store> will write the current data store to the cached data
-store. If a B<file> argument is present, B<store> will write the data
-store into that file instead.
-
-Note: any changes to the data store made during a session will be lost
-unless a B<store> command is issued!
+B<store> writes the current taglist into the stored taglist cache
+    file. This is very important to do after a B<gettags> command,
+    since otherwise the new data may be lost. If there is a
+    F<tagfile-name>, then the data is I<also> written to
+    F<tagfile-name>.
 
 =cut
-
-EOD
-    $help_file->set_man_info('store', $pod_input);
-
-    return;
-}
 
 1;

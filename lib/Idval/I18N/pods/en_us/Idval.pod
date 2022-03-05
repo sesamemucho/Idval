@@ -1,0 +1,118 @@
+=head1 NAME
+
+Idval - foo on yoo
+
+=head1 Introduction
+
+Idval is a tool for manipulating files that contain metadata, such as
+mp3, flac, and other music files; jpeg and other exif image files; and
+any other kind of files that contain metadata.
+
+Two of the principles behind Idval are: 1) that the authoritative
+source for a media file's metadata is the media file itself, and 2)
+metadata should be presented in a form that's easy to handle with a
+text editor. 
+
+Keep a music collection in lossless FLAC format, and then convert to
+OGG or MP3 as needed for use with portable music players.
+
+The name "Idval" came from "ID Validation". Define rules for a valid
+set of ID tags, and Idval will show which tags break the rules. Edit
+the text file that represents the metadata and use Idval to correct
+the bad tags.
+
+=head2 About the Documentation
+
+This document is the user manual and reference guide. Information of
+interest to developers is in XXX.
+
+=head2 Installing Idval
+
+B<Idval>, by itself, knows how to read and write tags for MP3 and JPEG
+files. To do anything like what B<Idval> was designed to do, you will
+need some more programs. All the programs mentioned here are Free
+software.
+
+Get I<Idval> from XXX. Unpack it in a directory of your choosing. You
+can try it out there, or install it in the usual way with
+
+  perl Makefile.PL
+  make
+  make test
+  make install
+
+=head3 Requirements
+
+The only requirement is Perl (L<http://www.perl.org/>), version 5.8 or
+later.
+
+=head3 Dependencies
+
+To process FLAC files, you will need the flac toolset
+L<http://flac.sourceforge.net/>.
+
+To process OGG files, you will need the Ogg Vorbis toolset L<http://www.vorbis.com/>.
+
+To convert to or from MP3 files, you will need the LAME tool
+L<http://lame.sourceforge.net/>.
+
+To convert ABC files, you will need abc2midi
+(L<http://abc.sourceforge.net/abcMIDI/>) and the MIDI decoder Timidity
+(L<http://timidity.sourceforge.net/>).
+
+None of these are strictly required, although you will want the FLAC
+tools and either or both of the OGG and lame tools. B<Idval> will
+automatically detect the presence of these tools when it starts, and
+will simply disable functionality if a required tool is unavailable.
+
+
+=head2 Running idv
+
+B<Idval> is a command-line program. It comes with a script that can be
+used to invoke the various commands that come with B<Idval>.
+
+    $ idv <ENTER>
+
+will invoke the Idval interpreter, and present the C<idv: >
+prompt. Some handy commands are B<help> and B<about>. Perhaps the
+first command you will use is one to catalog your existing metadata
+files:
+
+   idv: gettags F<directory> F<directory> ... <ENTER>
+
+where the F<directory>s are directories or folders in which you keep
+your music, image, or abc files. You can give one or more directory
+names here. B<Idval> will look in all the subdirectories under each
+F<directory> to find files. Before you quit, be sure to issue a
+B<store> command, to save this data for next time. If you don't,
+you'll have to enter another B<gettags> command.
+
+   idv: store <ENTER>
+
+When you're done:
+
+   idv: quit <ENTER>
+
+See L</"Built-in commands"> to get information about all of B<Idval's>
+commands.
+
+=head2 Theory of Operation
+
+
+=head1 Running idv
+
+=head2 Command line options
+
+
+=head1 Configuration files
+
+=head2 Configuration examples
+
+=head1 Built-in commands
+
+=head1 Extending Idval
+
+
+=head1 AUTHOR
+
+Bob Forgey <rforgey\@grumpydogconsulting.com>

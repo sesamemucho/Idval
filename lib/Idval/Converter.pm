@@ -40,8 +40,9 @@ use strict;
 use warnings;
 use Data::Dumper;
 use Memoize;
+use List::Util qw(first);
 
-use Idval::Logger qw(verbose idv_dbg);
+use Idval::Logger qw(verbose chatty idv_dbg fatal);
 use Idval::Common;
 use base qw(Idval::Converter);
 
@@ -68,14 +69,108 @@ sub init
     my $from = shift;
     my $to = shift;
     my @converters = @_;
+    
+    if (ref $converters[0] eq 'Idval::Converter::Smoosh')
+    {
+        # We are smooshing a filter or filters into a Smoosh
+        my $smoosh = $converters[0];
+        my @filters = @converters[1..$#converters];
+        my @current_converters = $smoosh->get_converters();
+        my @new_converters = ();
+        my $found_a_place = 0;
+        my %filter_hash;
 
+        # Validate filters
+        my $number_of_filters_to_add = scalar(@filters);
+        chatty("Smooshing [quant,_1,filter,filters] into a converter\n", scalar(@filters));
+        foreach my $filter (@filters)
+        {
+            if ($filter->get_source() ne $filter->get_destination())
+            {
+                fatal("Can only smoosh a filter into an existing Smoosh, trying [_1]\n", $filter->query('name'));
+            }
+
+            $filter_hash{$filter} = $filter;
+        }
+
+        # Where can we put them?
+        $found_a_place = 0;
+
+        chatty("current_converters 1: [_1]\n", join(",", map { $_->query('name') } @current_converters));
+       # Should any go at the beginning?
+        my $first_cnv = $current_converters[0];
+        foreach my $key (keys %filter_hash)
+        {
+            my $filter = $filter_hash{$key}; # Can't use objects as keys, really
+            if ($first_cnv->get_source() eq $filter->get_source())
+            {
+                # If any _do_ go at the start, then (since the input
+                # and output of a filter are of the same type), any
+                # others will either go at the end of the (new) first
+                # converter, or somewhere after that.
+                chatty("Adding filter [_1] to beginning of converter list\n", $filter->query('name'));
+                unshift(@current_converters, $filter);
+                $found_a_place++;
+                delete $filter_hash{$filter};
+                last;
+            }
+        }
+
+        # Should any go after the first one?
+
+        chatty("current_converters 2: [_1]\n", join(",", map { $_->query('name') } @current_converters));
+        my $current_converter;
+        my @delete_me;
+        while( my $nconv = shift @current_converters)
+        {
+            $current_converter = $nconv;
+            push(@new_converters, $current_converter);
+            chatty("pushing nconv [_1] onto new_converters ([_2])\n", $nconv->query('name'),
+                   join(",", map { $_->query('name') } @new_converters));
+            foreach my $key (keys %filter_hash)
+            {
+                my $filter = $filter_hash{$key}; # Can't use objects as keys, really
+                if ($current_converter->get_destination() eq $filter->get_destination())
+                {
+                    chatty("Adding filter [_1] after [_2]\n", $filter->query('name'), $current_converter->query('name'));
+                    $found_a_place++;
+                    push(@new_converters, $filter);
+                    chatty("pushing filter [_1] onto new_converters ([_2])\n", $filter->query('name'),
+                           join(",", map { $_->query('name') } @new_converters));
+                    push(@delete_me, $key); # Can't modify %filter_hash inside the loop
+                    $current_converter = $filter;
+                }
+            }
+
+            foreach my $filter (@delete_me)
+            {
+                chatty("Deleting filter $filter\n");
+                delete($filter_hash{$filter});
+            }
+
+            #push(@new_converters, $nconv);
+        }
+
+        if ($found_a_place != $number_of_filters_to_add)
+        {
+            fatal("Needed to place [quant,_1,filter,filters] for converter, but only placed [_2]",
+                  $number_of_filters_to_add,
+                  $found_a_place);
+        }
+
+        @converters = (@new_converters);
+    }
+
+    chatty("converters 1: [_1]\n", join(",", map { $_->query('name') } @converters));
     $self->{CONVERTERS} = [@converters];
     $self->{FIRSTCONVERTER} = $converters[0];
     $self->{LASTCONVERTER} = $converters[-1];
 
-    verbose("Smooshing: ", join(" -> ", map { $_->query('name') } @{$self->{CONVERTERS}}), "\n");
+    chatty("Smooshing: [_1]\n", join(" -> ", map { $_->query('name') } @{$self->{CONVERTERS}}));
     $self->{TO} = $to;
-    $self->add_endpoint($from, $to);
+    $self->add_endpoint_pair($from, $to);
+    my $name = join('/', map{$_->query('name')} @{$self->{CONVERTERS}});
+    $self->{NAME} = $name;
     $self->set_param('name', $self->{NAME});
     $self->set_param('attributes', $self->{LASTCONVERTER}->query('attributes'));
 
@@ -166,6 +261,13 @@ sub get_typemap
     my $self = shift;
 
     return Idval::Common::get_common_object('typemap');
+}
+
+sub get_converters
+{
+    my $self = shift;
+
+    return @{$self->{CONVERTERS}};
 }
 
 1;

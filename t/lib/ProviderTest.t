@@ -47,131 +47,147 @@ sub after : Test(teardown) {
     return;
 }
 
-# sub init : Test(2)
-# {
-#     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
-#     add_UserPlugin3_up1();
-#     my $fc = Idval::Config->new("/testdir/gt1.txt");
-#     $provs = eval{Idval::ProviderMgr->new($fc)};
-#     isa_ok($provs, 'Idval::ProviderMgr');
-#     is($provs->num_providers(), 1);
+sub init : Test(2)
+{
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'mp3tagger',
+                             type=>'MP3'});
 
-#     return;
-# }
+    my $fc = TestUtils::setup_Config();
+    $provs = eval{Idval::ProviderMgr->new($fc)};
+    isa_ok($provs, 'Idval::ProviderMgr');
+    is($provs->num_providers(), 1);
 
-# sub get_providers : Test(1)
-# {
-#     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
-#     add_UserPlugin3_up1();
-#     add_UserPlugin3_up2();
-#     add_UserPlugin3_up3();
-#     add_UserPlugin3_up4();
-#     my $fc = Idval::Config->new("/testdir/gt1.txt");
-#     $provs = eval{Idval::ProviderMgr->new($fc)};
-#     print "Error from Idval::ProviderMgr->new: $@\n" if $@;
-#     #print "test_get_providers: provs is: ", Dumper($provs);
-#     is($provs->num_providers(), 4);
+    return;
+}
 
-#     return;
-# }
+sub get_providers : Test(1)
+{
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'mp3tagger',
+                             type=>'MP3'});
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'goober',
+                             type=>'MP3',
+                             weight=>300});
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'oggtagger',
+                             type=>'OGG'});
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'flacber',
+                             type=>'FLAC'});
 
-# sub get_packages : Test(2)
-# {
-#     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
-#     add_UserPlugin3_up1();
-#     add_UserPlugin3_up2();
-#     add_UserPlugin3_up3();
-#     add_UserPlugin3_up4();
-#     my $fc = Idval::Config->new("/testdir/gt1.txt");
-#     $provs = Idval::ProviderMgr->new($fc);
-#     is($provs->num_providers(), 4);
-#     is_deeply(['Idval::Plugins::Up1',
-#                'Idval::Plugins::Up2',
-#                'Idval::Plugins::Up3',
-#                'Idval::Plugins::Up4'], $provs->get_packages());
+    my $fc = TestUtils::setup_Config();
+    $provs = eval{Idval::ProviderMgr->new($fc)};
+    print STDERR "Error from Idval::ProviderMgr->new: $@\n" if $@;
+    #print "test_get_providers: provs is: ", Dumper($provs);
+    is($provs->num_providers(), 4);
 
-#     return;
-# }
+    return;
+}
 
-# sub get_a_provider_1 : Test(1)
-# {
-#     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
-#     add_UserPlugin3_up1();
-#     add_UserPlugin3_up2();
-#     add_UserPlugin3_up3();
-#     add_UserPlugin3_up4();
-#     my $fc = Idval::Config->new("/testdir/gt1.txt");
-#     $provs = Idval::ProviderMgr->new($fc);
-#     my $writer = $provs->get_provider('writes_tags', 'OGG', 'NULL');
+sub get_a_provider_1 : Test(1)
+{
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'mp3tagger',
+                             type=>'MP3'});
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'goober',
+                             type=>'MP3',
+                             weight=>300});
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'oggtagger',
+                             type=>'OGG'});
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'flacber',
+                             type=>'FLAC'});
 
-#     is(ref $writer, 'Idval::Plugins::Up2');
+    my $fc = TestUtils::setup_Config();
+    $provs = Idval::ProviderMgr->new($fc);
+    my $writer = $provs->get_provider('writes_tags', 'OGG', 'NULL');
 
-#     return;
-# }
+    is(ref $writer, 'Idval::Plugins::oggtagger');
 
-# sub get_a_provider_2 : Test(1)
-# {
-#     my $item;
+    return;
+}
 
-#     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
-#     add_UserPlugin3_up1();
-#     add_UserPlugin3_up2();
-#     add_UserPlugin3_up3();
-#     add_UserPlugin3_up4();
-#     my $fc = Idval::Config->new("/testdir/gt1.txt");
-#     $provs = Idval::ProviderMgr->new($fc);
-#     $item = $provs->get_provider('converts', 'FLAC', 'WAV');
-#     ok(not $item);
+sub get_a_provider_2 : Test(1)
+{
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'mp3tagger',
+                             type=>'MP3'});
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'goober',
+                             type=>'MP3',
+                             weight=>300});
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'oggtagger',
+                             type=>'OGG'});
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'flacber',
+                             type=>'FLAC'});
 
-#     return;
-# }
+    my $fc = TestUtils::setup_Config();
+    $provs = Idval::ProviderMgr->new($fc);
+    # Test will print an error message if run_test... is not used
+    my ($item, $result) = TestUtils::run_test_and_get_log($provs, 'get_provider', 'converts', 'FLAC', 'WAV');
+    #like($result, qr/No "converts" provider found for "FLAC,WAV"/);
+    ok(not $item);
 
-# sub choose_provider_by_weight_in_config_file_1 : Test(1)
-# {
-#     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n" .
-#         "{\ncommand_name == goober\nweight = 50\n}\n");
-#     add_UserPlugin3_up1();
-#     add_UserPlugin3_up2();
-#     add_UserPlugin3_up3();
-#     add_UserPlugin3_up4();
-#     my $fc = Idval::Config->new("/testdir/gt1.txt");
-#     $provs = Idval::ProviderMgr->new($fc);
-#     my $writer = $provs->get_provider('writes_tags', 'MP3', 'NULL');
+    return;
+}
 
-#     is(ref $writer, 'Idval::Plugins::Up1');
+sub get_provider_default_is_lesser_weight : Test(1)
+{
+    my $item;
 
-#     return;
-# }
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'mp3tagger',
+                             type=>'MP3'});
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'goober',
+                             type=>'MP3',
+                             weight=>300});
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'oggtagger',
+                             type=>'OGG'});
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'flacber',
+                             type=>'FLAC'});
 
-# sub choose_provider_by_weight_in_config_file_2 : Test(1)
-# {
-#     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n" .
-#         "{\ncommand_name == tag_write4\nweight = 50\n}\n");
-#     add_UserPlugin3_up1();
-#     add_UserPlugin3_up2();
-#     add_UserPlugin3_up3();
-#     add_UserPlugin3_up4();
-#     my $fc = Idval::Config->new("/testdir/gt1.txt");
-#     #$Idval::Config::BlockReader::cfg_dbg = 1;
-#     $provs = Idval::ProviderMgr->new($fc);
-#     #print STDERR Dumper($provs);
-#     my $writer = $provs->get_provider('writes_tags', 'MP3', 'NULL');
-#     #$Idval::Config::BlockReader::cfg_dbg = 0;
+    my $fc = TestUtils::setup_Config();
+    $provs = Idval::ProviderMgr->new($fc);
+    $item = $provs->get_provider('writes_tags', 'MP3', 'NULL');
+    is(ref $item, 'Idval::Plugins::mp3tagger');
 
-#     is(ref $writer, 'Idval::Plugins::Up4');
+    return;
+}
 
-#     return;
-# }
+sub choose_provider_by_weight_in_config_file_1 : Test(1)
+{
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'mp3tagger',
+                             type=>'MP3'});
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'goober',
+                             type=>'MP3',
+                             weight=>300});
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'oggtagger',
+                             type=>'OGG'});
+    TestUtils::add_Provider({provides=>'writes_tags',
+                             name=>'flacber',
+                             type=>'FLAC'});
 
-# # sub get_a_provider_3 : Test(1)
-# # {
-# #     my $fc = FakeConfig->new("$testdir/Idval/UserPlugins3");
-# #     $provs = Idval::ProviderMgr->new($fc);
+    my $fc = TestUtils::setup_Config("{\ncommand_name == goober\nweight = 50\n}\n");
 
-# #     my $item = $prov->get_provider('converts', 'WAV', 'FLAC');
+    $provs = Idval::ProviderMgr->new($fc);
+    my $writer = $provs->get_provider('writes_tags', 'MP3', 'NULL');
 
-# #     is('Idval::Plugins::Garfinkle', ref $item);
-# # }
+    is(ref $writer, 'Idval::Plugins::goober');
+
+    return;
+}
 
 sub get_a_command_1 : Test(2)
 {
@@ -189,159 +205,98 @@ sub get_a_command_1 : Test(2)
     return;
 }
 
+sub test_smooshing_a_smoosh : Test(3)
+{
+    my $self = shift;
+
+    TestUtils::add_Provider({provides=>'converts',
+                             name=>'copy',
+                             from=>'*',
+                             to=>'*'});
+    TestUtils::add_Provider({provides=>'converts',
+                             name=>'ogger',
+                             from=>'OGG',
+                             to=>'WAV'});
+    TestUtils::add_Provider({provides=>'converts',
+                             name=>'flacker',
+                             from=>'WAV',
+                             to=>'FLAC'});
+    TestUtils::add_Provider({provides=>'filters',
+                             name=>'gakker',
+                             from=>'WAV',
+                             to=>'WAV',
+                             attributes=>['filter']});
+    TestUtils::add_Provider({provides=>'filters',
+                             name=>'oggfilter',
+                             from=>'OGG',
+                             to=>'OGG',
+                             attributes=>['filter']});
+
+    my $fc = TestUtils::setup_Config();
+    #my $save_logger = Idval::Logger::get_logger();
+    #Idval::Logger::re_init({debugmask=>'Converter:4'});
+    #$save_logger->set_debugmask('+Smoosh:4,+ProviderMgr:4');
+    #$save_logger->str('CT');
+    $provs = Idval::ProviderMgr->new($fc);
+    my $conv = $provs->get_provider('converts', 'OGG', 'WAV', 'filter:gakker');
+
+    is($conv->query('name'), 'ogger/gakker');
+
+    # gakker filters WAV/WAV, so it will go after ogger
+    $conv = $provs->get_provider('converts', 'OGG', 'FLAC', 'filter:gakker');
+    is($conv->query('name'), 'ogger/gakker/flacker');
+
+    # oggfilter filters OGG/OGG, so it will go before ogger
+    $conv = $provs->get_provider('converts', 'OGG', 'FLAC', 'filter:gakker', 'filter:oggfilter');
+    is($conv->query('name'), 'oggfilter/ogger/gakker/flacker');
+
+    return;
+}
+
+sub test_smooshing_a_smoosh_must_all_be_filters : Test(2)
+{
+    my $self = shift;
+
+    TestUtils::add_Provider({provides=>'converts',
+                             name=>'copy',
+                             from=>'*',
+                             to=>'*'});
+    TestUtils::add_Provider({provides=>'converts',
+                             name=>'ogger',
+                             from=>'OGG',
+                             to=>'WAV'});
+    TestUtils::add_Provider({provides=>'converts',
+                             name=>'flacker',
+                             from=>'WAV',
+                             to=>'FLAC'});
+    TestUtils::add_Provider({provides=>'filters',
+                             name=>'gakker',
+                             from=>'WAV',
+                             to=>'WAV',
+                             attributes=>['filter']});
+    TestUtils::add_Provider({provides=>'filters',
+                             name=>'oggfilter',
+                             from=>'OGG',
+                             to=>'OGG',
+                             attributes=>['filter']});
+
+    my $fc = TestUtils::setup_Config();
+    #my $save_logger = Idval::Logger::get_logger();
+    #Idval::Logger::re_init({debugmask=>'Converter:4'});
+    #$save_logger->set_debugmask('+Smoosh:4,+ProviderMgr:4');
+    #$save_logger->str('CT');
+    $provs = Idval::ProviderMgr->new($fc);
+
+    my $result = TestUtils::run_test_and_get_log($provs, 'get_provider', 'converts', 'OGG', 'WAV', 'filter:flacker');
+    like($result, qr/1 filter was not found/);
+
+    $result = TestUtils::run_test_and_get_log($provs, 'get_provider', 'converts', 'OGG', 'WAV', 'filter:flacker', 'filter:pilter');
+    like($result, qr/2 filters were not found/);
+
+    return;
+}
+
 ##-------------------------------------------------##
-
-sub add_UserPlugin3_up1
-{
-    my $plugin =<<'EOF';
-package Idval::Plugins::Up1;
-use Idval::Common;
-use base qw(Idval::Provider);
-no warnings qw(redefine);
-
-our $name = 'goober';
-Idval::Common::register_provider({provides=>'writes_tags', name=>$name, type=>'MP3'});
-
-sub new
-{
-    my $class = shift;
-    my $self = $class->SUPER::new(@_);
-    bless($self, ref($class) || $class);
-    $self->_init(@_);
-    return $self;
-}
-
-sub _init
-{
-    my $self = shift;
-
-    $self->set_param('name', $name);
-    $self->set_param('filetype_map', {'MP3' => [qw{ mp3 }]});
-    $self->set_param('classtype_map', {'MUSIC' => [qw( MP3 )]});
-    $self->set_param('is_ok', 1);
-}
-
-1;
-EOF
-
-    Idval::FileString::idv_add_file('/testdir/Idval/up1.pm', $plugin);
-
-    return;
-}
-
-sub add_UserPlugin3_up2
-{
-    my $plugin =<<'EOF';
-package Idval::Plugins::Up2;
-use Idval::Common;
-use base qw(Idval::Provider);
-no warnings qw(redefine);
-
-our $name = 'tag_write2';
-Idval::Common::register_provider({provides=>'writes_tags', name=>$name, type=>'OGG'});
-
-sub new
-{
-    my $class = shift;
-    my $self = $class->SUPER::new(@_);
-    bless($self, ref($class) || $class);
-    $self->_init(@_);
-    return $self;
-}
-
-sub _init
-{
-    my $self = shift;
-
-    $self->set_param('name', $name);
-    $self->set_param('filetype_map', {'OGG' => [qw{ ogg }]});
-    $self->set_param('classtype_map', {'MUSIC' => [qw( OGG )]});
-    $self->set_param('is_ok', 1);
-}
-
-1;
-EOF
-
-    Idval::FileString::idv_add_file('/testdir/Idval/up2.pm', $plugin);
-
-    return;
-}
-
-sub add_UserPlugin3_up3
-{
-    my $plugin =<<'EOF';
-package Idval::Plugins::Up3;
-use Idval::Common;
-use base qw(Idval::Provider);
-no warnings qw(redefine);
-
-our $name = 'tag_write3';
-Idval::Common::register_provider({provides=>'writes_tags', name=>$name, type=>'FLAC'});
-
-sub new
-{
-    my $class = shift;
-    my $self = $class->SUPER::new(@_);
-    bless($self, ref($class) || $class);
-    $self->_init(@_);
-    return $self;
-}
-
-sub _init
-{
-    my $self = shift;
-
-    $self->set_param('name', $name);
-    $self->set_param('filetype_map', {'FLAC' => [qw{ flac }]});
-    $self->set_param('classtype_map', {'MUSIC' => [qw( FLAC )]});
-    $self->set_param('is_ok', 1);
-}
-
-1;
-EOF
-
-    Idval::FileString::idv_add_file('/testdir/Idval/up3.pm', $plugin);
-
-    return;
-}
-
-sub add_UserPlugin3_up4
-{
-    my $plugin =<<'EOF';
-package Idval::Plugins::Up4;
-use Idval::Common;
-use base qw(Idval::Provider);
-no warnings qw(redefine);
-
-our $name = 'tag_write4';
-Idval::Common::register_provider({provides=>'writes_tags', name=>$name, type=>'MP3'});
-
-sub new
-{
-    my $class = shift;
-    my $self = $class->SUPER::new(@_);
-    bless($self, ref($class) || $class);
-    $self->_init(@_);
-    return $self;
-}
-
-sub _init
-{
-    my $self = shift;
-
-    $self->set_param('name', $name);
-    $self->set_param('filetype_map', {'MP3' => [qw{ mp3 }]});
-    $self->set_param('classtype_map', {'MUSIC' => [qw( MP3 )]});
-    $self->set_param('is_ok', 4);
-}
-
-1;
-EOF
-
-    Idval::FileString::idv_add_file('/testdir/Idval/up4.pm', $plugin);
-
-    return;
-}
 
 sub add_command_1
 {

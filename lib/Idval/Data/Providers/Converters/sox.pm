@@ -28,7 +28,7 @@ use Idval::Logger qw(verbose idv_dbg fatal);
 
 use base qw(Idval::Converter);
 
-Idval::Common::register_provider({provides=>'converts', name=>'sox', from=>'WAV', to=>'WAV', attributes=>'filter'});
+Idval::Common::register_provider({provides=>'filters', name=>'sox', from=>'WAV', to=>'WAV', attributes=>'filter'});
 
 sub new
 {
@@ -53,7 +53,6 @@ sub init
 
     $self->find_and_set_exe_path('sox');
 
-    set_pod_input();
     return;
 }
 
@@ -74,7 +73,7 @@ sub convert
 
     my $path = $self->query('path');
 
-    my $sox_args = $self->{CONFIG}->get_single_value('sox_args', $tag_record);
+    my $sox_args = $self->{CONFIG}->i18n_get_single_value('config', 'sox_args', $tag_record);
 
     if (!$sox_args)
     {
@@ -95,11 +94,7 @@ sub convert
     return $status;
 }
 
-sub set_pod_input
-{
-    my $help_file = Idval::Common::get_common_object('help_file');
-
-    my $pod_input =<<"EOD";
+=pod
 
 =head1 NAME
 
@@ -137,11 +132,5 @@ will make the output file be the first thiry seconds of the input
 file.
 
 =cut
-
-EOD
-    $help_file->set_man_info('sox', $pod_input);
-
-    return;
-}
 
 1;

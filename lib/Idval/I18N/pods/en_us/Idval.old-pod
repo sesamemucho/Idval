@@ -1,0 +1,33 @@
+=head1 NAME
+
+Idval - Toolkit for manipulating files with their metadata.
+
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+Idval is a tool for manipulating files that contain metadata, such as
+mp3, flac, and other music files; jpeg and other exif image files; and
+any other kind of files that contain metadata.
+
+Two of the principles behind Idval are: 1) that the authoritative
+source for a media file's metadata is the media file itself, and 2)
+metadata should be presented in a form that's easy to handle with a
+text editor. 
+
+Keep a music collection in lossless FLAC format, and then convert to
+OGG or MP3 as needed for use with portable music players.
+
+The name "Idval" came from "ID Validation". Define rules for a valid
+set of ID tags, and Idval will show which tags break the rules. Edit
+the text file that represents the metadata and use Idval to correct
+the bad tags.
+
+
+
+Idval works by using "plugins". Idval plugins read metadata from
+files, write metadata to files, convert between file formats, and manipulate metadata XXX
+
+=head1 AUTHOR
+
+Bob Forgey <rforgey\@grumpydogconsulting.com>

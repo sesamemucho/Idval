@@ -33,8 +33,6 @@ use Idval::Ui;
 
 sub init
 {
-    set_pod_input();
-
     return;
 }
 
@@ -80,36 +78,27 @@ sub main
     return $new_datastore;
 }
 
-sub set_pod_input
-{
-    my $help_file = Idval::Common::get_common_object('help_file');
-
-    my $pod_input =<<"EOD";
+=pod
 
 =head1 NAME
 
-update - updates tag information according to a tag data file
+X<update>update - Updates files according to a taglist
 
 =head1 SYNOPSIS
 
-update file
-
-=head1 OPTIONS
-
-This command has no options.
+update taglist-file
 
 =head1 DESCRIPTION
 
-B<Update> will cause the files referenced in the tag data file B<file>
-to have the tag data indicated by B<file>. This command is what you
-use to change tag information in your files.
+For each file in F<taglist-file>, B<update> will re-write the tags in
+    that file according to the data in taglist-file.
+
+=head1 TODO
+
+B<Update> does not check to see if a file needs to be updated. It
+    should probably check against the stored taglist and only update
+    the differences.
 
 =cut
-
-EOD
-    $help_file->set_man_info('update', $pod_input);
-
-    return;
-}
 
 1;

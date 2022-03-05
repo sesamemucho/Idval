@@ -17,10 +17,10 @@ package Idval::Plugins::Converters::Abc2midi;
 # You should have received a copy of the GNU General Public License
 # along with Idval.  If not, see <http://www.gnu.org/licenses/>.
 
-#use Idval::Setup;
 use strict;
 use warnings;
 no warnings qw(redefine);
+use Idval::I18N;
 use Idval::Common;
 use Class::ISA;
 
@@ -53,8 +53,9 @@ sub init
     $self->set_param('output_ext_map', {'MIDI' => [qw( mid )]});
 
     my $config = Idval::Common::get_common_object('config');
-    $self->{VISIBLE_SEPARATOR} = $config->get_single_value('visible_separator', {'config_group' => 'idval_settings'});
+    $self->{VISIBLE_SEPARATOR} = $config->i18n_get_single_value('config', 'visible_separator', {'config_group' => 'idval_settings'});
 
+    $self->{LH} = Idval::I18N->idv_get_handle() || die "Can't get language handle.";
     $self->find_and_set_exe_path('abc2midi');
 
     return;
@@ -68,7 +69,7 @@ sub convert
 
     return 0 if !$self->query('is_ok');
 
-    my $extra_args = $self->{CONFIG}->get_single_value('extra_args', {'command_name' => 'abc2midi'});
+    my $extra_args = $self->{CONFIG}->i18n_get_single_value('config', 'extra_args', {'command_name' => 'abc2midi'});
 
     my $src = $self->get_source_filepath($tag_record);
     $dest = Idval::Common::mung_path($dest);
@@ -104,7 +105,8 @@ sub get_dest_filename
     my $rec = shift;
     my $dest_name = shift;
     my $dest_ext = shift;
-    my $title = $rec->get_first_value('TIT2') || 'No \'TIT2\' tag in record for: "' . $rec->get_name() . '"';
+    my $title = $rec->get_first_value('TIT2') ||
+        $self->{LH}->maketext("No \"TIT2\" tag in record for: \"[_1]\"", $rec->get_name());
 
     $dest_name = $rec->get_first_value('TIT2') . '.' . $dest_ext;
 

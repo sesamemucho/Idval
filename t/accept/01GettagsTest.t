@@ -54,7 +54,12 @@ sub get_tags : Test(1)
 
     my @files = map{ AcceptUtils::get_audiodir("/sbeep$_") } qw(.flac .ogg .mp3);
     my $taglist = $idval->datastore();
-    $taglist = Idval::Scripts::gettags($taglist, $idval->providers(), $AcceptUtils::audiodir);
+    my $junk;
+    ($junk, $junk, $taglist) = AcceptUtils::run_test_and_get_log({idval_obj=>$idval,
+                                                                  cmd_sub=>\&Idval::Scripts::gettags,
+                                                                  tag_source=>$taglist,
+                                                                  otherargs=>[$AcceptUtils::audiodir]});
+    #$taglist = Idval::Scripts::gettags($taglist, $idval->providers(), $AcceptUtils::audiodir);
     #$taglist = Idval::Scripts::print($taglist, $idval->providers());
 
     #print STDERR "Checking: ", @files, "\n";

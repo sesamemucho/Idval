@@ -34,8 +34,6 @@ my $first = 1;
 
 sub init
 {
-    set_pod_input();
-
     return;
 }
 
@@ -95,11 +93,7 @@ sub main
     return $datastore;
 }
 
-sub set_pod_input
-{
-    my $help_file = Idval::Common::get_common_object('help_file');
-
-    my $pod_input =<<"EOD";
+=pod
 
 =head1 NAME
 
@@ -162,11 +156,5 @@ the command line. The tag information will be merged.
   gettags "c:/use forward slashes/on/windows/not backward/slashes"
 
 =cut
-
-EOD
-    $help_file->set_man_info('gettags', $pod_input);
-
-    return;
-}
 
 1;

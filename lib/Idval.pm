@@ -26,7 +26,8 @@ use Data::Dumper;
 use File::Spec;
 use Cwd;
 
-use Idval::Logger qw(verbose chatty);
+use Idval::I18N;
+use Idval::Logger qw(idv_print verbose chatty);
 use Idval::ServiceLocator;
 use Idval::Ui;
 use Idval::Config;
@@ -35,8 +36,12 @@ use Idval::FileIO;
 use Idval::Common;
 use Idval::Help;
 
+my %option_names;
+my @standard_options_in;
 my @standard_options;
+my %options_in;
 my %options;
+
 our $VERSION;
 our $AUTOLOAD;  ## no critic (ProhibitPackageVars)
 my $log;
@@ -46,15 +51,13 @@ local $| = 1;
 
 $VERSION = '0.7.0';
 
-@standard_options =
+@standard_options_in =
     (
      'help',
      'man',
      'Version',
-#     'input=s',
      'output=s',
      'print_to=s',
-     'store!',
      'sysconfig=s',
      'userconfig=s',
      'no-run',
@@ -70,22 +73,21 @@ $VERSION = '0.7.0';
     );
 
 # Set defaults
-$options{'help'} = '';
-$options{'man'} = '';
-$options{'version'} = '';
-#$options{'input'} = '';
-$options{'output'} = '';
-$options{'store'} = 1;
-$options{'sysconfig'} = '';
-$options{'userconfig'} = '';
-$options{'no-run'} = 0;
-$options{'xml'} = 0;
-$options{'verbose'} = 1;
-$options{'quiet'} = 0;
-$options{'development'} = 0;
-$options{'log_out'} = '';
-$options{'print_to'} = '';
-$options{'optimize'} = 1;
+$options_in{'help'} = '';
+$options_in{'man'} = '';
+$options_in{'version'} = '';
+$options_in{'output'} = '';
+$options_in{'sysconfig'} = '';
+$options_in{'userconfig'} = '';
+$options_in{'no-run'} = 0;
+$options_in{'xml'} = 0;
+$options_in{'verbose'} = 1;
+$options_in{'quiet'} = 0;
+$options_in{'development'} = 0;
+$options_in{'log_out'} = '';
+$options_in{'print_to'} = '';
+$options_in{'optimize'} = 1;
+$options_in{'debug'} = undef;
 
 END {
     unlink @{$tempfiles};
@@ -109,7 +111,26 @@ sub _init
     my @realargv = @ARGV;
     my @other_args = ();
 
-    #print "Idval: realargv: ", Dumper(\@realargv);
+    #--------------------------------------------------------------------------
+    # Translate option names into local language
+    my $lh = Idval::I18N->idv_get_handle() || die "Can't get language handle.";
+    $self->{LH} = $lh;
+
+    foreach my $opt_name (@standard_options_in)
+    {
+        $option_names{$opt_name} = $lh->idv_getkey('options', $opt_name);
+        push(@standard_options, $option_names{$opt_name});
+    }
+
+    foreach my $opt_name (keys %options_in)
+    {
+        $option_names{$opt_name} = $lh->idv_getkey('options', $opt_name);
+        $options{$option_names{$opt_name}} = $options_in{$opt_name};
+    }
+    #print "Standard options are: ", join("\n", @standard_options), "\n";
+    #print "options are: ", Dumper(\%options);
+    #--------------------------------------------------------------------------
+
     if (!defined($argref))
     {
         $argref = \@realargv;
@@ -135,13 +156,13 @@ sub _init
 
     # We now know enough to fire up the error logger
     my $logger_args = Idval::Common::mkargref(
-        'level' => $options{'verbose'} - $options{'quiet'},
-        defined($options{'debug'}) ? ('debugmask' => $options{'debug'}) : ('', ''),
-        $options{'development'} ? ('show_trace' => 1, 'show_time' => 1) : ('', ''),
-        'log_out' => $options{'log_out'},
-        'print_to' => $options{'print_to'},
-        'xml' => $options{'xml'},
-        'optimize' => $options{'optimize'},
+        'level' => $options{$option_names{'verbose'}} - $options{$option_names{'quiet'}},
+        defined($options{$option_names{'debug'}}) ? ('debugmask' => $options{$option_names{'debug'}}) : ('', ''),
+        $options{$option_names{'development'}} ? ('show_trace' => 1, 'show_time' => 1) : ('', ''),
+        'log_out' => $options{$option_names{'log_out'}},
+        'print_to' => $options{$option_names{'print_to'}},
+        'xml' => $options{$option_names{'xml'}},
+        'optimize' => $options{$option_names{'optimize'}},
         );
 
     Idval::Logger::re_init($logger_args);
@@ -151,13 +172,19 @@ sub _init
     my $help_info = Idval::Help->new();
     Idval::Common::register_common_object('help_file', $help_info);
 
-    $self->set_pod_input();
-
     #$log->str("Idval startup");
 
     #pod2usage(-verbose => 0)  if ($getopts{'help'});
     #pod2usage(-verbose => 2)  if ($getopts{'man'});
-    #print_version()           if ($getopts{'version'});
+    if ($options{'Version'})
+    {
+        idv_print("Idval version [_1]\n", $VERSION);
+        idv_print("Copyright (C) 2008-2009 Bob Forgey\n");
+        idv_print("\nIdval comes with ABSOLUTELY NO WARRANTY.  This is free software, and you\n");
+        idv_print("are welcome to redistribute it under certain conditions.  See the GNU\n");
+        idv_print("General Public Licence for details.\n");
+        exit 0;
+    }
 
     my $real_lib_top = Idval::Common::get_top_dir('lib');
     my $data_dir = Idval::Common::get_top_dir('Data');
@@ -170,8 +197,8 @@ sub _init
     #verbose("option list: [_1]", Dumper(\%options));
     verbose("Looking for: [_1]\n", Idval::Ui::get_sysconfig_file($data_dir));
 
-    my $sysconfig_file  = $options{'sysconfig'} || Idval::Ui::get_sysconfig_file($data_dir);
-    my $userconfig_file = $options{'userconfig'} || Idval::Ui::get_userconfig_file($data_dir);
+    my $sysconfig_file  = $options{$option_names{'sysconfig'}} || Idval::Ui::get_sysconfig_file($data_dir);
+    my $userconfig_file = $options{$option_names{'userconfig'}} || Idval::Ui::get_userconfig_file($data_dir);
     verbose("sysconfig is: \"[_1]\", userconfig is \"[_2]\"\n", $sysconfig_file, $userconfig_file);
 
     my $config = Idval::Config->new($sysconfig_file);
@@ -182,11 +209,11 @@ sub _init
     if (not $config->value_exists('data_store', {config_group => 'idval_settings'}))
     {
         require Idval::FirstTime;
-        my $cfgfile = Idval::FirstTime::init($config);
-        print "conf: Got \"$cfgfile\"\n";
-        exit;
+        my $ft = Idval::FirstTime->new($config);
+        my $cfgfile = $ft->setup();
+        $config->add_file($cfgfile);
     }
-    print "data_store is: ", $config->get_single_value('data_store', {config_group => 'idval_settings'}), "\n";
+    #print "data_store is: ", $config->get_single_value('data_store', {config_group => 'idval_settings'}), "\n";
 
     Idval::Common::register_common_object('tempfiles', $tempfiles);
     $self->{CONFIG} = $config;
@@ -261,57 +288,6 @@ sub AUTOLOAD  ## no critic (RequireFinalReturn)
     goto &$rtn;
 
     use strict;
-}
-
-package Idval;
-
-sub set_pod_input
-{
-    my $self = shift;
-    my $help_file = Idval::Common::get_common_object('help_file');
-
-    my $pod_input =<<"EOD";
-
-=head1 NAME
-
-Idval - Toolkit for manipulating files with their metadata.
-
-=head1 SYNOPSIS
-
-=head1 DESCRIPTION
-
-Idval is a tool for manipulating files that contain metadata, such as
-mp3, flac, and other music files; jpeg and other exif image files; and
-any other kind of files that contain metadata.
-
-Two of the principles behind Idval are: 1) that the authoritative
-source for a media file's metadata is the media file itself, and 2)
-metadata should be presented in a form that's easy to handle with a
-text editor. 
-
-Keep a music collection in lossless FLAC format, and then convert to
-OGG or MP3 as needed for use with portable music players.
-
-The name "Idval" came from "ID Validation". Define rules for a valid
-set of ID tags, and Idval will show which tags break the rules. Edit
-the text file that represents the metadata and use Idval to correct
-the bad tags.
-
-
-
-Idval works by using "plugins". Idval plugins read metadata from
-files, write metadata to files, convert between file formats, and manipulate metadata XXX
-
-=head1 AUTHOR
-
-Bob Forgey <rforgey\@grumpydogconsulting.com>
-
-=cut
-
-EOD
-    $help_file->{'main'} = $pod_input;
-
-    return;
 }
 
 1;

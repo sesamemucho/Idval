@@ -78,6 +78,7 @@ sub merge_blocks1 : Test(1)
     eval {$obj = Idval::Config->new("{\ngubber == 33\ngubber == 34\n\nfoo = 1\n}\n");};
     my $eval_status = $@ if $@;
 
+    #print STDERR "EVAL STATUS IS: \"$eval_status\"\n";
     like($eval_status, qr/Conditional variable \"gubber\" was already used in this block/);
     Idval::Logger::re_init($old_settings);
     return;
@@ -349,7 +350,9 @@ sub multiple_select_key_when_no_keys_should_match : Test(1)
 
 sub merge_one_block : Test(1)
 {
+    my $datadir = Idval::Common::get_top_dir('Data');
     my $cfg_file =<<EOF;
+    DATA = $datadir
     {
         # Collect settings of use only to overall Idval configuration
         config_group == idval_settings
@@ -373,14 +376,14 @@ sub merge_one_block : Test(1)
             command_path = ~/local/bin/Tag.exe
     }
 EOF
-    my $datadir = Idval::Common::get_top_dir('Data');
     my $result = {
         'command_extension' => 'pm',
                 'demo_validate_cfg' => "$datadir/val_demo.cfg",
         'command_dir' => "$datadir/commands",
         'provider_dir' => "$datadir/Plugins",
         'data_store' => "$datadir/data_store.bin",
-        'visible_separator' => '%%'
+        'visible_separator' => '%%',
+        'DATA' => $datadir
     };
     Idval::FileString::idv_add_file('/testdir/gt1.txt', $cfg_file);
     my $obj = Idval::Config->new('/testdir/gt1.txt');
@@ -388,7 +391,7 @@ EOF
     my $vars = $obj->merge_blocks({'config_group' => 'idval_settings'});
 
     # Should be just 'provider_dir through 'visible_separator'
-    #print "result of merge blocks with \{'config_group' => 'idval_settings'\}: ", Dumper($vars);
+    #print STDERR "result of merge blocks with \{'config_group' => 'idval_settings'\}: ", Dumper($vars);
     is_deeply($vars, $result);
 }
 
@@ -431,7 +434,9 @@ sub get_value_using_selector_list : Test(1)
 
 sub get_values_including_sub_block : Test(1)
 {
+    my $datadir = Idval::Common::get_top_dir('Data');
     my $cfg_file =<<EOF;
+    DATA = $datadir
     {
     # Collect settings of use only to overall Idval configuration
     config_group == idval_settings
@@ -509,7 +514,8 @@ EOF
         'K' => 'TKEY',
         'Z' => 'TENC',
         'D' => 'TALB',
-        'C' => 'TCOM'
+        'C' => 'TCOM',
+        'DATA' => $datadir
        };
 
     Idval::FileString::idv_add_file('/testdir/gt1.txt', $cfg_file);
@@ -525,7 +531,7 @@ EOF
     #Dumper($vars);
 
     is_deeply($vars, $result);
-    
+
 }
 
 # Can we back-add inherited values?
@@ -542,7 +548,7 @@ sub no_back_adding_of_inherited_values : Test(1)
             convert      = MIDI
         }
     }
-    
+
     {
         config_group == tag_mappings
 
@@ -749,7 +755,7 @@ EOF
     *{'Idval::ValidateFuncs::TestSub'} = sub {
         my $selectors = shift;
         my $tagname = shift;
-        #print STDERR "Hello from TestSub: tagname is $tagname\n";    
+        #print STDERR "Hello from TestSub: tagname is $tagname\n";
         return $tagname eq 'AAA';
     };
 
@@ -837,7 +843,9 @@ EOF
 
 sub plus_equals_creates_an_array1 : Test(1)
 {
-my $cfg_file =<<EOF;
+    my $datadir = Idval::Common::get_top_dir('Data');
+    my $cfg_file =<<EOF;
+DATA = $datadir
 {
     # Collect settings of use only to overall Idval configuration
     config_group == idval_settings
@@ -892,6 +900,23 @@ EOF
     $local_foo_val = 3;
     is($obj->get_single_value('blah_blah', {use_foo => 1}), 3);
 }
+
+sub previously_defined_vars_can_be_substituted_in: Test(1)
+{
+my $cfg_file =<<EOF;
+{
+    # Collect settings of use only to overall Idval configuration
+    config_group == idval_settings
+
+    data_dir = ./foo/boo
+    data_store = %data_dir%/data_store
+}
+EOF
+
+    my $obj = Idval::Config->new($cfg_file);
+    is($obj->get_single_value('data_store', {'config_group' => 'idval_settings'}), './foo/boo/data_store');
+}
+
 
 1;
 

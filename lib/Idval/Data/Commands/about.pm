@@ -29,8 +29,6 @@ use Idval::TypeMap;
 
 sub init
 {
-    set_pod_input();
-
     return;
 }
 
@@ -42,15 +40,15 @@ sub main
 
     my $verbose = 0;
     my $show_config = 0;
-    my $show_xml = 0;
     my $filters = 0;
+    my $transcoders = 0;
     my $attributes = [];
 
     my $result = GetOptions(
         'verbose' => \$verbose,
         'config'  => \$show_config,
-        'xml'     => \$show_xml,
         'filters' => \$filters,
+        'transcoders' => \$transcoders,
         );
 
     my $typemap = Idval::TypeMap->new($providers);
@@ -68,29 +66,15 @@ sub main
 
     if ($filters)
     {
-        $attributes = ['filter'];
+        push(@{$attributes}, 'filter');
     }
 
-    if (@ARGV)
+    if ($transcoders)
     {
-        my $name = $ARGV[0];
-        my $info_ref = $help_file->detailed_info_ref($name);
-
-        if (defined($info_ref))
-        {
-            foreach my $pkg (keys %{$info_ref})
-            {
-                print "Information for \"${pkg}::${name}\":\n";
-                print $info_ref->{$pkg};
-                print "\n";
-            }
-        }
-        else
-        {
-            print "No information available for \"$name\"\n";
-        }
+        push(@{$attributes}, 'transcode');
     }
-    elsif ($show_config)
+
+    if ($show_config)
     {
         my $config = Idval::Common::get_common_object('config');
         my $vars = $config->merge_blocks({'config_group' => 'idval_settings'});
@@ -101,11 +85,6 @@ sub main
             printf "%-20s:%s\n", $key, $vars->{$key};
         }
     }
-    elsif ($show_xml)
-    {
-        my $config = Idval::Common::get_common_object('config');
-        print $config->{PRETTY};
-    }
     else
     {
         # Find converters
@@ -113,9 +92,9 @@ sub main
         {
             print STDERR ("null converter?\n"), next unless defined($item);
             #print STDERR "converter: item is: ", Dumper($item);
-            foreach my $endpoint ($item->get_endpoint())
+            foreach my $endpoint_pair ($item->get_endpoint_pair())
             {
-                my ($from, $to) = split(':', $endpoint);
+                my ($from, $to) = split(':', $endpoint_pair);
                 $converters_by_type{$from}->{$to} = $item;
             }
             $providers_by_name{$item->{NAME}}{'PROV'} = $item;
@@ -162,7 +141,7 @@ sub main
         }
         silent_q(join("\n", @msgs), "\n");
 
-        silent_q("Reads:\n");
+        silent_q("\nReads:\n");
         foreach my $reader_type (sort keys %readers_by_type)
         {
             $provider = $readers_by_type{$reader_type};
@@ -205,7 +184,7 @@ sub main
         #if ((exists $options->{'all'}) and $options->{'all'})
         {
             # Only display to the level of provider name and provider type.
-            # It is assumed that, for different endpoints, a given provider
+            # It is assumed that, for different endpoint_pairs, a given provider
             # has the same characteristics
 
             silent_q("\nProvider info:\n");
@@ -252,51 +231,79 @@ sub main
         }
 
     }
+
     return $datastore;
 }
 
-sub set_pod_input
-{
-    my $help_file = Idval::Common::get_common_object('help_file');
-
-    my $pod_input =<<"EOD";
+=pod
 
 =head1 NAME
 
-about - Using GetOpt::Long and Pod::Usage blah blah foo booaljasdf
+X<about>about - Displays information about idv.
 
 =head1 SYNOPSIS
 
-about [options] [file ...]
+about [options]
 
  Options:
-   -help            brief help message
-   -man             full documentation
+    --verbose           Displays extra information about providers.
+    --config            Displays information about the configuration file.
 
 =head1 OPTIONS
 
-=over 8
+=over 4
 
-=item B<-help>
+=item B<--verbose>
 
-Print a brief help message and exits.
+Adds attribute information to the provider display.
 
-=item B<-man>
+=item B<--config>
 
-Prints the manual page and exits.
+Displays information about the configuration file instead of about
+    providers.
 
 =back
 
 =head1 DESCRIPTION
 
-B<About> reports on interesting things in idv.
+B<about> displays information about what B<idv> can currently do.
+
+B<about> should be the first command to use if you want to know the
+    status of B<idv>.
+
+=over
+
+=item Converts
+
+What file types can be converted into what other file types,
+    and how.
+
+=item Reads
+
+What kinds of files B<idv> can read tag information from.
+
+=item Writes
+
+What kinds of files B<idv> can write tag information to.
+
+=item Types
+
+What extensions go with what file types, and what overall classes of
+    file types B<idv> recognizes.
+
+=item Provider paths
+
+B<idv> uses external programs or modules to do most of its work. This
+    section shows where these programs are located.
+
+=item Provider info
+
+It may be the case that B<idv> has a problem accessing one or more
+    providers. This section shows the current status of all known
+    providers.
+
+=back
 
 =cut
-
-EOD
-    $help_file->set_man_info('about', $pod_input);
-
-    return;
-}
 
 1;

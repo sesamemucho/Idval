@@ -25,6 +25,7 @@ use File::Spec;
 use List::Util;
 use Data::Dumper;
 
+use Idval::I18N;
 use Idval::Logger qw(verbose fatal);
 use Idval::Common;
 use Idval::FileIO;
@@ -40,9 +41,9 @@ sub new
     $self->{PARAMS} = {};
     $self->{CONFIG} = $config;
     $self->{NAME} = $name;
-    $self->{ENDPOINTS}->{PAIRS} = {};
-    $self->{ENDPOINTS}->{SRCS} = {};
-    $self->{ENDPOINTS}->{DESTS} = {};
+    $self->{ENDPOINT_PAIRS}->{PAIRS} = {};
+    $self->{ENDPOINT_PAIRS}->{SRCS} = {};
+    $self->{ENDPOINT_PAIRS}->{DESTS} = {};
 
     # Just make sure these keys exist
     $self->{FWD_MAPPING} = {};
@@ -96,10 +97,10 @@ sub create_records
     return;
 }
 
-# endpoints are for use by the 'about' command
+# endpoint_pairs are for use by the 'about' command
 
-# make_endpoint is a class method; it does not need an object
-sub make_endpoint
+# make_endpoint_pair is a class method; it does not need an object
+sub make_endpoint_pair
 {
     my $from = uc shift;
     my $to = uc shift;
@@ -107,49 +108,49 @@ sub make_endpoint
     return $from . ':' . $to;
 }
 
-sub has_endpoint
+sub has_endpoint_pair
 {
     my $self = shift;
     my $from = uc shift;
     my $to = uc shift;
-    my $endpoint = make_endpoint($from, $to);
+    my $endpoint_pair = make_endpoint_pair($from, $to);
 
-    return exists ($self->{ENDPOINTS}->{PAIRS}->{$endpoint});
+    return exists ($self->{ENDPOINT_PAIRS}->{PAIRS}->{$endpoint_pair});
 }
 
-sub add_endpoint
+sub add_endpoint_pair
 {
     my $self = shift;
     my $from = uc shift;
     my $to = uc shift;
-    my $endpoint = make_endpoint($from, $to);
+    my $endpoint_pair = make_endpoint_pair($from, $to);
 
-    $self->{ENDPOINT}->{PAIR} = $endpoint;
-    $self->{ENDPOINT}->{SRC} = $from;
-    $self->{ENDPOINT}->{DEST} = $to;
+    $self->{ENDPOINT_PAIR}->{PAIR} = $endpoint_pair;
+    $self->{ENDPOINT_PAIR}->{SRC} = $from;
+    $self->{ENDPOINT_PAIR}->{DEST} = $to;
 
-    return $endpoint;
+    return $endpoint_pair;
 }
 
-sub get_endpoint
+sub get_endpoint_pair
 {
     my $self = shift;
 
-    return $self->{ENDPOINT}->{PAIR};
+    return $self->{ENDPOINT_PAIR}->{PAIR};
 }
 
 sub get_source
 {
     my $self = shift;
 
-    return $self->{ENDPOINT}->{SRC};
+    return $self->{ENDPOINT_PAIR}->{SRC};
 }
 
 sub get_destination
 {
     my $self = shift;
 
-    return $self->{ENDPOINT}->{DEST};
+    return $self->{ENDPOINT_PAIR}->{DEST};
 }
 
 sub get_source_filepath
@@ -172,7 +173,7 @@ sub get_dest_filename
     return $dest_name;
 }
 
-sub find_exe_path
+sub _find_exe_path
 {
     my $self = shift;
     my $name = shift || $self->{NAME};
@@ -225,12 +226,14 @@ sub find_and_set_exe_path
 {
     my $self = shift;
     my $name = shift || $self->{NAME};
+    my $lh = Idval::I18N->idv_get_handle() || die "Can't get language handle.";
+    $name = $lh->idv_getkey('extern', $name);
 
-    my $path = $self->find_exe_path($name);
+    my $path = $self->_find_exe_path($name);
 
     $self->set_param('path', $path);
     $self->set_param('is_ok', $path ? 1 : 0);
-    $self->set_param('status', $path ? 'ok' : "Program \"$name\" not found.");
+    $self->set_param('status', $path ? $lh->maketext('ok') : $lh->maketext("Program \"[_1]\" not found.", $name));
 
     return $path;
 }

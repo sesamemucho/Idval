@@ -98,7 +98,7 @@ sub decode
                                         $extra_args,
                                         #"--silent",
                                         "--decode",
-                                        -o "$dest",
+                                        "-o", "$dest",
                                         $src));
 
     return $status;

@@ -21,6 +21,7 @@ package Idval::Plugins::Taggers::Exiftool;
 use strict;
 use warnings;
 no  warnings qw(redefine);
+use Data::Dumper;
 use Class::ISA;
 
 use base qw(Idval::Provider);
@@ -32,7 +33,7 @@ my $req_msg = !defined($req_status) ? "$!" :
 
 if ($req_msg ne 'Load OK')
 {
-    print "Oops; let's try again for Image::ExifTool\n";
+    #print "Oops; let's try again for Image::ExifTool\n";
     use lib Idval::Common::get_top_dir('lib/perl/Image-ExifTool');
 
     $req_status = eval {require Image::ExifTool};
@@ -79,7 +80,9 @@ sub init
     $self->set_param('status', $req_msg);
 
     my $config = Idval::Common::get_common_object('config');
-    $self->{VISIBLE_SEPARATOR} = $config->get_single_value('visible_separator', {'config_group' => 'idval_settings'});
+    $self->{VISIBLE_SEPARATOR} = $config->i18n_get_single_value('config', 
+                                                                'visible_separator', 
+                                                                {'config_group' => 'idval_settings'});
 
     return;
 }
@@ -103,6 +106,9 @@ sub read_tags
         # This takes a while, so only do it (once) if we need it
         $self->{WRITEABLE_TAGS} = [Image::ExifTool::GetWritableTags()];
         #print "Found ", scalar @{$self->{WRITEABLE_TAGS}}, " writable tags\n";
+        #print "Writeable tags: ", Dumper($self->{WRITEABLE_TAGS});
+        $self->{ALL_TAGS} = [Image::ExifTool::GetAllTags()];
+        #print "Found ", scalar @{$self->{ALL_TAGS}}, " all tags\n";
     }
 
     my $filename = $tag_record->get_value('FILE');
@@ -110,6 +116,15 @@ sub read_tags
     #print "exif: new exiftool\n";
     my $vs = $self->{VISIBLE_SEPARATOR};
 
+    if (!exists($self->{CURRENT_GROUPS}))
+    {
+        $self->{CURRENT_GROUPS} = [$exiftool->GetGroups()];
+        #print "Current groups: ", Dumper($self->{CURRENT_GROUPS});
+        $self->{CURRENT_NEW_GROUPS} = [$exiftool->GetNewGroups()];
+        #print "Current new groups: ", Dumper($self->{CURRENT_NEW_GROUPS});
+    }
+    # only get information in EXIF or MakerNotes groups
+    #$exiftool->Options(Group0 => ['EXIF', 'MakerNotes']);
     # Extract meta information from an image
     #my $info = $exiftool->ImageInfo($filename, $self->{WRITEABLE_TAGS}, \%options);
     my $info = $exiftool->ImageInfo($filename, \%options);
@@ -123,15 +138,25 @@ sub read_tags
     #my @taglist = $exiftool->GetFoundTags('Alpha');
 
     my @taglist = $exiftool->GetTagList($info);
-    #print "exif: got tag list\n";
+    #print "Taglist for $filename: ", Dumper(\@taglist);
+    #print "exif: got tag list for $filename\n";
     foreach my $tag (@taglist)
     {
         # Get the value of a specified tag
         my $value = $exiftool->GetValue($tag, 'PrintConv');
         next unless defined($value);
+#         if ($tag =~ m/ImageHeight/)
+#         {
+#             print "Ref for $tag ($value): <", ref $value, ">\n";
+#         }
+        if (ref $value eq 'ARRAY')
+        {
+            #print "Ref for $tag ($value): <", ref $value, ">\n";
+        }
         if ((ref $value eq 'ARRAY') || (ref $value eq ''))
         {
-            $tag =~ s/ /\Q$vs\E/g;
+            $tag =~ s/ /$vs/g;
+            #print "Adding tag <$tag>\n";
             $tag_record->add_tag($tag, $value);
         }
         #print "exif: tag \"$tag\"\n";

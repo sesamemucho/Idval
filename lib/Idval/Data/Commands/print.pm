@@ -30,8 +30,6 @@ use Idval::Common;
 
 sub init
 {
-    set_pod_input();
-
     return;
 }
 
@@ -60,45 +58,44 @@ sub main
     return $datastore;
 }
 
-sub set_pod_input
-{
-    my $help_file = Idval::Common::get_common_object('help_file');
-
-    my $pod_input =<<"EOD";
+=pod
 
 =head1 NAME
 
-print - Prints a formatted listing of a tag data file.
+X<print>print - Prints a tagfile.
 
 =head1 SYNOPSIS
 
-print [options] [file]
+print [options] [taglist-file]
 
  Options:
-   -outputfile F<output_listing_file> 
+    --output=<output file>         Prints taglist to F<output file>
+    --full                         Prints all tags
 
 =head1 OPTIONS
 
-=over 8
+=over 4
 
-=item B<-outputfile output_listing_file>
+=item B<--outputfile>=F<output file>
 
-If specified, the report will be sent here. Otherwise, the report will be printed to the screen.
+Prints a report of the differences found to F<output file>, as well as to the screen.
+
+=item B<--full>
+
+Some tags in a tagfile are created at runtime by B<idv>. These tags
+    are not stored when a tagfile is written to disk. If you're
+    curious, or debugging, use B<--full>. Otherwise, it will just show
+    a lot of irrelevant stuff.
 
 =back
 
 =head1 DESCRIPTION
 
-B<Print> print the contents of the given file to the screen. If no
-file is given, B<print> will display the contents of the cached
-data store.
+B<print> prints out a tagfile. This is usually done to edit the file,
+    and later update the music files with the B<update> command. If
+    there is no F<taglist-file> given, B<print> displays the current
+    taglist.
 
 =cut
-
-EOD
-    $help_file->set_man_info('print', $pod_input);
-
-    return;
-}
 
 1;

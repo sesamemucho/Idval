@@ -29,8 +29,6 @@ use Idval::Ui;
 
 sub init
 {
-    set_pod_input();
-
     return;
 }
 
@@ -51,7 +49,7 @@ sub main
     }
     else
     {
-        my $dsfile = $config->get_single_value('data_store', {'config_group' => 'idval_settings'});
+        my $dsfile = $config->i18n_get_single_value('config', 'data_store', {'config_group' => 'idval_settings'});
         $datastore = eval {Idval::Ui::get_source_from_cache("${dsfile}.bin", "${dsfile}.dat");};
     }
 
@@ -60,43 +58,25 @@ sub main
     return $datastore;
 }
 
-sub set_pod_input
-{
-    my $help_file = Idval::Common::get_common_object('help_file');
-
-    my $pod_input =<<"EOD";
+=pod
 
 =head1 NAME
 
-read_data - Reads a tag data file into the current data store.
+X<read>read - Reads a taglist file into the current taglist
 
 =head1 SYNOPSIS
 
-read_data [file]
-
-=head1 OPTIONS
-
-This command has no options.
+read [taglist-file]
 
 =head1 DESCRIPTION
 
-B<Read_Data> will read the given tag data file and place it into the
-current data store, where it can be used by other programs. Either
-B<read_data> or B<gettags> must be run in order to bring data into the
-system so that other commands can use it.
+B<read> reads the contents of F<taglist-file> into the current
+    taglist. If no taglist-file is specified, then B<read> reads the
+    contents of the stored file into the current taglist.
 
-If a command is given on the B<idv> command line, a B<read_data> command is
-executed automatically before the given command.
-
-If no file is given to B<read_data>, the cached data store is read into the
-current data store.
+B<idv> will automatically issue a B<read> command when it starts, to
+    load the stored taglist file into the current taglist.
 
 =cut
-
-EOD
-    $help_file->set_man_info('read', $pod_input);
-
-    return;
-}
 
 1;

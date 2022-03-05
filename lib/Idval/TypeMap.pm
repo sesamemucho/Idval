@@ -5,6 +5,7 @@ use warnings;
 use Data::Dumper;
 use English '-no_match_vars';
 
+use Idval::I18N;
 use Idval::Logger qw(idv_dbg fatal);
 
 sub new
@@ -24,10 +25,20 @@ sub _init
 
     $self->{VISIBLE_SEPARATOR} = $vs;
 
+    $self->{LH} = Idval::I18N->idv_get_handle() || die "Idval::TypeMap: Can't get a language handle!";
+
     $self->build_type_mapper($prov);
 
     #idv_dbg("TypeMap: FILETYPE map is: [_1]", Dumper($self->{MAPPING}->{FILETYPE}));
     return;
+}
+
+sub uc_i18n_lookup
+{
+    my $self = shift;
+    my $name = shift;
+
+    return uc $self->{LH}->idv_getkey('provmgr', uc $name);
 }
 
 sub _build_map
@@ -41,20 +52,24 @@ sub _build_map
 
     # Now, build up the filename to media type map
     my $mapper = $converter->query($param);
+    my $i18n_key;
+    my $i18n_ext;
     if (defined $mapper and $mapper)
     {
         foreach my $key (keys %{$mapper})
         {
+            $i18n_key = $self->uc_i18n_lookup($key);
             foreach my $ext (@{$mapper->{$key}})
             {
+                $i18n_ext = $self->uc_i18n_lookup($ext);
                 # Should probably put some kind of check to make sure
                 # types and extensions are defined consistently and
                 # uniquely.
                 # Fwd is (for example) MUSIC -> {MP3=>1, FLAC=>1}, or 
                 # FLAC -> {FLAC=>1, FLAC16=>1}
                 # Rev is MP3 -> MUSIC, MP3 (file extension) -> MP3 (file type)
-                $self->{MAPPING}->{$maptype}->{FWD}->{uc($key)}->{uc($ext)}++;
-                $self->{MAPPING}->{$maptype}->{REV}->{uc($ext)} = uc($key);
+                $self->{MAPPING}->{$maptype}->{FWD}->{$i18n_key}->{$i18n_ext}++;
+                $self->{MAPPING}->{$maptype}->{REV}->{$i18n_ext} = $i18n_key;
             }
         }
     }
@@ -128,8 +143,9 @@ sub get_filetypes_from_class
 {
     my $self = shift;
     my $class = shift;
+    $class = $self->uc_i18n_lookup($class);
 
-    return map {uc $_} sort (keys %{$self->{MAPPING}->{CLASSTYPE}->{FWD}->{$class}});
+    return sort (keys %{$self->{MAPPING}->{CLASSTYPE}->{FWD}->{$class}});
 }
 
 sub get_dot_map
@@ -157,7 +173,8 @@ sub get_dot_map
 sub get_exts_from_filetype
 {
     my $self = shift;
-    my $filetype = uc(shift);
+    my $filetype = shift;
+    $filetype = $self->uc_i18n_lookup($filetype);
 
     return map {lc $_} sort (keys %{$self->{MAPPING}->{FILETYPE}->{FWD}->{$filetype}});
 }
@@ -166,7 +183,9 @@ sub get_exts_from_filetype
 sub get_output_ext_from_filetype
 {
     my $self = shift;
-    my $filetype = uc(shift);
+    my $filetype = shift;
+    $filetype = $self->uc_i18n_lookup($filetype);
+
     # If the converter has expressed a preference for the output extension, use that.
     # Otherwise, use whatever we get from the filetype map. If no preference has been
     # given, the filetype map _should_ have only one extension per type. To put it
@@ -180,7 +199,8 @@ sub get_output_ext_from_filetype
 sub get_exts_from_class
 {
     my $self = shift;
-    my $class = uc(shift);
+    my $class = shift;
+    $class = $self->uc_i18n_lookup($class);
 
     return map {lc $_} sort (keys %{$self->{MAPPING}->{CLASSEXT}->{FWD}->{$class}});
 }
@@ -188,7 +208,8 @@ sub get_exts_from_class
 sub get_class_from_filetype
 {
     my $self = shift;
-    my $filetype = uc(shift);
+    my $filetype = shift;
+    $filetype = $self->uc_i18n_lookup($filetype);
 
     return $self->{MAPPING}->{CLASSTYPE}->{REV}->{$filetype};
 }
@@ -197,7 +218,8 @@ sub get_class_from_filetype
 sub get_class_and_type_from_ext
 {
     my $self = shift;
-    my $ext = uc(shift);
+    my $ext = shift;
+    $ext = $self->uc_i18n_lookup($ext);
 
     return ($self->{MAPPING}->{CLASSEXT}->{REV}->{$ext},
             $self->{MAPPING}->{FILETYPE}->{REV}->{$ext});
@@ -212,7 +234,7 @@ sub get_filetype_from_file
     my $vis_sep = $self->{VISIBLE_SEPARATOR};
     my ($ext) = ($file =~ m/\.([^.]+)$/);
     $ext =~ s/\Q${vis_sep}\E.*$//;
-    $ext = uc($ext);
+    $ext = $self->uc_i18n_lookup($ext);
 
     idv_dbg("TypeMap::get_filetype_from_file: ext is \"[_1]\"\n", $ext);
     return exists($self->{MAPPING}->{FILETYPE}->{REV}->{$ext}) ? $self->{MAPPING}->{FILETYPE}->{REV}->{$ext} : '';

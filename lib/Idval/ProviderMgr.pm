@@ -26,7 +26,8 @@ use File::Basename;
 use File::Spec;
 use Memoize;
 
-use Idval::Logger qw(:vars info verbose chatty idv_dbg idv_warn fatal);
+use Idval::I18N;
+use Idval::Logger qw(:vars info verbose chatty idv_dbg idv_warn fatal idv_dumper);
 use Idval::Common;
 use Idval::Converter;
 use Idval::Graph;
@@ -53,6 +54,7 @@ sub _init
     $self->{DEFAULT_SELECTS} = {'config_group' => 'idval_settings'};
     Idval::Common::register_common_object('providers', $self);
 
+    $self->{LH} = Idval::I18N->idv_get_handle() || die "Idval::ProviderMgr: Can't get a language handle!";
     $self->{PROVIDER_DIRS} = $self->local_get_list_value('provider_dir');
     #print STDERR "dirlist is: ", join(":", @{$self->{PROVIDER_DIRS}}), "\n";
     #my $foo = $self->{CONFIG}->merge_blocks($self->{DEFAULT_SELECTS});
@@ -61,6 +63,7 @@ sub _init
     $self->{COMMAND_LIST} = {};
     $self->{COMMAND_EXT}  = $self->local_get_single_value('command_extension', 'pm');
 
+    # Probably, all provider types that are put in a Graph (i.e., not filters) XXX
     my @provider_types = qw{converts reads_tags writes_tags command};
     $self->{NUM_PROVIDERS} = 0;
     $self->{PROVIDERS} = {};
@@ -75,10 +78,12 @@ sub _init
 
     map{$self->{GRAPH}->{$_}->process_graph()} @provider_types;
 
-    #chatty_graph("loaded packages: [_1]", Dumper($self->{LOADED_PACKAGES}));
-    #chatty_graph("TAGREADER graph: [_1]", Dumper($self->{GRAPH}->{reads_tags}));
-    #chatty_graph("command graph: [_1]", Dumper($self->{GRAPH}->{command}));
-    #chatty_graph("converter graph: [_1]", Dumper($self->{GRAPH}->{converts}));
+    $self->process_filters();
+
+    chatty_graph("loaded packages: [_1]", idv_dumper($self->{LOADED_PACKAGES}));
+    chatty_graph("TAGREADER graph: [_1]", idv_dumper($self->{GRAPH}->{reads_tags}));
+    chatty_graph("command graph: [_1]", idv_dumper($self->{GRAPH}->{command}));
+    chatty_graph("converter graph: [_1]", idv_dumper($self->{GRAPH}->{converts}));
 
     $self->setup_command_abbreviations();
 
@@ -90,7 +95,7 @@ sub local_get_list_value
     my $self = shift;
     my $item = shift;
 
-    return $self->{CONFIG}->get_list_value($item, $self->{DEFAULT_SELECTS});
+    return $self->{CONFIG}->i18n_get_list_value('config', $item, $self->{DEFAULT_SELECTS});
 }
 
 sub local_get_single_value
@@ -99,13 +104,40 @@ sub local_get_single_value
     my $item = shift;
     my $default = shift || '';
 
-    return $self->{CONFIG}->get_single_value($item, $self->{DEFAULT_SELECTS}, $default);
+    return $self->{CONFIG}->i18n_get_single_value('config', $item, $self->{DEFAULT_SELECTS}, $default);
 }
 
 sub num_providers
 {
     my $self = shift;
     return $self->{NUM_PROVIDERS};
+}
+
+# Collect all the filters in one place. Sync config files only
+# identify filters by name, so filter names must be unique (and
+# therefore we don't need to keep filter package names). There is no
+# way to specify endpoint pairs to get_provider(), so we don't need to
+# keep endpoint_pairs. If a requested filter doesn't match any of the
+# endpoints in a conversion path (see get_provider()), the Smoosh at
+# the end of get_provider() will fail anyway.
+
+sub process_filters
+{
+    my $self = shift;
+
+    foreach my $package (keys %{$self->{ALL_PROVIDERS}->{filters}})
+    {
+        foreach my $filter (keys %{$self->{ALL_PROVIDERS}->{filters}->{$package}})
+        {
+            foreach my $endpoint_pair (keys %{$self->{ALL_PROVIDERS}->{filters}->{$package}->{$filter}})
+            {
+                chatty("Adding filter $filter to list of filters\n");
+                $self->{FILTERS}->{$filter} = $self->{ALL_PROVIDERS}->{filters}->{$package}->{$filter}->{$endpoint_pair};
+            }
+        }
+    }
+
+    return;
 }
 
 #
@@ -132,7 +164,13 @@ sub get_provider
     my $prov_type = shift;
     my $src = shift;
     my $dest = shift;
+
+    $src = $self->{LH}->idv_getkey('provmgr', $src);
+    $dest = $self->{LH}->idv_getkey('provmgr', $dest);
     my @attributes = @_;
+    # Treat the 'filter' attribute(s) specially
+    my @filters = grep(/filter/, @attributes);
+    @attributes = grep(!/filter/, @attributes) if @filters;
 
     my $config = $self->{CONFIG};
     my $cnv = undef;
@@ -145,11 +183,28 @@ sub get_provider
         fatal("Invalid src \"[_1]\" or dest \"[_2]\".", $src, $dest);
     }
 
-    idv_dbg("Looking for provider type \"[_1]\" src \"[_2]\" dest \"[_3]\", with attributes <[_4]>\n",
-        $prov_type, $src, $dest, join(',', @attributes)); ##debug1
+    idv_dbg("Looking for provider type \"[_1]\" src \"[_2]\" dest \"[_3]\", with attributes <[_4]> and filters <[_5]>\n",
+        $prov_type, $src, $dest, join(',', @attributes), join(',', @filters)); ##debug1
+
+    # If $src and $dest are the same, AND we aren't looking for a filter, use the 'copy' converter
+    if ($src eq $dest)
+    {
+        # Don't get excited. The '*' is just a label. No globbing is involved.
+        $src = '*';
+        $dest = '*';
+#         my $cnvinfo = $graph->get_best_path('*', '*', @attributes);
+#         my ($converter, $name) = ($$cnvinfo[1] =~ m{^(.*)::([^:]+)}x);
+#         my $from = $$cnvinfo[0];
+#         my $to = $$cnvinfo[2];
+#         my $endpoint_pair = Idval::Provider::make_endpoint_pair($from, $to);
+#         chatty("Looking up \{[_1]\}->\{[_2]\}->\{[_3]\}->\{[_4]\}\n", $prov_type, $converter, $name, $endpoint_pair); ##debug1
+#         $cnv = $self->{ALL_PROVIDERS}->{$prov_type}->{$converter}->{$name}->{$endpoint_pair};
+#         $converter = $cnv;
+    }
+
     my $path = $graph->get_best_path($src, $dest, @attributes);
-    #idv_dbg("Converter graph is: [_1]", Dumper($graph)); ##Dumper
-    #idv_dbg("From [_1] to [_2]. Path is: [_3]", $src, $dest, Dumper($path)); ##Dumper
+    idv_dbg("Converter graph is: [_1]", idv_dumper($graph)); ##Dumper
+    idv_dbg("From [_1] to [_2]. Path is: [_3]", $src, $dest, idv_dumper($path)); ##Dumper
     if (defined($path))
     {
         foreach my $cnvinfo (@{$path})
@@ -158,13 +213,13 @@ sub get_provider
             my ($converter, $name) = ($$cnvinfo[1] =~ m{^(.*)::([^:]+)}x);
             my $from = $$cnvinfo[0];
             my $to = $$cnvinfo[2];
-            my $endpoint = Idval::Provider::make_endpoint($from, $to);
+            my $endpoint_pair = Idval::Provider::make_endpoint_pair($from, $to);
             idv_dbg("cnvinfo is <[_1]>\n", join(", ", @{$cnvinfo})); ##debug1
             idv_dbg("converter is <[_1]>\n", $converter); ##debug1
             idv_dbg("name is <[_1]>\n", $name); ##debug1
-            chatty("Looking up \{[_1]\}->\{[_2]\}->\{[_3]\}->\{[_4]\}\n", $prov_type, $converter, $name, $endpoint); ##debug1
-            $cnv = $self->{ALL_PROVIDERS}->{$prov_type}->{$converter}->{$name}->{$endpoint};
-            #idv_dbg("cnv is: [_1]", Dumper($cnv)) if $src eq 'about'; ##Dumper
+            chatty("Looking up \{[_1]\}->\{[_2]\}->\{[_3]\}->\{[_4]\}\n", $prov_type, $converter, $name, $endpoint_pair); ##debug1
+            $cnv = $self->{ALL_PROVIDERS}->{$prov_type}->{$converter}->{$name}->{$endpoint_pair};
+            idv_dbg("cnv is: [_1]", idv_dumper($cnv)) if $src eq 'about'; ##Dumper
             push(@cnv_list, $cnv);
         }
     }
@@ -172,8 +227,11 @@ sub get_provider
     idv_dbg("Found [quant,_1,provider,providers] for [_2] -> [_3]\n", scalar(@cnv_list), $dest, $src); ##debug1
     if (scalar(@cnv_list) < 1)
     {
-        idv_warn("No \"[_1]\" provider found for \"[_2],[_3]\"\n", $prov_type, $src, $dest);
-        $converter = undef;
+        #if (($src ne $dest) or !$cnv)
+        #{
+            idv_warn("No \"[_1]\" provider found for \"[_2],[_3]\"\n", $prov_type, $src, $dest);
+            $converter = undef;
+        #}
     }
     elsif (scalar(@cnv_list) == 1)
     {
@@ -183,6 +241,29 @@ sub get_provider
     {
         # This will die if we smoosh something other than converters
         $converter = Idval::Converter::Smoosh->new($src, $dest, @cnv_list);
+    }
+
+    if (@filters)
+    {
+        my @smoosh_filters;
+        my $filter_obj;
+        my $bad_filters = 0;
+        foreach my $filter (@filters)
+        {
+            $filter =~ m/filter:(\S+)/;
+            $filter_obj = $self->{FILTERS}->{$1};
+            if (!defined($filter_obj))
+            {
+                idv_warn("Specified filter [_1] was not found", $filter);
+                $bad_filters++;
+                next;
+            }
+            push(@smoosh_filters, $filter_obj);
+        }
+
+        fatal("[quant,_1,filter was,filters were] not found", $bad_filters) if $bad_filters;
+        
+        $converter = Idval::Converter::Smoosh->new($src, $dest, $converter, @smoosh_filters);
     }
 
     return $converter;
@@ -250,6 +331,16 @@ sub _get_arg
     return $retval;
 }
 
+sub _i18n_get_arg
+{
+    my $self = shift;
+
+    my $retval = $self->_get_arg(@_);
+    $retval    = $self->{LH}->idv_getkey('provmgr', $retval);
+
+    return $retval;
+}
+
 sub clear_providers
 {
     my $self = shift;
@@ -282,9 +373,9 @@ sub _add_provider
     my $added = 0;
     my $config = $self->{CONFIG};
     my $cnv;
-    my $endpoint = Idval::Provider::make_endpoint($src, $dest);
+    my $endpoint_pair = Idval::Provider::make_endpoint_pair($src, $dest);
 
-    if (!exists ($self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name}->{$endpoint}))
+    if (!exists ($self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name}->{$endpoint_pair}))
     {
         if ($prov_type eq 'command')
         {
@@ -298,17 +389,20 @@ sub _add_provider
         $cnv->set_param('attributes', $argref->{attributes});
         $cnv->set_param('from', $src);
         $cnv->set_param('to', $dest);
-        $cnv->add_endpoint($src, $dest);
+        $cnv->add_endpoint_pair($src, $dest);
 
         $self->{NUM_PROVIDERS}++;
-        $self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name}->{$endpoint} = $cnv;
+        $self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name}->{$endpoint_pair} = $cnv;
         if ($cnv->query('is_ok'))
         {
-            chatty("Adding \{[_1]\}->\{[_2]\}->\{[_3]\}->\{[_4]\}\n", $prov_type, $package, $name, $endpoint); ##debug1
+            chatty("Adding \{[_1]\}->\{[_2]\}->\{[_3]\}->\{[_4]\}\n", $prov_type, $package, $name, $endpoint_pair); ##debug1
             chatty("Adding \"[_1]\" provider: From \"[_2]\", via \"[_3]\" to \"[_4]\", weight: \"[_5]\"attributes: \"[_6]\"\n", 
                    $prov_type, $src, "${package}::$name", $dest,
                    $weight, $argref->{attributes}); ##debug1
-            $self->{GRAPH}->{$prov_type}->add_edge($src, $package . '::' . $name, $dest, $weight, @attributes);
+            if ($prov_type ne 'filters')
+            {
+                $self->{GRAPH}->{$prov_type}->add_edge($src, $package . '::' . $name, $dest, $weight, @attributes);
+            }
             $added = 1;
         }
         else
@@ -343,9 +437,10 @@ sub register_provider
     #print "caller(2) is: ", caller(2), "\n";
     foreach my $argref (@_)
     {
-        #chatty("register_provider: argref is: [_1]", Dumper($argref)); ##Dumper
+        chatty("register_provider: argref is: [_1]", idv_dumper($argref)); ##Dumper
         my $provides = lc($self->_get_arg($argref, 'provides'));
-        my $name     = $self->_get_arg($argref, 'name');
+        my $name     = $self->_i18n_get_arg($argref, 'name');
+
         # If a weighting for this provider has been specified in a config file, use that value
         my $config_weight = $self->{CONFIG}->get_single_value('weight', {'command_name'=>$name});
         # otherwise, use what the provider says... otherwise, use 100
@@ -361,7 +456,7 @@ sub register_provider
             $self->_add_provider({prov_type => $provides,
                                   package => $package,
                                   name => $name,
-                                  src => uc($self->_get_arg($argref, 'type')),
+                                  src => uc($self->_i18n_get_arg($argref, 'type')),
                                   dest => 'NULL',
                                   weight => $weight,
                                   attributes => $attributes,});
@@ -371,7 +466,7 @@ sub register_provider
             $self->_add_provider({prov_type => $provides,
                                   package => $package,
                                   name => $name,
-                                  src => uc($self->_get_arg($argref, 'type')),
+                                  src => uc($self->_i18n_get_arg($argref, 'type')),
                                   dest => 'NULL',
                                   weight => $weight,
                                   attributes => $attributes,});
@@ -382,24 +477,23 @@ sub register_provider
             $self->_add_provider({prov_type => $provides,
                                   package => $package,
                                   name => $name,
-                                  src => uc($self->_get_arg($argref, 'from')),
-                                  dest => uc($self->_get_arg($argref, 'to')),
+                                  src => uc($self->_i18n_get_arg($argref, 'from')),
+                                  dest => uc($self->_i18n_get_arg($argref, 'to')),
                                   weight => $weight,
                                   attributes => $attributes,});
             next;
         };
-
-#         $provides eq 'command' and do {
-#             #print STDERR "Command registering: name is $name: $from to $to\n";
-#             $self->_add_provider({prov_type => $provides,
-#                                   package => $package,
-#                                   name => $name,
-#                                   src => $name,
-#                                   dest => 'NULL',
-#                                   weight => $weight,
-#                                   attributes => $attributes,});
-#             next;
-#         };
+        $provides eq 'filters' and do {
+            #print STDERR "Converter registering: name is $name: $from to $to\n";
+            $self->_add_provider({prov_type => $provides,
+                                  package => $package,
+                                  name => $name,
+                                  src => uc($self->_i18n_get_arg($argref, 'from')),
+                                  dest => uc($self->_i18n_get_arg($argref, 'to')),
+                                  weight => $weight,
+                                  attributes => $attributes,});
+            next;
+        };
 
         fatal("Unrecognized provider type \"[_1]\" in [_2]", $provides, Dumper($argref));
     }
@@ -532,6 +626,7 @@ sub _get_command
     if ($package)
     {
         my $name = basename(lc($filename), '.' . $self->{COMMAND_EXT});
+        $name = $self->{LH}->idv_getkey('provmgr', $name);
 
         #print STDERR "Command registering \"$filename\" into \"$package\": name is $name: $name to NULL\n";
         my $added = $self->_add_provider({prov_type => 'command',
@@ -594,10 +689,10 @@ sub direct_get_providers
         {
             foreach my $provider_name (keys %{$self->{ALL_PROVIDERS}->{$prov_type}->{$provider_package}})
             {
-                foreach my $endpoint (keys %{$self->{ALL_PROVIDERS}->{$prov_type}->{$provider_package}->{$provider_name}})
+                foreach my $endpoint_pair (keys %{$self->{ALL_PROVIDERS}->{$prov_type}->{$provider_package}->{$provider_name}})
                 {
-                    my $cnv = $self->{ALL_PROVIDERS}->{$prov_type}->{$provider_package}->{$provider_name}->{$endpoint};
-                    push(@prov_list, {converter=>$cnv, name=>$provider_name, package_name=>$provider_package, type=>$prov_type, endpoint=>$endpoint});
+                    my $cnv = $self->{ALL_PROVIDERS}->{$prov_type}->{$provider_package}->{$provider_name}->{$endpoint_pair};
+                    push(@prov_list, {converter=>$cnv, name=>$provider_name, package_name=>$provider_package, type=>$prov_type, endpoint_pair=>$endpoint_pair});
                 }
             }
         }

@@ -37,6 +37,7 @@ use Idval::Logger qw(quiet verbose chatty fatal);
 my $log = Idval::Logger::get_logger();
 our %common_objs;
 my @top_dir_path = ();
+my $lh;
 
 memoize('mung_path_query');
 
@@ -168,7 +169,7 @@ sub run
     }
     else
     {
-        verbose("[_1] [_2]\n", $name, $cmdargs);
+        verbose("\"[_1]\" \"[_2]\"\n", $name, $cmdargs);
         $retval = qx{"$name" $cmdargs 2>&1};
         $status = $?;
         if ($status)

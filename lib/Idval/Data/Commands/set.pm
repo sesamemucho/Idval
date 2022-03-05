@@ -24,8 +24,8 @@ use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
 use English '-no_match_vars';;
-use Idval::I18N;
 
+use Idval::I18N;
 use Idval::Logger qw(:vars idv_print);
 
 my $first = 0;
@@ -34,7 +34,7 @@ my %cmds;
 sub init
 {
     my $lh = Idval::I18N->get_handle() || die "Can't get a language handle!";
-    foreach my $cmd_id (qw(conf debug level))
+    foreach my $cmd_id (qw(conf debug))
     {
         my $cmd_str = $lh->maketext("set_cmd=" . $cmd_id) || die "No command found for set command \"$cmd_id\"\n";
         $cmd_str =~ s/^set_cmd=//;
@@ -49,16 +49,11 @@ sub main
 
     local @ARGV    = @_;
 
-#     my $result = GetOptions('select=s' => \$selectfile,
-#                             'output=s' => \$outputfile,
-#                             'quiet'    => \$quiet,
-#         );
-
     my $param = shift @ARGV;
 
     if (!defined($param) or !$param)
     {
-        idv_print("set commands are: conf, debug, level\n");
+        idv_print("set commands are: conf and debug\n");
     }
     elsif ($param eq $cmds{'debug'})
     {
@@ -75,50 +70,12 @@ sub main
             idv_print("[sprintf,%-20s  %d,_1,_2]\n", $modhash->{$item}->{STR}, $modhash->{$item}->{LEVEL});
         }
     }
-    elsif ($param eq $cmds{'level'})
-    {
-        my $helpsub = sub {
-            idv_print("Available debug levels are:\n");
-            foreach my $level (sort {$a <=> $b} keys %level_to_name)
-            {
-                idv_print("[sprintf,    %8s: %d,_1,_2]\n", $level_to_name{$level}, $level);
-            }
-
-            my $current_level = Idval::Common::get_logger()->accessor('LOGLEVEL');
-            idv_print("\nCurrent level is: [_1] ([_2])\n", $current_level, $level_to_name{$current_level});
-        };
-
-        if (@ARGV)
-        {
-            my $newlevel = shift @ARGV;
-            if (exists($level_to_name{$newlevel}))
-            {
-                Idval::Common::get_logger()->accessor('LOGLEVEL', $newlevel);
-                my $current_level = Idval::Common::get_logger()->accessor('LOGLEVEL');
-                idv_print("\nNew level is: [_1] ([_2])\n", $current_level, $level_to_name{$current_level});
-            }
-            elsif (exists($name_to_level{lc($newlevel)}))
-            {
-                Idval::Common::get_logger()->accessor('LOGLEVEL', $name_to_level{lc($newlevel)});
-                my $current_level = Idval::Common::get_logger()->accessor('LOGLEVEL');
-                idv_print("\nNew level is: [_1] ([_2])\n", $current_level, $level_to_name{$current_level});
-            }
-            else
-            {
-                idv_print("Unrecognized level \"[_1]\"\n", $newlevel);
-                &$helpsub();
-            }
-        }
-        else
-        {
-            &$helpsub();
-        }
-    }
     elsif ($param eq $cmds{'conf'})
     {
         require Idval::FirstTime;
         my $config = Idval::Common::get_common_object('config');
-        my $cfgfile = Idval::FirstTime::init($config);
+        my $ft = Idval::FirstTime->new($config);
+        my $cfgfile = $ft->setup();
         print "conf: got \"$cfgfile\"\n";
         #$config->add_file($cfgfile);
     }
@@ -129,5 +86,35 @@ sub main
 
     return $datastore;
 }
+
+=pod
+
+=head1 NAME
+
+X<set>set - Sets configuration values
+
+=head1 SYNOPSIS
+
+set debug|conf
+
+=head1 DESCRIPTION
+
+B<set> sets certain configuration values. Currently, the only two set
+    commands available are
+
+=over 4
+
+=item debug
+
+Sets debug levels for modules as described in L<Logger>.
+
+=item conf
+
+Re-runs the startup configuration utility, just as though this were the
+    first run of B<idv>.
+
+=back
+
+=cut
 
 1;

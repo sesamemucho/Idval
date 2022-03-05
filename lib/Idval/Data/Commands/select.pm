@@ -34,7 +34,7 @@ my $first = 0;
 
 sub init
 {
-    #set_pod_input();
+    return;
 }
 
 sub main
@@ -114,38 +114,69 @@ sub main
         $out->print(join("\n", @{$coll}), "\n");
         $out->close();
     }
-    
+
     return $select_coll;
 }
 
-# sub set_pod_input
-# {
-#     my $help_file = Idval::Common::get_common_object('help_file');
+=pod
 
-#     my $pod_input =<<EOD;
+=head1 NAME
 
-# =head1 NAME
+X<select>select - Selects records from a taglist
 
-# select - selects tag information according to a tag data file
+=head1 SYNOPSIS
 
-# =head1 SYNOPSIS
+select [options] [selector1 [selector2 [...]]]
 
-# select file
+ Options:
+    --output=<output file>         Prints selected records to F<output file>
+    --quiet                        Does not print anything
+    --selectfile=<select-config-file>  Uses F<select-config-file>
+                                   instead of selectors.
 
-# =head1 OPTIONS
+=head1 OPTIONS
 
-# This command has no options.
+=over 4
 
-# =head1 DESCRIPTION
+=item B<--output>=F<output file>
 
-# B<Select> will cause the files referenced in the tag data file B<file>
-# to have the tag data indicated by B<file>. This command is what you
-# use to change tag information in your files.
+Prints the selected records to F<output file>, I<instead> of to the screen.
 
-# =cut
+=item B<--quiet>
 
-# EOD
-#    $help_file->set_man_info('select', $pod_input);
-# }
+Does not print anything to the screen. B<select> will still modify the
+current taglist.
+
+=item B<--selectfile>=F<select-config-file>
+
+Uses selectors from F<select-config-file>, instead of selectors passed
+    in as arguments.
+
+=back
+
+=head1 DESCRIPTION
+
+B<select> selects records from the current taglist, and then replaces
+    the current taglist with those selected records. It can also print
+    the selected records to the screen or file. See
+    L<idv/"Configuration files"> for information about selectors.
+
+For B<select>, each selector should be surrounded with quotes. Use
+    curly braces "{}" to AND selectors. Selectors with no braces
+    around them are ORed together.
+
+=head1 EXAMPLES
+
+  select "TPE1 == Tommy Jarrell" "TYPE == ABC"
+
+will select records where either the artist is Tommy Jarrell or the
+    record type is ABC.
+
+  select { "TPE1 == Tommy Jarrell" "TYPE == ABC" }
+
+will select records where the artist is Tommy Jarrell AND the
+    record type is ABC.
+
+=cut
 
 1;

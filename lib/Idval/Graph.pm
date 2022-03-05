@@ -25,7 +25,7 @@ use warnings;
 use Data::Dumper;
 use List::Util;
 
-use Idval::Logger qw(verbose chatty idv_dbg fatal);
+use Idval::Logger qw(verbose chatty idv_dbg fatal idv_dumper);
 use Idval::Common;
 
 my @path_list;
@@ -191,7 +191,7 @@ sub get_paths
         # $path_info{ATTRS} is a hash of the attributes shared by all members of the list.
         # There will always be a 'weight' attribute; there may or may not be any others.
         $path_info{ATTRS} = {%attrs}; # be sure to make a copy
-        #idv_dbg("Storing into [_1].[_2]: [_3]", $path_info{START}, $path_info{END}, Dumper(\%path_info)); ##Dumper
+        idv_dbg("Storing into [_1].[_2]: [_3]", $path_info{START}, $path_info{END}, idv_dumper(\%path_info)); ##Dumper
         push(@{$self->{EXTRACTED_PATHS}->{$path_info{START} . '.' . $path_info{END}}}, \%path_info);
         verbose("\n"); ##debug1
     }
@@ -252,7 +252,7 @@ sub walkit
     {
         # Let's allow loops back to the start
         # But make sure it really is to the start
-        #verbose("[_1]Found a loop: [_2]", $leader x $level, Dumper($self->{CURRENT_PATH})); ##Dumper
+        verbose("[_1]Found a loop: [_2]", $leader x $level, idv_dumper($self->{CURRENT_PATH})); ##Dumper
         fatal("Beginning of current path \([_1]\) is not a START_NODE\n", $short_item) unless $self->is_major_node($item);
     }
 #     elsif (List::Util::first { $item eq $_ } @{$self->{CURRENT_PATH}})
@@ -482,7 +482,7 @@ sub has_duplicate_nodes
             }
 
             idv_dbg("[_1]Bad duplicate node found for \"$start\" -> \"$end\"\n");
-            #idv_dbg("[_1]ATTRS: ", Dumper($self->{GRAPH}->{$start}->{$type}->{ATTRS})); ##Dumper
+            idv_dbg("[_1]ATTRS: ", idv_dumper($self->{GRAPH}->{$start}->{$type}->{ATTRS})); ##Dumper
             return 1;           # We have an invalid duplicate
         }
     }
@@ -558,7 +558,7 @@ sub get_best_path
     }
 
     # Get a list of all the paths that have all the required attributes
-    #chatty("Getting best path from: [_1]", Dumper($self->{EXTRACTED_PATHS}->{$arc})); ##Dumper
+    chatty("Getting best path from: [_1]", idv_dumper($self->{EXTRACTED_PATHS}->{$arc})); ##Dumper
     chatty("Need attributes: [_1]\n", join(',', @attrs)); ##debug1
   CHECK_PATHS:
     foreach my $pathinfo (@{$self->{EXTRACTED_PATHS}->{$arc}})
@@ -578,7 +578,7 @@ sub get_best_path
         push(@goodpaths, $pathinfo);
     }
 
-    #idv_dbg("Resulting path list is: [_1]", Dumper(\@goodpaths)); ##Dumper
+    idv_dbg("Resulting path list is: [_1]", idv_dumper(\@goodpaths)); ##Dumper
 
     #
     # Sort in order of weight

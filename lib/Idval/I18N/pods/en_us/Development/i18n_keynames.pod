@@ -1,0 +1,18 @@
+=head1 NAME
+
+i18n_keynames - A list of key names that can be localized.
+
+=head1 DESCRIPTION
+
+Anything that a user is likely to see or enter or use in a
+configuration file is localizeable, with some exceptions (see
+L<EXCEPTIONS>, below). This includes in particular command names and
+configuration keywords. This file contains a should-be-complete list
+of these items.
+
+As with the other localizeable text, keynames that do not have a
+localized value default to en_us.
+
+   sync          config    sync.pm
+   sync          command
+   convert       config    sync.pm

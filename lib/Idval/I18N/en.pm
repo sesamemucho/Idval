@@ -20,8 +20,7 @@ package Idval::I18N::en;
 use strict;
 use warnings;
 
-use base qw(Idval::I18N);
-1;
-
 # This class just zero-derives from the project base class.
+use base qw(Idval::I18N);
 
+1;

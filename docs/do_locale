@@ -1,0 +1,1 @@
+ sudo localedef  -f UTF-8 -i en_PIGTEST /usr/lib/locale/en_PIGTEST.UTF-8

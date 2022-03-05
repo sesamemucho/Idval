@@ -29,6 +29,7 @@ use Idval::Logger qw(chatty);
 use base qw(Idval::Converter);
 
 Idval::Common::register_provider({provides=>'converts', name=>'copy', from=>'*', to=>'*'});
+#Idval::Common::register_provider({provides=>'converts', name=>'copy', from=>'*', to=>'*', weight=>200});
 
 sub new
 {
