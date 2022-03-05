@@ -25,8 +25,13 @@ use Carp qw(croak cluck confess);
 use POSIX qw(strftime);
 use Memoize qw(memoize flush_cache);
 
+sub Locale::Maketext::DEBUG () {0}
+ # set to 1 or higher to see trace messages.
+use Idval::I18N;
+
 use base qw( Exporter );
 our @EXPORT_OK = qw( idv_print silent silent_q quiet info info_q verbose chatty idv_dbg idv_warn fatal
+                     would_I_print
                      $L_SILENT $L_QUIET $L_INFO $L_VERBOSE $L_CHATTY $L_DEBUG %level_to_name %name_to_level);
 our %EXPORT_TAGS = (vars => [qw($L_SILENT $L_QUIET $L_INFO $L_VERBOSE $L_CHATTY $L_DEBUG %level_to_name %name_to_level)]);
 
@@ -85,6 +90,9 @@ sub _init
     my $argref = shift;
     my $lfh;
 
+    $self->{LH} = Idval::I18N->get_handle() || die "Can't get a language handle!";
+    print STDERR "Logger: LH is: ", Dumper($self->{LH});
+    print "Logger: current LH fail is: ", $self->{LH}->fail_with(), "\n";
     my $initial_dbg = exists($ENV{IDV_DEBUGMASK}) ? $ENV{IDV_DEBUGMASK} : 'DBG_STARTUP DBG_PROCESS Command::*';
     my $initial_lvl = exists($ENV{IDV_DEBUGLEVEL}) ? $ENV{IDV_DEBUGLEVEL} : $L_INFO;
     my $initial_trace = exists($ENV{IDV_DEBUGTRACE}) ? $ENV{IDV_DEBUGTRACE} : 1;
@@ -102,7 +110,7 @@ sub _init
     $self->set_fh('PRINT_TO', safe_get($argref, 'print_to', 'STDOUT'));
 
     $self->{WARNINGS} = ();
-    $self->str('after init');
+    #$self->str('after init');
     return;
 }
 
@@ -148,8 +156,9 @@ sub set_fh
             last NLOG;
         }
 
-        undef $fh;
-        open($fh, ">&=", $name) || croak "Can't duplicate file descriptor \"$name\" for writing: $!\n"; ## no critic (RequireBriefOpen)
+        $fh = $name;
+        #undef $fh;
+        #open($fh, ">&=", $name) || croak "Can't duplicate file descriptor \"$name\" for writing: $!\n"; ## no critic (RequireBriefOpen)
     }
 
     $self->{$fhtype} = $fh;
@@ -462,6 +471,7 @@ sub _log
         print "<LEVEL>", $level_to_name{$level}, "</LEVEL>\n";
         print "<SOURCE>$package</SOURCE>\n" if $decorate;
         print "<TIME>", strftime("%y-%m-%d %H:%M:%S ", localtime), "</TIME>\n" if $decorate;
+        #print "<$type>", $self->{LH}->maketext(@_), "</$type>\n";
         print "<$type>", @_, "</$type>\n";
         print "</LOGMESSAGE>\n";
     }
@@ -475,12 +485,13 @@ sub _log
             $prepend = $time . $package . ': ';
         }
 
-        print $fh ($prepend, @_);
+        print $fh ($prepend, $self->{LH}->maketext(@_));
+        #print $fh ($prepend, @_);
     }
 
+    my $ans = '';
     if ($isquery)
     {
-        my $ans;
         $ans = <>;
         if( defined $ans ) {
             chomp $ans;
@@ -489,8 +500,21 @@ sub _log
             $self->silent_q({debugmask=>1}, "\n");
         }
 
-        return $ans;
     }
+
+    return $ans;
+}
+
+sub would_I_print
+{
+    my $desired_level = shift;
+    my $self = get_logger();
+
+    #my $package = $argref{package} ? $argref{package} : caller(1);
+    my $package = caller(1);
+    my ($got_match, $l_level) = $self->_pkg_matches($package);
+
+    return ($got_match && ($desired_level <= $l_level)) + 0;
 }
 
 sub idv_null
@@ -614,13 +638,29 @@ sub re_init
     $lo->set_fh('PRINT_TO', safe_get($argref, 'print_to', 'STDOUT')) if exists $argref->{print_to};
 
     flush_cache('_pkg_matches');
-    $lo->str("after end of re_init");
+    #$lo->str("after end of re_init");
     return;
 }
 
 sub get_logger
 {
     return $lo;
+}
+
+sub get_settings
+{
+    my %settings;
+
+    $settings{level} = $lo->accessor('LOGLEVEL');
+    $settings{debugmask} = $lo->get_debugmask();
+    $settings{show_trace} = $lo->accessor('SHOW_TRACE');
+    $settings{show_time} = $lo->accessor('SHOW_TIME');
+    $settings{use_xml} = $lo->accessor('USE_XML');
+    $settings{from} = $lo->accessor('FROM');
+    $settings{log_out} = $lo->accessor('LOG_OUT');
+    $settings{print_to} = $lo->accessor('PRINT_TO');
+
+    return \%settings;
 }
 
 sub _create_logger

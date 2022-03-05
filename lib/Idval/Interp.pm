@@ -121,7 +121,7 @@ sub cmd_loop
             @line_args = @{Idval::Common::split_line($line)};
 
             my $cmd_name = shift @line_args;
-            chatty("command name: \"$cmd_name\", line args: ", join(" ", @line_args), "\n");
+            chatty("command name: \"[_1]\", line args: [_2]\n", $cmd_name, join(" ", @line_args));
             my $rtn = 'Idval::Scripts::' . $cmd_name;
             no strict 'refs';
             eval { $temp_ds = &$rtn($datastore, $providers, @line_args); };
@@ -142,7 +142,7 @@ sub cmd_loop
                 else
                 {
                     print STDERR "Yipes\n";
-                    fatal("Error in \"$cmd_name\": \"$status\", \"$reason\"\n");
+                    fatal("Error in \"[_1]\": \"[_2]\", \"[_3]\"\n", $cmd_name, $status, $reason);
                 }
             }
 

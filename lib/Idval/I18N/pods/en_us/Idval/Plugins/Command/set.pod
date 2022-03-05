@@ -1,0 +1,15 @@
+=head1 NAME
+
+set - Sets various run-time parameters (for debugging)
+
+=head1 SYNOPSIS
+
+set <param> = <value>
+
+=head1 OPTIONS
+
+This command has no options.
+
+=head1 DESCRIPTION
+
+B<Set> will ...

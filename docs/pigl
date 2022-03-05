@@ -1,0 +1,165 @@
+escape_char /
+comment_char %
+% Locale for Pig Latin locale
+% Contributed by Obbay Orgeyfay, 2008
+
+LC_IDENTIFICATION
+title      "Pig Latin locale"
+source     "Free Software Foundation, Inc."
+address    "59 Temple Place - Suite 330, Boston, MA 02111-1307, USA"
+contact    ""
+email      "rforgey@grumpydogconsulting.com"
+tel        ""
+fax        ""
+language   "PigLatin"
+territory  "USA"
+revision   "1.0"
+date       "2008-12-1"
+%
+category  "x-pig-latin:2008";LC_IDENTIFICATION
+category  "x-pig-latin:2008";LC_CTYPE
+category  "x-pig-latin:2008";LC_COLLATE
+category  "x-pig-latin:2008";LC_TIME
+category  "x-pig-latin:2008";LC_NUMERIC
+category  "x-pig-latin:2008";LC_MONETARY
+category  "x-pig-latin:2008";LC_MESSAGES
+category  "x-pig-latin:2008";LC_PAPER
+category  "x-pig-latin:2008";LC_NAME
+category  "x-pig-latin:2008";LC_ADDRESS
+category  "x-pig-latin:2008";LC_TELEPHONE
+
+END LC_IDENTIFICATION
+
+LC_CTYPE
+copy "en_GB"
+END LC_CTYPE
+
+LC_COLLATE
+
+% Copy the template from ISO/IEC 14651
+copy "iso14651_t1"
+
+END LC_COLLATE
+
+LC_MONETARY
+copy "en_US"
+END LC_MONETARY
+
+LC_NUMERIC
+copy "en_US"
+END LC_NUMERIC
+
+LC_TIME
+abday	"<U0055><U006E><U0073>";/
+        "<U004F><U006E><U0064>";/
+        "<U0055><U0065><U0073>";/
+        "<U0045><U0064><U006E>";/
+        "<U0055><U0072><U0073>";/
+        "<U0049><U0064><U0061>";/
+        "<U0041><U0074><U0075>"
+day     "<U0055><U006E><U0064><U0061><U0079><U0073><U0061><U0079>";/
+        "<U004F><U006E><U0064><U0061><U0079><U006D><U0061><U0079>";/
+        "<U0055><U0065><U0073><U0064><U0061><U0079><U0074><U0061><U0074>";/
+        "<U0045><U0064><U006E><U0065><U0073><U0064><U0061><U0079><U0077><U0061><U0079>";/
+        "<U0055><U0072><U0073><U0064><U0061><U0079><U0074><U0068><U0061><U0079>";/
+        "<U0049><U0064><U0061><U0079><U0066><U0072><U0061><U0079>";/
+	"<U0041><U0074><U0075><U0072><U0064><U0061><U0079><U0073><U0061><U0079>"
+
+week    7;19971130;7
+first_weekday	1
+first_workday	2
+abmon	"<U0041><U006E><U0075>";"<U0045><U0062><U0072>";/
+	"<U0041><U0072><U0063>";"<U0041><U0070><U0072>";/
+	"<U0041><U006D><U0061>";"<U0055><U006E><U0065>";/
+	"<U0055><U006C><U0079>";"<U0041><U0075><U0067>";/
+	"<U0045><U0070><U0074>";"<U004F><U0063><U0074>";/
+	"<U004F><U0076><U0065>";"<U0045><U0063><U0065>"
+mon     "<U0041><U006E><U0075><U0061><U0072><U0079><U006A><U0061><U0079>";/
+        "<U0045><U0062><U0072><U0075><U0061><U0072><U0079><U0066><U0061><U0079>";/
+        "<U0041><U0072><U0063><U0068><U006D><U0061><U0079>";/
+        "<U0041><U0070><U0072><U0069><U006C><U0061><U0079>";/
+        "<U0041><U006D><U0061><U0079>";/
+        "<U0055><U006E><U0065><U006A><U0061><U0079>";/
+        "<U0055><U006C><U0079><U006A><U0061><U0079>";/
+        "<U0041><U0075><U0067><U0075><U0073><U0074><U0061><U0079>";/
+        "<U0045><U0070><U0074><U0065><U006D><U0062><U0065><U0072><U0073><U0061><U0079>";/
+        "<U004F><U0063><U0074><U006F><U0062><U0065><U0072><U0061><U0079>";/
+        "<U004F><U0076><U0065><U006D><U0062><U0065><U0072><U006E><U0061><U0079>";/
+        "<U0045><U0063><U0065><U006D><U0062><U0065><U0072><U0064><U0061><U0079>"
+
+% Appropriate date and time representation (%c)
+%	"%a %d %b %Y %r %Z"
+d_t_fmt "<U0025><U0061><U0020><U0025><U0064><U0020><U0025><U0062><U0020><U0025><U0059><U0020><U0025><U0072><U0020><U0025><U005A>"
+%
+% Appropriate date representation (%x)
+%	"%m/%d/%Y"
+d_fmt   "<U0025><U006D><U002F><U0025><U0064><U002F><U0025><U0059>"
+%
+% Appropriate time representation (%X)
+%	"%r"
+t_fmt   "<U0025><U0072>"
+%
+% Appropriate AM/PM time representation (%r)
+%	"%I:%M:%S %p"
+t_fmt_ampm "<U0025><U0049><U003A><U0025><U004D><U003A><U0025><U0053><U0020>/
+<U0025><U0070>"
+%
+% Strings for AM/PM
+%
+am_pm	"<U0041><U004D>";"<U0050><U004D>"
+%
+% Appropriate date representation (date(1))   "%a %b %e %H:%M:%S %Z %Y"
+date_fmt	"<U0025><U0061><U0020><U0025><U0062><U0020><U0025><U0065>/
+<U0020><U0025><U0048><U003A><U0025><U004D><U003A><U0025><U0053><U0020>/
+<U0025><U005A><U0020><U0025><U0059>"
+END LC_TIME
+
+LC_MESSAGES
+yesexpr "<U005E><U005B><U0065><U0045><U005D><U002E><U002A>"
+noexpr  "<U005E><U005B><U006F><U004F><U005D><U002E><U002A>"
+END LC_MESSAGES
+
+LC_PAPER
+copy "en_US"
+END LC_PAPER
+
+LC_NAME
+name_fmt    "<U0025><U0064><U0025><U0074><U0025><U0067><U0025><U0074>/
+<U0025><U006D><U0025><U0074><U0025><U0066>"
+name_miss   "<U004D><U0069><U0073><U0073><U002E>"
+name_mr     "<U004D><U0072><U002E>"
+name_mrs    "<U004D><U0072><U0073><U002E>"
+name_ms     "<U004D><U0073><U002E>"
+END LC_NAME
+
+
+LC_ADDRESS
+postal_fmt    "<U0025><U0061><U0025><U004E><U0025><U0066><U0025><U004E>/
+<U0025><U0064><U0025><U004E><U0025><U0062><U0025><U004E><U0025><U0068>/
+<U0020><U0025><U0073><U0020><U0025><U0065><U0020><U0025><U0072><U0025>/
+<U004E><U0025><U0054><U002C><U0020><U0025><U0053><U0020><U0025><U007A><U0025>/
+<U004E><U0025><U0063><U0025><U004E>"
+country_name  "<U0055><U0053><U0041>"
+country_post  "<U0055><U0053><U0041>"
+country_ab2   "<U0055><U0053>"
+country_ab3   "<U0055><U0053><U0041>"
+country_num   840
+country_car   "<U0055><U0053><U0041>"
+country_isbn  0
+lang_name	"<U0050><U0069><U0067><U006C><U0061><U0074><U0069><U006E>"
+lang_ab		"<U0070><U0069><U0067>"
+lang_term	"<U0078><U002D><U0070><U0069><U0067><U002D><U006C><U0061><U0074><U0069><U006E>"
+lang_lib	"<U0070><U0069><U0067>"
+END LC_ADDRESS
+
+LC_TELEPHONE
+tel_int_fmt    "<U002B><U0025><U0063><U0020><U0028><U0025><U0061><U0029>/
+<U0020><U0025><U006C>"
+tel_dom_fmt    "<U0028><U0025><U0061><U0029><U0020><U0025><U006C>"
+int_select     "<U0031><U0031>"
+int_prefix     "<U0031>"
+END LC_TELEPHONE
+
+LC_MEASUREMENT
+measurement    2
+END LC_MEASUREMENT

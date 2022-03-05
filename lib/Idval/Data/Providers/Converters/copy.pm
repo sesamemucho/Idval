@@ -63,7 +63,7 @@ sub convert
     $dest = Idval::Common::mung_path($dest);
     $src = Idval::Common::mung_path($src);
 
-    chatty("Copying \"$src\" to \"$dest\"\n");
+    chatty("Copying \"[_1]\" to \"[_2]\"\n", $src, $dest);
     #sleep(rand(10));
     return !copy($src, $dest);  # We want 0 for success
 }

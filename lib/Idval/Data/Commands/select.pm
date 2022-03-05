@@ -103,14 +103,14 @@ sub main
         }
     }
 
-    info_q({force_match => 1}, "Processed $numrecs records.\n") unless $quiet;
+    info_q({force_match => 1}, "Processed [quant,_1,record,records].\n", $numrecs) unless $quiet;
 
     if ($outputfile)
     {
         $select_coll->source($outputfile);
         my $coll = $select_coll->stringify();
 
-        my $out = Idval::FileIO->new($outputfile, '>') or fatal("Can't open $outputfile for writing: $ERRNO\n");
+        my $out = Idval::FileIO->new($outputfile, '>') or fatal("Can't open [_1] for writing: [_2]\n", $outputfile, $ERRNO);
         $out->print(join("\n", @{$coll}), "\n");
         $out->close();
     }
@@ -145,7 +145,7 @@ sub main
 # =cut
 
 # EOD
-#    $help_file->man_info('select', $pod_input);
+#    $help_file->set_man_info('select', $pod_input);
 # }
 
 1;

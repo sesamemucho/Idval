@@ -167,7 +167,7 @@ sub main
         {
             $provider = $readers_by_type{$reader_type};
             $provider_paths{$provider->{NAME}} = $provider->query('path');
-            silent_q("\tReads tags from: $reader_type using ", $provider->{NAME}, "\n");
+            silent_q("\tReads tags from: [_1] using [_2]\n", $reader_type, $provider->{NAME});
         }
 
         silent_q("Writes:\n");
@@ -175,19 +175,19 @@ sub main
         {
             $provider = $writers_by_type{$writer_type};
             $provider_paths{$provider->{NAME}} = $provider->query('path');
-            silent_q("\tWrites tags to: $writer_type using ", $provider->{NAME}, "\n");
+            silent_q("\tWrites tags to: [_1] using [_2]\n", $writer_type, $provider->{NAME});
         }
 
         silent_q("Types:\n");
         #print STDERR "TypeMap: ", Dumper($typemap);
         foreach my $filetype ($typemap->get_all_filetypes()) {
-            silent_q("\tType $filetype files have extensions: ",
-                     join(', ', map {lc $_} $typemap->get_exts_from_filetype($filetype), "\n"));
+            silent_q("\tType [_1] files have extensions: [_2]\n", $filetype,
+                     join(', ', map {lc $_} $typemap->get_exts_from_filetype($filetype)));
         }
         silent_q("\n");
         foreach my $class ($typemap->get_all_classes()) {
-            silent_q("\tClass $class comprises types: ",
-                     join(', ', $typemap->get_filetypes_from_class($class)), "\n");
+            silent_q("\tClass [_1] comprises types: [_2]\n", $class,
+                     join(', ', $typemap->get_filetypes_from_class($class)));
         }
 
         #if ((exists $options->{'all'}) and $options->{'all'})
@@ -198,7 +198,7 @@ sub main
                 next if $provider =~ m{/}; # This indicates a 'smooshed' combined converter,
                 # whose individual components will be displayed
                 # separately.
-                silent_q("\tProvider $provider uses ", $provider_paths{$provider}, "\n");
+                silent_q("\tProvider [_1] uses [_2]\n", $provider, $provider_paths{$provider});
             }
         }
 
@@ -294,7 +294,7 @@ B<About> reports on interesting things in idv.
 =cut
 
 EOD
-    $help_file->man_info('about', $pod_input);
+    $help_file->set_man_info('about', $pod_input);
 
     return;
 }

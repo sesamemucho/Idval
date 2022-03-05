@@ -44,11 +44,11 @@ sub set_imp
     my $service_name = shift;
     my $service = shift;
 
-    fatal("Unrecognized service name \"$service_name\" in Idval::FileIO") if $service_name ne "io_type";
+    fatal("Unrecognized service name \"[_1]\" in Idval::FileIO", $service_name) if $service_name ne "io_type";
 
     $implementation = $service eq "FileSystem" ? "Idval::FileSystem" :
                       $service eq "FileString" ? "Idval::FileString" :
-                      fatal("Unrecognized service \"$service\" for service name io_type");
+                      fatal("Unrecognized service \"[_1]\" for service name io_type", $service);
 
     return;
 }

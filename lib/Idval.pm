@@ -167,12 +167,12 @@ sub _init
     # Tell the system to use the regular filesystem services (i.e., not the unit-testing version)
     Idval::ServiceLocator::provide('io_type', 'FileSystem');
 
-    #verbose("option list:", Dumper(\%options));
-    verbose("Looking for: ", Idval::Ui::get_sysconfig_file($data_dir), "\n");
+    #verbose("option list: [_1]", Dumper(\%options));
+    verbose("Looking for: [_1]\n", Idval::Ui::get_sysconfig_file($data_dir));
 
     my $sysconfig_file  = $options{'sysconfig'} || Idval::Ui::get_sysconfig_file($data_dir);
     my $userconfig_file = $options{'userconfig'} || Idval::Ui::get_userconfig_file($data_dir);
-    verbose("sysconfig is: \"$sysconfig_file\", userconfig is \"$userconfig_file\"\n");
+    verbose("sysconfig is: \"[_1]\", userconfig is \"[_2]\"\n", $sysconfig_file, $userconfig_file);
 
     my $config = Idval::Config->new($sysconfig_file);
     $config->add_file($userconfig_file) if $userconfig_file;
@@ -200,7 +200,7 @@ sub _init
     $self->{DATASTORE} = Idval::Collection->new({contents => '', source => 'blank'});
 
     $self->{REMAINING_ARGS} = [@other_args];
-    chatty("Remaining args: <", join(", ", @{$self->{REMAINING_ARGS}}), ">\n");
+    chatty("Remaining args: <[_1]>\n", join(", ", @{$self->{REMAINING_ARGS}}));
     return;
 }
 
@@ -248,11 +248,11 @@ sub AUTOLOAD  ## no critic (RequireFinalReturn)
 
     return if $name =~ m/^[[:upper:]]+$/;
 
-    chatty("In autoload, checking \"$name\"\n");
+    chatty("In autoload, checking \"[_1]\"\n", $name);
     my $providers = Idval::Common::get_common_object('providers');
     fatal("ERROR: Command \"$rtn\" called too early\n") unless defined $providers;
 
-    chatty("In autoload; rtn is \"$rtn\"\n");
+    chatty("In autoload; rtn is \"[_1]\"\n", $rtn);
 
     my $subr = $providers->get_provider('command', $name, 'NULL');
     no strict 'refs';

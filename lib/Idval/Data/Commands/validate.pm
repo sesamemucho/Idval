@@ -63,9 +63,7 @@ sub main
     }
 
     $val_cfg = $vcfg;
-    $Idval::Config::DEBUG=1;  # XXX
-    $val_cfg->{DEBUG} = 1;    # XXX
-
+    # This is required to make sure the tagname->line_number mapping is present
     $datastore->stringify();
     $filename = $datastore->source();
 
@@ -94,26 +92,42 @@ sub each_item
 
     my @rectags = $tag_record->get_all_keys();
     my $lines = $tag_record->get_value('__LINES');
-    #print STDERR "val_cfg: ", Dumper($val_cfg);
-    my $varlist = $val_cfg->get_gripes($tag_record);
+#     if ($key eq '/home/bob/Projects/src/idv/t/accept/../accept_data/ValidateTest/t/d1/oggs/fil03.ogg')
+#     {
+#         print STDERR "val_cfg: ", Dumper($val_cfg);
+#     }
+    my $varlist = $val_cfg->merge_blocks($tag_record);
 
-    #print "For $key, got varlist: ", Dumper($varlist);
+    #print STDERR "For $key, got varlist, lines: ", Dumper($varlist, $lines);
 
+    my @gripe_list;
+    # We want to display in order of the line number at with the tag appears
+    foreach my $gripe_key (keys %{$varlist})
+    {
+        foreach my $tag (@{$varlist->{$gripe_key}})
+        {
+            # Tags without line numbers are calculated, and shouldn't be shown
+            next unless defined $lines->{$tag};
+            push(@gripe_list, [$gripe_key, $lines->{$tag}, $tag]);
+        }
+    }
+    # Now, sort on the line number
+    #print STDERR "gripe_list for $key: ", Dumper(\@gripe_list);
     my @sorted_gripes = map  { $_->[0] }
                         sort { $a->[1] <=> $b->[1] }
                         map  { [$_, $$_[1]] }
-                        @{$varlist};
+                             @gripe_list;
 
-    #foreach my $gripe_item (@{$varlist})
+#     #foreach my $gripe_item (@{$varlist})
     foreach my $gripe_item (@sorted_gripes)
     {
         $gripe = $$gripe_item[0];
         $linenumber = $$gripe_item[1];
         $tagname = $$gripe_item[2];
-        silent_q(sprintf "%s:%d: error: For %s, %s\n", $filename, $linenumber, $tagname, $gripe);
+        silent_q("[sprintf,%s:%d: error: For %s, %s,_1,_2,_3,_4]\n", $filename, $linenumber, $tagname, $gripe);
     }
 
-#a.c:7: error: `garf' undeclared (first use in this function)
+# #a.c:7: error: `garf' undeclared (first use in this function)
 
     return 0;
 }
@@ -148,7 +162,7 @@ useful with the contents thereof.
 =cut
 
 EOD
-    $help_file->man_info('validate', $pod_input);
+    $help_file->set_man_info('validate', $pod_input);
 
     return;
 }

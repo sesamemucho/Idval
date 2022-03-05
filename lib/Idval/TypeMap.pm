@@ -26,7 +26,7 @@ sub _init
 
     $self->build_type_mapper($prov);
 
-    #idv_dbg("TypeMap: FILETYPE map is: ", Dumper($self->{MAPPING}->{FILETYPE}));
+    #idv_dbg("TypeMap: FILETYPE map is: [_1]", Dumper($self->{MAPPING}->{FILETYPE}));
     return;
 }
 
@@ -214,7 +214,7 @@ sub get_filetype_from_file
     $ext =~ s/\Q${vis_sep}\E.*$//;
     $ext = uc($ext);
 
-    idv_dbg("TypeMap::get_filetype_from_file: ext is \"$ext\"\n");
+    idv_dbg("TypeMap::get_filetype_from_file: ext is \"[_1]\"\n", $ext);
     return exists($self->{MAPPING}->{FILETYPE}->{REV}->{$ext}) ? $self->{MAPPING}->{FILETYPE}->{REV}->{$ext} : '';
 }
 

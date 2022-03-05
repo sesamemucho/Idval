@@ -23,8 +23,7 @@ use Data::Dumper;
 use English '-no_match_vars';
 
 use Idval::Common;
-use Idval::Logger qw(info_q chatty verbose);
-#use Idval::Logger qw(chatty verbose);
+use Idval::Logger qw(idv_dbg);
 use Idval::Data::Genres;
 
 use base qw( Idval::Config );
@@ -61,188 +60,24 @@ sub new
     return $self;
 }
 
-# Similar to Config.pm's evaluate, but sufficiently different
-sub val_evaluate
+sub parse_vars
 {
     my $self = shift;
-    my $noderef = shift;
-    my $select_list = shift;
-    my $retval = 1;
-    my @s_key_list;
-    my $match = '';
-    my $is_regexp = 0;
-    my @tags_matched = ();
+    my @vars = @_;
+    my @results = ();
 
-    #chatty("in val_evaluate: ", Dumper($noderef));
-    #chatty("val_evaluate: 1 select_list: ", Dumper($select_list));
-    # If the block has no selector keys itself, then all matches should succeed
-    if (not (exists($noderef->{'select'}) && ref($noderef->{'select'}) eq 'HASH'))
+    idv_dbg("In parse_vars, got [quant,_1,var,vars]\n", scalar(@vars));
+    foreach my $varinfo (@vars)
     {
-        chatty("Block has no selector keys, returning 2\n");
-        return 2;
+        my ($var, $op, $value) = @{$varinfo};
+        next unless $var eq 'GRIPE';
+
+        #push(@results, 'print STDERR "keys of ar_selects: ", join(",", keys(%{$ar_selects})), "\n";');
+        #push(@results, 'print STDERR "matching regexp tags: ", join(",", @{$rg_matched_tags}), "\n";');
+        push(@results, '$vars{q{' . $value . '}} = [keys(%{$ar_selects}), @{$rg_matched_tags}];');
     }
 
-    my %selectors = %{$select_list};
-
-    return 0 unless %selectors;
-
-    #my $tags_to_ignore = $select_list->get_calculated_keys_re();
-#     my $tags_to_ignore = eval {$select_list->get_calculated_keys_re(); };
-#     if ($@)
-#     {
-#         confess $@;
-#     }
-# No more ignoring keys
-
-  KEY_MATCH: foreach my $block_key (keys %{$noderef->{'select'}})
-    {
-        if (exists ($self->{DEF_VARS}->{$block_key}))
-        {
-            no strict 'refs';
-            my $subr = $self->{DEF_VARS}->{$block_key};
-            $selectors{$block_key} = &$subr(\%selectors);
-            chatty("Using ", $selectors{$block_key}, " for \"$block_key\"\n");
-            use strict;
-        }
-
-        if ($block_key eq '%FILE_TIME%')
-        {
-            $selectors{$block_key} = Idval::FileIO::idv_get_mtime($selectors{FILE});
-        }
-
-        my $bstor = $noderef->{'select'}->{$block_key}; # Naming convenience
-
-        #verbose("val_evaluate: 2 select_list: ", Dumper(\%selectors));
-
-        @s_key_list = $self->{ALLOW_KEY_REGEXPS} ? grep(/^$block_key$/, keys %selectors) :
-            ($block_key);
-        $is_regexp = $block_key =~ m/\W/;
-
-        verbose("Checking block selector \"$block_key\" (is_regexp = \"$is_regexp\")\n");
-
-        my $key_list_loop_result = 0;
-
-        foreach my $s_key (@s_key_list)
-        {
-            chatty("Checking block selector key \"$s_key\"\n");
-            if (!exists($selectors{$s_key}))
-            {
-                # The select list has nothing to match a required selector, so this must fail
-                chatty("Select list has nothing to match block selector key \"$s_key\", so return 0.\n");
-                return 0;
-            }
-
-#             if ($is_regexp && ($s_key =~ m/$tags_to_ignore/))
-#             {
-#                 chatty("Block selector key \"$s_key\" is a tag to ignore.\n");
-#                 next;
-#             }
-
-            # Make sure arg_value is a list reference
-            my $arg_value_list = ref $selectors{$s_key} eq 'ARRAY' ? $selectors{$s_key} :
-                [$selectors{$s_key}];
-
-            my $block_op = $bstor->{'op'};
-            my $block_value = $bstor->{'value'};
-            my $block_cmp_func = Idval::Select::get_compare_function($block_op, 'STR');
-            my $cmp_result = 0;
-
-            # For any key, the passed_in selector may have a list of values that it can offer up to be matched.
-            # A successful match for any of these values constitutes a successful match for the block selector.
-            foreach my $value (@{$arg_value_list})
-            {
-                verbose("Comparing \"$s_key\" => \"$value\" \"$block_op\" \"$block_value\" resulted in ",
-                         &$block_cmp_func($value, $block_value) ? "True\n" : "False\n");
-
-                $cmp_result ||= &$block_cmp_func($value, $block_value);
-                last if $cmp_result;
-            }
-
-            # Regexp matches are ORed together. For example, if a
-            # block key is 'TALB|TPE1', then this loop should return
-            # TRUE if either TALB or TPE1 gets a match.
-            # Also note that, if the block key is not a regexp, this
-            # loop will execute exactly once.
-
-            $key_list_loop_result ||= $cmp_result;
-
-            if ($cmp_result)
-            {
-                push(@tags_matched, $s_key);
-            }
-
-            chatty("accumulated retval is now \"$retval\"\n");
-        }
-
-        $retval &&= $key_list_loop_result;
-    }
-
-    chatty("val_evaluate returning \"$retval\"\n");
-    return ($retval, \@tags_matched);
-}
-
-# The only variable we care about is the GRIPE
-# Use 'select' key to find out which tags matched, and so get the right line number
-sub get_gripes
-{
-    my $self = shift;
-    my $selects = shift;
-    my $tree = $self->{TREE};
-    my @gripelist;
-
-    info_q({force_match => 1}, 'blah');
-    chatty({force_match => 1}, "Start of _get_gripes, selects: ", Dumper($selects));
-    print STDERR "Start of _get_gripes, selects: ", Dumper($selects);
-    print STDERR "HELLO from get_gripes\n";
-    my $visitor = sub {
-        my $self = shift;
-        my $noderef = shift;
-
-        my $gripe = 'no gripe found?';
-        my @match_tags = ();
-
-        #chatty("get_gripes: noderef is: ", Dumper($noderef));
-        my ($retval, $matches) = $self->val_evaluate($noderef, $selects);
-        return 0 if ($retval == 0);
-
-        chatty("get_gripes: val_evaluate returned nonzero\n");
-
-        # There might not be a GRIPE at this node (for instance, a top-level 'group')
-        if(exists $noderef->{GRIPE})
-        {
-            $gripe = $noderef->{GRIPE};
-            push(@gripelist, [$gripe, $matches]) if @{$matches};
-        }
-
-        return 1;
-    };
-
-    $self->visit([$tree], 'top', 0, $visitor);
-
-    # Translate tag names to line numbers
-    my $gripe;
-    my $linenum;
-    # The $selects argument for this call had better be a tag record...
-    my $lines = $selects->get_value('__LINES');
-    my @retlist;
-    foreach my $gripe_item (@gripelist)
-    {
-        $gripe = $$gripe_item[0];
-        # Just flag the first bad tag
-        foreach my $bad_tag (@{$$gripe_item[1]})
-        {
-            # If we can't find the tag (maybe it's a regexp), just return the line
-            # number for the start of the tag record (the FILE line).
-            $linenum = exists $lines->{$bad_tag} ? $lines->{$bad_tag} : $lines->{FILE};
-
-            push(@retlist, [$gripe, $linenum, $bad_tag]);
-            #print "Got gripe \"$gripe\" for tag \"$bad_tag\" at line number \"$linenum\"\n";
-        }
-    }
-
-    #chatty("Result of merge blocks - VARS: ", Dumper(\@retlist));
-
-    return \@retlist;
+    return @results;
 }
 
 package Idval::ValidateFuncs;

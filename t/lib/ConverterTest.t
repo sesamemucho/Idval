@@ -54,8 +54,8 @@ sub get_converter : Test(1)
     Idval::FileString::idv_add_file('/testdir/gt1.txt', "\nprovider_dir = /testdir/Idval\n\n");
     add_UserPlugin3_up1();
 
-    my $fc = eval {Idval::Config->new("/testdir/gt1.txt")};
-    $provs = eval{Idval::ProviderMgr->new($fc)};
+    my $fc = Idval::Config->new("/testdir/gt1.txt");
+    $provs = Idval::ProviderMgr->new($fc);
     my $conv = $provs->get_converter('WAV', 'FLAC');
 
     is($conv->query('name'), 'flacker');

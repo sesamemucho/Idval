@@ -313,14 +313,14 @@ sub format_record
             next if $tag =~ m/$calculated_tags_re/;
         }
 
-        fatal("Uninitialized value for tag \"$tag\"\n") if !defined($self->get_value($tag));
+        fatal("Uninitialized value for tag \"[_1]\"\n", $tag) if !defined($self->get_value($tag));
         
         $tag_value = $self->get_value($tag);
         if (ref $tag_value eq 'ARRAY')
         {
             my @values = (@{$tag_value}); # Make a copy
             my $value = shift @values;
-            fatal("Uninitialized array value for tag \"$tag\"\n") if !defined($value);
+            fatal("Uninitialized array value for tag \"[_1]\"\n", $tag) if !defined($value);
             push(@output, "$tag = $value");
             foreach $value (@values)
             {

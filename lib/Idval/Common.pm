@@ -32,7 +32,7 @@ use Text::Balanced qw (
                        extract_multiple
                       );
 
-use Idval::Logger qw(quiet verbose fatal);
+use Idval::Logger qw(quiet verbose chatty fatal);
 
 my $log = Idval::Logger::get_logger();
 our %common_objs;
@@ -163,17 +163,17 @@ sub run
     #$name = exe_name($name);
     if ($no_run)
     {
-        quiet("$name $cmdargs\n");
+        quiet("[_1] [_2]\n", $name, $cmdargs);
         return 0;
     }
     else
     {
-        verbose("\"$name\" $cmdargs\n");
+        verbose("[_1] [_2]\n", $name, $cmdargs);
         $retval = qx{"$name" $cmdargs 2>&1};
         $status = $?;
         if ($status)
         {
-            quiet("Error $status from: \"$name $cmdargs\"\nReturned \"$retval\"\n");
+            quiet("Error [_1] from: \"[_2] [_3]\"\nReturned \"[_4]\"\n", $status, $name, $cmdargs, $retval);
         }
         #elsif (! $log->log_level_is_under($Idval::Logger::DEBUG1))
         #{
@@ -218,7 +218,7 @@ sub deep_copy {
         }
     }
 
-    fatal("what type is ", ref $this ,"?");
+    fatal("what type is [_1]?\n", ref $this);
 }
 
 # Given two references to hash tables, copy assignments from $from to
@@ -264,7 +264,7 @@ sub get_common_object
 {
     my $key = shift;
 
-    fatal("Common object \"$key\" not found.") unless exists($common_objs{$key});
+    fatal("Common object \"[_1]\" not found.\n", $key) unless exists($common_objs{$key});
     return $common_objs{$key};
 }
 

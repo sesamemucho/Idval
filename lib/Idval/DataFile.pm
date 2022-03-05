@@ -61,7 +61,7 @@ sub parse
         return $collection;
     }
 
-    my $fh = Idval::FileIO->new($datafile, "r") || fatal("Can't open tag data file \"$datafile\" for reading: $!\n");
+    my $fh = Idval::FileIO->new($datafile, "r") || fatal("Can't open tag data file \"[_1]\" for reading: [_2]\n", $datafile, $!);
 
     my $line;
 
@@ -147,7 +147,7 @@ sub parse_tagdefs
         {
             if (!exists ($hash{$1}))
             {
-                fatal("\"Append\" line too early in tag data file (no previous value): \"$line\"\n");
+                fatal("\"Append\" line too early in tag data file (no previous value): \"[_1]\"\n", $line);
             }
             elsif (ref $hash{$1} ne 'ARRAY')
             {
@@ -165,13 +165,13 @@ sub parse_tagdefs
         else
         {
             $line =~ s/\r/\<CR\>/g;
-            fatal("Unrecognized line in tag data file: \"$line\"\n");
+            fatal("Unrecognized line in tag data file: \"[_1]\"\n", $line);
         }
     }
 
     if (!exists($hash{FILE}))
     {
-        fatal("No FILE tag in tag data record \"", join("\n", @{$blockref}), "\"\n");
+        fatal("No FILE tag in tag data record \"[_1]\"\n", join("\n", @{$blockref}));
     }
 
     my $rec = Idval::Record->new({FILE=>$hash{FILE}});

@@ -24,6 +24,7 @@ use English '-no_match_vars';
 use Getopt::Long;
 use Data::Dumper;
 
+use Idval::Logger qw(fatal);
 use Idval::FileIO;
 use Idval::Common;
 
@@ -49,7 +50,7 @@ sub main
     # If there's something left, we've been passed a file handle
     $outputfile = $ARGV[0] if @ARGV;
     my $out = ref $outputfile ? $outputfile :
-        Idval::FileIO->new($outputfile, '>') or fatal("Can't open $outputfile for writing: $ERRNO\n");
+        Idval::FileIO->new($outputfile, '>') or fatal("Can't open $outputfile for writing: [_1]\n", $ERRNO);
 
     #print STDERR "print command: ", Dumper($datastore);
     my $coll = $datastore->stringify($full);
@@ -95,7 +96,7 @@ data store.
 =cut
 
 EOD
-    $help_file->man_info('print', $pod_input);
+    $help_file->set_man_info('print', $pod_input);
 
     return;
 }

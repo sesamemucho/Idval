@@ -79,16 +79,16 @@ sub convert
     if (!$sox_args)
     {
         my $vars = $self->{CONFIG}->merge_blocks($tag_record);
-        
-        idv_dbg("No sox args. merge_blocks result is: ", Dumper($vars));
-        fatal("sox filter was called, but there were no arguments in \"sox_args\". Selectors are ", Dumper($tag_record));
+
+        idv_dbg("No sox args. merge_blocks result is: [_1]", Dumper($vars));
+        fatal("sox filter was called, but there were no arguments in \"sox_args\". Selectors are [_1]", Dumper($tag_record));
     }
 
     my @sox_args_list = split(' ', $sox_args);
     grep(s/%INFILE%/$src/, @sox_args_list);
     grep(s/%OUTFILE%/$dest/, @sox_args_list);
 
-    verbose("sox filter command: $path ", join(' ', Idval::Common::mkarglist(@sox_args_list)), "\n");
+    verbose("sox filter command: [_1] [_2]\n", $path, join(' ', Idval::Common::mkarglist(@sox_args_list)));
 
     my $status = Idval::Common::run($path, Idval::Common::mkarglist(@sox_args_list));
 
@@ -121,7 +121,7 @@ file is represented by %OUTFILE%.
 
 sox_args = %INFILE% %OUTFILE% lowp 1000.0
 
-filters the input file through a low-pass filter 
+filters the input file through a low-pass filter
 
 sox_args = %INFILE% %OUTFILE% echo 0.8 0.9 1000.0 0.3
 
@@ -139,7 +139,7 @@ file.
 =cut
 
 EOD
-    $help_file->man_info('sox', $pod_input);
+    $help_file->set_man_info('sox', $pod_input);
 
     return;
 }

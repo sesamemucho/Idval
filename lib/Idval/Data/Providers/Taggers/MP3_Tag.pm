@@ -25,9 +25,11 @@ use Class::ISA;
 use Data::Dumper;
 use Encode;
 
-use Idval::Logger qw(fatal);
+use Idval::Logger qw(idv_dbg fatal);
 use base qw(Idval::Provider);
 
+# We need MP3::Tag. If it isn't installed with Perl, look for it
+# in the Idval installation.
 my $req_status = eval {require MP3::Tag};
 my $req_msg = !defined($req_status) ? "$!" :
                    $req_status == 0 ? "$@" :
@@ -86,8 +88,8 @@ sub init
     # Forward mapping is ID3v1 to ID3v2
     # Reverse mapping is ID3v2 to ID3v1
     $self->set_tagname_mappings($config, 'MP3');
-    #idv_dbg("MP3_Tags FWD_MAPPING: ", Dumper($self->{FWD_MAPPING}));
-    #idv_dbg("MP3_Tags REV_MAPPING: ", Dumper($self->{REV_MAPPING}));
+    #idv_dbg("MP3_Tags FWD_MAPPING: [_1]", Dumper($self->{FWD_MAPPING}));
+    #idv_dbg("MP3_Tags REV_MAPPING: [_1]", Dumper($self->{REV_MAPPING}));
     $self->{DEBUG} = 0;
     return;
 }
@@ -140,7 +142,6 @@ sub read_tags
 
     if (exists $mp3->{ID3v1})
     {
-        #idv_dbg(STDERR "MP3: Yes to ID3v1\n");
         ($title, $artist, $album, $year, $comment, $track, $genre) = $mp3->{ID3v1}->all;
 
         $tag_record->add_tag($self->map_to_id3v2('TITLE'), $title);
@@ -283,7 +284,7 @@ sub read_tags
                             #print "$name: $info\n";
                             $valstr = $info;
                         }
-                        
+
                         my $text1;
                         ($text1 = $valstr) =~ s/\r/CR/g;
                         print "Frame $frame, valstr: \"$valstr\"\n" if $dbg;
@@ -380,7 +381,6 @@ sub write_tags
         $tag_index = -1;
         while ($tagvalue = $temp_rec->shift_value($tagname))
         {
-            #fatal("Undefined value for tag \"$tagname\"") unless defined($tagvalue);
             $tag_index++;
             $framename = $tag_index > 0 ? sprintf("%s%02d", $tagname, $tag_index) : $tagname;
 
@@ -390,7 +390,7 @@ sub write_tags
                 delete $frameIDs->{$framename};
                 next;
             }
-            
+
             # Is the tag name a supported ID3v2 tag?
             if (exists($self->{SUPPORTED_TAGS}->{$tagname}))
             {

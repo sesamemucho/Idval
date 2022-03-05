@@ -1,0 +1,296 @@
+lib/Idval/Select.pm:    fatal("Unknown function Idval::ValidateFuncs::[_1]", $funcname) unless check_function($funcname);
+lib/Idval/Select.pm:    verbose("\n\nregex is: \"[_1]\"\n\n\n", $combo);
+lib/Idval/NConfig.pm:#     chatty("Calculated variables are: ", Dumper($subr_vars));
+lib/Idval/NConfig.pm:    fatal("Need a file") unless @{$self->{INITFILES}}; # We do need at least one config file
+lib/Idval/NConfig.pm:            $fh = Idval::FileIO->new($fname, "r") || fatal("Can't open \"$fname\" for reading: $! in " . __PACKAGE__ . " line(" . __LINE__ . ")");
+lib/Idval/NConfig.pm:    idv_dbg("looking for ", join(',', @{$tagsref}), " in ", Dumper($selectors, $varsref));
+lib/Idval/NConfig.pm:    chatty("ck_selects: returning: ", Dumper($ar_selects, \%expanded_tags));
+lib/Idval/NConfig.pm:            #idv_dbg("ert: checking ", Dumper($ert_conditional));
+lib/Idval/NConfig.pm:                #idv_dbg("Comparing \"selector list\" \"$ar_selects->{$tagname}\" \"$op\" \"$value\" resulted in ",
+lib/Idval/NConfig.pm:    idv_dbg("pc: parts: ", Dumper(\%parts));
+lib/Idval/NConfig.pm:    idv_dbg("In parse_vars, got ", scalar(@vars), " vars\n");
+lib/Idval/NConfig.pm:            fatal("Any '{' or '}' must be on a line by itself: <$line>\n");
+lib/Idval/NConfig.pm:            fatal("Conditional variable \"$name\" was already used in this block:\n{\n$block_text}\n") if exists($seen_conds{$name});
+lib/Idval/NConfig.pm:        idv_warn("Unrecognized input line <$line>\n");
+lib/Idval/NConfig.pm:    idv_dbg("returning <\n$subr\n>\n");
+lib/Idval/NConfig.pm:#     fatal("node_list_ref not an ARRAY ref") unless ref $node_list_ref eq 'ARRAY';
+lib/Idval/NConfig.pm:# #                 fatal("Dis-allowed configuration name 'group' found");
+lib/Idval/NConfig.pm:#     #idv_dbg("Start of _merge_blocks, selects: ", Dumper($selects)); ##Dumper
+lib/Idval/NConfig.pm:#         #idv_dbg("merge_blocks: noderef is: ", Dumper($noderef)); ##Dumper
+lib/Idval/NConfig.pm:#         idv_dbg("merge_blocks: evaluate returned nonzero\n"); ##debug1
+lib/Idval/NConfig.pm:#             idv_dbg("merge_blocks: checking key $key\n"); ##debug1
+lib/Idval/NConfig.pm:#             idv_dbg("ref of value is: ", ref $value, "\n"); ##debug1
+lib/Idval/NConfig.pm:#                     fatal("Unexpected attributes for value: ", join(', ', sort keys %{$value}));
+lib/Idval/NConfig.pm:#             idv_dbg("merge_blocks: Adding \"$value\" to \"$key\"\n"); ##debug1
+lib/Idval/NConfig.pm:#     #idv_dbg("Result of merge blocks - VARS: ", Dumper(\%vars)); ##Dumper
+lib/Idval/NConfig.pm:    #idv_dbg("Start of match_blocks, selects: ", Dumper($selects)); ##Dumper
+lib/Idval/NConfig.pm:        #idv_dbg("match_blocks: noderef is: ", Dumper($noderef)); ##Dumper
+lib/Idval/NConfig.pm:    #idv_dbg("Result of match blocks is $result\n"); ##debug1
+lib/Idval/NConfig.pm:#     #idv_dbg("in evaluate: ", Dumper($noderef)); ##Dumper
+lib/Idval/NConfig.pm:#     #idv_dbg("evaluate: 1 select_list: ", Dumper($select_list)); ##Dumper
+lib/Idval/NConfig.pm:#         idv_dbg("Block has no selector keys, returning 2\n"); ##debug1
+lib/Idval/NConfig.pm:#             #chatty("Using \"$block_key\" as subroutine name\n"); ##debug1
+lib/Idval/NConfig.pm:# #             chatty("Using \"$block_key\" as subroutine name\n");
+lib/Idval/NConfig.pm:#             #idv_dbg("Comparing \"selector list\" \"$block_key\" \"$block_op\" \"$block_value\" resulted in ",
+lib/Idval/NConfig.pm:#         #idv_dbg("evaluate: 2 select_list: ", Dumper(\%selectors)); ##Dumper
+lib/Idval/NConfig.pm:#         #idv_dbg("Checking block selector \"$block_key\"\n"); ##debug1
+lib/Idval/NConfig.pm:#                 #idv_dbg("Comparing \"$value\" \"$block_op\" \"$block_value\" resulted in ",
+lib/Idval/NConfig.pm:    idv_dbg("In get_single_value with key \"$key\"\n"); ##debug1
+lib/Idval/NConfig.pm:    #idv_dbg("get_single_value: list result for \"$key\" is: ", Dumper($vars->{$key})); ##Dumper
+lib/Idval/NConfig.pm:#     fatal("No filename in selectors") unless exists $selectors->{FILE};
+lib/Idval/FirstTime.pm:        idv_print("$prompt $displayed_default $def");
+lib/Idval/FirstTime.pm:            idv_print("Unrecognized response \"$ans\"\n");
+lib/Idval/FirstTime.pm:        idv_print(sprintf("%2d %s\n", $i, $choices[$i]));
+lib/Idval/FirstTime.pm:        idv_print("$prompt $displayed_default $def");
+lib/Idval/FirstTime.pm:        idv_print("Response \"$ans\" is outside the range\n");
+lib/Idval/FirstTime.pm:            idv_print(sprintf("%2d %s\n", $i, $choices[$i]));
+lib/Idval/FirstTime.pm:    idv_print(qq{
+lib/Idval/FirstTime.pm:idv_print(qq{
+lib/Idval/FirstTime.pm:    idv_print(qq{
+lib/Idval/Data/Commands/print.pm:        Idval::FileIO->new($outputfile, '>') or fatal("Can't open $outputfile for writing: [_1]\n", $ERRNO);
+lib/Idval/Data/Commands/print.pm:    $help_file->man_info('print', $pod_input);
+lib/Idval/Data/Commands/help.pm:        fatal("Unrecognized command name \"[_1]\"\n", $name) unless defined($cmd);
+lib/Idval/Data/Commands/help.pm:        fatal("No help information for command name \"[_1]\"\n", $name) unless defined($help_file->man_info($cmd_name));
+lib/Idval/Data/Commands/help.pm:            silent_q($help_file->get_full_description($cmd_name));
+lib/Idval/Data/Commands/help.pm:            silent_q($help_file->get_synopsis($cmd_name));
+lib/Idval/Data/Commands/help.pm:            silent_q("\nUse \"help -v [_1]\" for more information.\n", $cmd_name);
+lib/Idval/Data/Commands/help.pm:        silent_q($help_file->get_full_description('main'));
+lib/Idval/Data/Commands/help.pm:       silent_q("\nAvailable commands:\n");
+lib/Idval/Data/Commands/help.pm:           silent_q("  ", $help_file->get_short_description($cmd_name), "\n");
+lib/Idval/Data/Commands/help.pm:    $help_file->man_info('help', $pod_input);
+lib/Idval/Data/Commands/store.pm:    fatal("Bad \"datastore\" (ref is \"[_1]\"\n", ref $datastore) unless ref $datastore eq 'Idval::Collection';
+lib/Idval/Data/Commands/store.pm:    fatal("Bad \"providers\" (ref is \"[_1]\"\n", ref $providers) unless ref $providers eq 'Idval::ProviderMgr';
+lib/Idval/Data/Commands/store.pm:    $help_file->man_info('store', $pod_input);
+lib/Idval/Data/Commands/about.pm:        silent_q(join("\n", @msgs), "\n");
+lib/Idval/Data/Commands/about.pm:        silent_q("Reads:\n");
+lib/Idval/Data/Commands/about.pm:            silent_q("\tReads tags from: [_1] using [_2]\n", $reader_type, $provider->{NAME});
+lib/Idval/Data/Commands/about.pm:        silent_q("Writes:\n");
+lib/Idval/Data/Commands/about.pm:            silent_q("\tWrites tags to: [_1] using [_2]\n", $writer_type, $provider->{NAME});
+lib/Idval/Data/Commands/about.pm:        silent_q("Types:\n");
+lib/Idval/Data/Commands/about.pm:            silent_q("\tType [_1] files have extensions: [_2]\n", $filetype,
+lib/Idval/Data/Commands/about.pm:        silent_q("\n");
+lib/Idval/Data/Commands/about.pm:            silent_q("\tClass [_1] comprises types: [_2]\n", $class,
+lib/Idval/Data/Commands/about.pm:            silent_q("\nProvider paths:\n");
+lib/Idval/Data/Commands/about.pm:                silent_q("\tProvider [_1] uses [_2]\n", $provider, $provider_paths{$provider});
+lib/Idval/Data/Commands/about.pm:            silent_q("\nProvider info:\n");
+lib/Idval/Data/Commands/about.pm:                    silent_q($infoline);
+lib/Idval/Data/Commands/about.pm:#                 silent_q($infoline);
+lib/Idval/Data/Commands/about.pm:    $help_file->man_info('about', $pod_input);
+lib/Idval/Data/Commands/validate.pm:        silent_q("[sprintf,%s:%d: error: For %s, %s,_1,_2,_3,_4]\n", $filename, $linenumber, $tagname, $gripe);
+lib/Idval/Data/Commands/validate.pm:    $help_file->man_info('validate', $pod_input);
+lib/Idval/Data/Commands/gettags.pm:        idv_print("Need to specify at least one directory\n") if ($result and !@args);
+lib/Idval/Data/Commands/gettags.pm:        idv_print($help_file->get_full_description('gettags'));
+lib/Idval/Data/Commands/gettags.pm:    info_q("Collecting directory information. Please wait...\n");
+lib/Idval/Data/Commands/gettags.pm:        idv_dbg("Checking \"[_1]\"\n", $key);
+lib/Idval/Data/Commands/gettags.pm:    $help_file->man_info('gettags', $pod_input);
+lib/Idval/Data/Commands/set.pm:        idv_print("set commands are: conf, debug, level\n");
+lib/Idval/Data/Commands/set.pm:        idv_print("  Module spec       level\n");
+lib/Idval/Data/Commands/set.pm:            idv_print("[sprintf,%-20s  %d,_1,_2]\n", $modhash->{$item}->{STR}, $modhash->{$item}->{LEVEL});
+lib/Idval/Data/Commands/set.pm:            idv_print("Available debug levels are:\n");
+lib/Idval/Data/Commands/set.pm:                idv_print("[sprintf,    %8s: %d,_1,_2]\n", $level_to_name{$level}, $level);
+lib/Idval/Data/Commands/set.pm:            idv_print("\nCurrent level is: [_1] ([_2])\n", $current_level, $level_to_name{$current_level});
+lib/Idval/Data/Commands/set.pm:                idv_print("\nNew level is: [_1] ([_2])\n", $current_level, $level_to_name{$current_level});
+lib/Idval/Data/Commands/set.pm:                idv_print("\nNew level is: [_1] ([_2])\n", $current_level, $level_to_name{$current_level});
+lib/Idval/Data/Commands/set.pm:                idv_print("Unrecognized level \"[_1]\"\n", $newlevel);
+lib/Idval/Data/Commands/set.pm:        idv_print("Unrecognized \"set\" command: \"[_1]\" (try \"help set\")\n", join(' ', @ARGV));
+lib/Idval/Data/Commands/set.pm:   $help_file->man_info('set', $pod_input);
+lib/Idval/Data/Commands/update.pm:    fatal("Need an input file for update\n") unless (defined($inputfile) && $inputfile);
+lib/Idval/Data/Commands/update.pm:    fatal("Error: [_1]\n", $@) if $@;
+lib/Idval/Data/Commands/update.pm:    #idv_dbg("update: datastore: [_1]", Dumper($datastore));
+lib/Idval/Data/Commands/update.pm:    #idv_dbg("update: new datastore: [_1]", Dumper($new_datastore));
+lib/Idval/Data/Commands/update.pm:        #idv_dbg("in update with: [_1]", Dumper($tag_record));
+lib/Idval/Data/Commands/update.pm:    $help_file->man_info('update', $pod_input);
+lib/Idval/Data/Commands/read.pm:    verbose("Reading tag information from \"[_1]\"\n", $loc);
+lib/Idval/Data/Commands/read.pm:    $help_file->man_info('read', $pod_input);
+lib/Idval/Data/Commands/select.pm:    info_q({force_match => 1}, "Processed [quant,_1,record,records].\n", $numrecs) unless $quiet;
+lib/Idval/Data/Commands/select.pm:        my $out = Idval::FileIO->new($outputfile, '>') or fatal("Can't open [_1] for writing: [_2]\n", $outputfile, $ERRNO);
+lib/Idval/Data/Commands/select.pm:#    $help_file->man_info('select', $pod_input);
+lib/Idval/Data/Commands/diff.pm:    $help_file->man_info('diff', $pod_input);
+lib/Idval/Data/Commands/sync.pm:        verbose("Remote file \"[_1]\" does not exist. Will create.\n", $remote_pathname);
+lib/Idval/Data/Commands/sync.pm:        verbose("Remote file \"[_1]\" is older than local file \"[_2]\". Will convert.\n", $remote_pathname, $local_pathname);
+lib/Idval/Data/Commands/sync.pm:        verbose("Remote file \"[_1]\" is newer than local file \"[_2]\". Will not convert.\n", $remote_pathname, $local_pathname);
+lib/Idval/Data/Commands/sync.pm:    idv_dbg("Checking [_1]\n", $tag_record->get_name());
+lib/Idval/Data/Commands/sync.pm:    chatty("source type is \"[_1]\" dest type is \"[_2]\"; filter is \"[_3]\"\n", $src_type, $dest_type, $filter);
+lib/Idval/Data/Commands/sync.pm:    chatty("src: [_1] to dest: [_2] yields converter [_3]\n", $src_type, $dest_type, $prov->query('name'));
+lib/Idval/Data/Commands/sync.pm:        chatty("Converting \"[_1]\" to \"[_2]\"\n", $src_path, $dest_path);
+lib/Idval/Data/Commands/sync.pm:        chatty("Did not convert \"[_1]\" to \"[_2]\"\n", $src_path, $dest_path);
+lib/Idval/Data/Commands/sync.pm:    #idv_dbg("Getting provider for src:[_1] dest:[_2]\n", $src_type, $dest_type);
+lib/Idval/Data/Commands/sync.pm:        Idval::Common::get_logger()->fatal("Sync: Need at least one argument to sync\n");
+lib/Idval/Data/Commands/sync.pm:        Idval::Common::get_logger()->fatal("Sync: Need at least one argument to sync\n");
+lib/Idval/Data/Commands/sync.pm:            Idval::Common::get_logger()->fatal("Sync: argument error ($orig_args)\n");
+lib/Idval/Data/Commands/sync.pm:    info_q("processed remaining  total  percent  elapsed  remaining    total\n");
+lib/Idval/Data/Commands/sync.pm:    info_q("[sprintf,%5d %9d %9d %5.0f%%     %8s  %8s  %8s,_1,_2,_3,_4,_5,_6]\n",
+lib/Idval/Data/Commands/sync.pm:    info_q("[sprintf,%5d %9d %9d %5.0f%%     %8s  %8s  %8s,_1,_2,_3,_4,_5,_6]\n",
+lib/Idval/Data/Commands/sync.pm:    chatty("For [_1]\n", $src_path);
+lib/Idval/Data/Commands/sync.pm:    chatty("   remote top is \"[_1]\"\n", $remote_top);
+lib/Idval/Data/Commands/sync.pm:    chatty("   dest name is \"[_1]\" ([_2])\n", $dest_name, $prov->query('name'));
+lib/Idval/Data/Commands/sync.pm:        chatty("sync_dest is a directory: sync dest is \"[_1]\"\n", $sync_dest);
+lib/Idval/Data/Commands/sync.pm:        idv_dbg("Found tags to expand: [_1]\n", join(',', @tags));
+lib/Idval/Data/Commands/sync.pm:        idv_dbg("dest path is now: \"[_1]\"\n", $dest_path);
+lib/Idval/Data/Commands/sync.pm:    $help_file->man_info('sync', $pod_input);
+lib/Idval/Data/Providers/Converters/copy.pm:    chatty("Copying \"[_1]\" to \"[_2]\"\n", $src, $dest);
+lib/Idval/Data/Providers/Converters/sox.pm:        idv_dbg("No sox args. merge_blocks result is: [_1]", Dumper($vars));
+lib/Idval/Data/Providers/Converters/sox.pm:        fatal("sox filter was called, but there were no arguments in \"sox_args\". Selectors are [_1]", Dumper($tag_record));
+lib/Idval/Data/Providers/Converters/sox.pm:    verbose("sox filter command: [_1] [_2]\n", $path join(' ', Idval::Common::mkarglist(@sox_args_list)));
+lib/Idval/Data/Providers/Converters/sox.pm:    $help_file->man_info('sox', $pod_input);
+lib/Idval/Data/Providers/Taggers/metaflac.pm:            idv_warn("Getters::BadFlac [_1] [_2]\n", $line, $filename);
+lib/Idval/Data/Providers/Taggers/metaflac.pm:            chatty("ref record: [_1]\n", ref $tag_record);
+lib/Idval/Data/Providers/Taggers/metaflac.pm:    fatal("Unblessed tag_record reference (ref is \"[_1]\"\n", ref $tag_record) unless ref $tag_record eq 'Idval::Record';
+lib/Idval/Data/Providers/Taggers/Vorbiscomment.pm:            idv_warn("Getters::BadVorbis [_1] [_2]\n", $line, $filename);
+lib/Idval/Data/Providers/Taggers/Vorbiscomment.pm:            chatty("ref record: [_1]\n", ref $tag_record);
+lib/Idval/Data/Providers/Taggers/abc.pm:    $self->save_info();
+lib/Idval/Data/Providers/Taggers/abc.pm:        my $fh = Idval::FileIO->new($fname, "r") || fatal("Can't open \"[_1]\" for reading: [_2]\n", $fname, $!);
+lib/Idval/Data/Providers/Taggers/abc.pm:    my $fh = Idval::FileIO->new($fname, "r") ||fatal("Can't open \"[_1]\" for reading: [_2]\n", $fname, $!);
+lib/Idval/Data/Providers/Taggers/abc.pm:            $fh = Idval::FileIO->new($fname, "w") || fatal("Can't open \"[_1]\" for writing: [_2]\n", $fname, $!);
+lib/Idval/Data/Providers/Taggers/MP3_Tag.pm:    #idv_dbg("MP3_Tags FWD_MAPPING: [_1]", Dumper($self->{FWD_MAPPING}));
+lib/Idval/Data/Providers/Taggers/MP3_Tag.pm:    #idv_dbg("MP3_Tags REV_MAPPING: [_1]", Dumper($self->{REV_MAPPING}));
+lib/Idval/Data/Providers/Taggers/MP3_Tag.pm:    fatal("Undefined tag record\n") unless defined($tag_record);
+lib/Idval/FileIO.pm:    fatal("Unrecognized service name \"[_1]\" in Idval::FileIO", $service_name) if $service_name ne "io_type";
+lib/Idval/FileIO.pm:                      fatal("Unrecognized service \"[_1]\" for service name io_type", $service);
+lib/Idval/FileIO.pm:    fatal("File system implementation not set.\n" .
+lib/Idval/FileIO.pm:    fatal("undefined self") unless defined($self);
+lib/Idval/Collection.pm:    fatal("Huh?") unless defined $self->{CREATIONDATE};
+lib/Idval/ServiceLocator.pm:        verbose("Registering callback with \"[_1]\"\n", "$service_name/$callback_name/$callback_routine_name");
+lib/Idval/ServiceLocator.pm:        fatal("Unregistered service \"[_1]\" requested.\n", $service_name);
+lib/Idval/Logger.pm:            $self->silent_q({debugmask=>1}, "\n");
+lib/Idval/Provider.pm:            verbose("Checking \"[_1]\n", $testexe); ##debug1
+lib/Idval/Provider.pm:                verbose("Found \"[_1]\"\n", $testexe); ##debug1
+lib/Idval/Provider.pm:    #fatal("Could not find program \"[_1]\"\n", $name) if !$exe;
+lib/Idval/FileString.pm:        fatal("Filename \"[_1]\" opened in read mode but it doesn't exist.\n", $filename);
+lib/Idval/FileString.pm:            fatal("Maximum directory depth exceeded. So far, the name is: \"[_1]\"\n",
+lib/Idval/FileString.pm:        fatal("A regular file ([_1]) was found while creating the directory path \"[_2]\"\n", $dpath, $path);
+lib/Idval/FileString.pm:    fatal("Undefined path\n") unless defined($path);
+lib/Idval/FileString.pm:    fatal("File \"[_1]\" not found\n", $path) unless idv_test_isfile($path);
+lib/Idval/Command.pm:    chatty("Idval::Command creating object from \"[_1]\"\n", $cmd_pkg);
+lib/Idval/Command.pm:        fatal("No \"main\" routine in command \"[_1]\"\n", $cmd_pkg);
+lib/Idval/TypeMap.pm:    #idv_dbg("TypeMap: FILETYPE map is: [_1]", Dumper($self->{MAPPING}->{FILETYPE}));
+lib/Idval/TypeMap.pm:    fatal("Undefined provider object") unless defined($prov);
+lib/Idval/TypeMap.pm:    idv_dbg("TypeMap::get_filetype_from_file: ext is \"[_1]\"\n", $ext);
+lib/Idval/Help.pm:    my $input = $self->man_info($name);
+lib/Idval/Record.pm:        fatal("A new Record must have a filename.") if !exists($argref->{FILE});
+lib/Idval/Record.pm:    fatal("undefined tag name") unless defined($name);
+lib/Idval/Record.pm:    fatal("Record::format_record: bogus arg_ref\n") if $argref and (ref $argref ne 'HASH');
+lib/Idval/Record.pm:        fatal("Uninitialized value for tag \"[_1]\"\n", $tag) if !defined($self->get_value($tag));
+lib/Idval/Record.pm:            fatal("Uninitialized array value for tag \"[_1]\"\n", $tag) if !defined($value);
+lib/Idval/Config.pm:#     chatty("Calculated variables are: [_1]", Dumper($subr_vars));
+lib/Idval/Config.pm:    fatal("Need a file") unless @{$self->{INITFILES}}; # We do need at least one config file
+lib/Idval/Config.pm:                fatal("Can't open \"[_1]\" for reading: [_2] in [_3] line([_4])", $fname, $!, __PACKAGE__, __LINE__);
+lib/Idval/Config.pm:    idv_dbg("looking for [_1] in [_2]", join(',', @{$tagsref}), Dumper($selectors, $varsref));
+lib/Idval/Config.pm:    chatty("ck_selects: returning: [_1]", Dumper($ar_selects, \%expanded_tags));
+lib/Idval/Config.pm:            idv_dbg("ert: for \"[_1]\", checking [_2]", $regexp_tag, Dumper($ert_conditional));
+lib/Idval/Config.pm:                idv_dbg("Comparing \"selector list\" \"[_1]\" \"[_2]\" \"[_3]\" resulted in " .
+lib/Idval/Config.pm:    idv_dbg("pc: parts: [_1]", Dumper(\%parts));
+lib/Idval/Config.pm:    idv_dbg("In parse_vars, got [quant,_1,var,vars]\n", scalar(@vars));
+lib/Idval/Config.pm:            fatal("Any '{' or '}' must be on a line by itself: <[_1]>\n", $line);
+lib/Idval/Config.pm:            fatal("Conditional variable \"[_1]\" was already used in this block:\n{\n[_2]}\n", $name, $block_text) if exists($seen_conds{$name});
+lib/Idval/Config.pm:        idv_warn("Unrecognized input line <[_1]>\n", $line);
+lib/Idval/Config.pm:    idv_dbg("returning <\n[_1]\n>\n", $subr);
+lib/Idval/Config.pm:    idv_dbg("returning just_match: <\n[_1]\n>\n", $just_match_subr);
+lib/Idval/Config.pm:    idv_dbg("In get_single_value with key \"[_1]\"\n", $key); ##debug1
+lib/Idval/Config.pm:    #idv_dbg("get_single_value: list result for \"[_1]\" is: [_2]", $key, Dumper($vars->{$key})); ##Dumper
+lib/Idval/Config.pm:    fatal("No filename in selectors") unless exists $selectors->{FILE};
+lib/Idval/ProviderMgr.pm:        fatal("Invalid src \"[_1]\" or dest \"[_2]\".", $src, $dest);
+lib/Idval/ProviderMgr.pm:    idv_dbg("Looking for provider type \"[_1]\" src \"[_2]\" dest \"[_3]\", with attributes <[_4]>\n",
+lib/Idval/ProviderMgr.pm:    #idv_dbg("Converter graph is: [_1]", Dumper($graph)); ##Dumper
+lib/Idval/ProviderMgr.pm:    #idv_dbg("From [_1] to [_2]. Path is: [_3]", $src, $dest, Dumper($path)); ##Dumper
+lib/Idval/ProviderMgr.pm:            idv_dbg("cnvinfo is <[_1]>\n", join(", ", @{$cnvinfo})); ##debug1
+lib/Idval/ProviderMgr.pm:            idv_dbg("converter is <[_1]>\n", $converter); ##debug1
+lib/Idval/ProviderMgr.pm:            idv_dbg("name is <[_1]>\n", $name); ##debug1
+lib/Idval/ProviderMgr.pm:            chatty("Looking up \{[_1]\}->\{[_2]\}->\{[_3]\}->\{[_4]\}\n", $prov_type, $converter, $name, $endpoint); ##debug1
+lib/Idval/ProviderMgr.pm:            #idv_dbg("cnv is: [_1]", Dumper($cnv)) if $src eq 'about'; ##Dumper
+lib/Idval/ProviderMgr.pm:    idv_dbg("Found [quant,_1,provider,providers] for [_2] -> [_3]\n", scalar(@cnv_list), $dest, $src); ##debug1
+lib/Idval/ProviderMgr.pm:        idv_warn("No \"[_1]\" provider found for \"[_2],[_3]\"\n", $prov_type, $src, $dest);
+lib/Idval/ProviderMgr.pm:        idv_dbg("from _get_providers: For provider type \"[_1]\" with attributes <[_2]>\n", $prov_type, join(',', @{$attributes})); ##debug1
+lib/Idval/ProviderMgr.pm:            idv_dbg("from _get_providers: Checking conversion \"[_1]\n", $conversion); ##debug1
+lib/Idval/ProviderMgr.pm:    idv_dbg("from _get_providers: returning <[_1]>\n", join(',', @prov_list)); ##debug1
+lib/Idval/ProviderMgr.pm:        fatal("Nothing provided for \"[_1]\" in [_2]", $keyword, Dumper($argref));
+lib/Idval/ProviderMgr.pm:            chatty("Adding \{[_1]\}->\{[_2]\}->\{[_3]\}->\{[_4]\}\n", $prov_type, $package, $name, $endpoint); ##debug1
+lib/Idval/ProviderMgr.pm:            chatty("Adding \"[_1]\" provider: From \"[_2]\", via \"[_3]\" to \"[_4]\", weight: \"[_5]\"attributes: \"[_6]\"\n", 
+lib/Idval/ProviderMgr.pm:            verbose("Provider \"[_1]\" is not ok: status is: [_2]\n", $name, $status); ##debug1
+lib/Idval/ProviderMgr.pm:        #chatty("register_provider: argref is: [_1]", Dumper($argref)); ##Dumper
+lib/Idval/ProviderMgr.pm:        chatty("Adding \"[_1]\" [_2]\n", $provides, $package); ##debug1
+lib/Idval/ProviderMgr.pm:        fatal("Unrecognized provider type \"[_1]\" in [_2]", $provides, Dumper($argref));
+lib/Idval/ProviderMgr.pm:    fatal("Bad filehandle: [_1] for item \"[_2]\"", $!, $filename) unless defined $fh;
+lib/Idval/ProviderMgr.pm:        verbose("Plugin candidate \"[_1]\" is not an Idval plugin: no \"package Idval::Plugin::...\"\n", $filename); ##debug1
+lib/Idval/ProviderMgr.pm:    #fatal("Could not read plugin \"[_1]\"\n", $filename) unless $plugin;
+lib/Idval/ProviderMgr.pm:    chatty("Plugin [_1]\n", $filename); ##debug1
+lib/Idval/ProviderMgr.pm:        chatty("Status is <[_1]>\n", $status); ##debug1
+lib/Idval/ProviderMgr.pm:        info("Error return from \"[_1]\"\n", $filename);
+lib/Idval/ProviderMgr.pm:        fatal("Error reading \"[_1]\": Does it return a true value at the end of the file?\n", $filename);
+lib/Idval/ProviderMgr.pm:        fatal("Error reading \"[_1]\":([_2]) ([_3])", $filename, $!, $@) unless $status;
+lib/Idval/ProviderMgr.pm:    fatal("No plugin file extension defined?") unless $ext;
+lib/Idval/ProviderMgr.pm:        chatty("ProviderMgr: in \"[_1]\", candidates are: [_2]\n", $dir, join(', ', @sources)); ##debug1
+lib/Idval/Graph.pm:        verbose("Inspecting ([_1]); length is: [_2]\n", join(',', @{$list}), scalar(@{$list})); ##debug1
+lib/Idval/Graph.pm:        #verbose("Initial attributes are: [_1]\n", join(':', sort keys %attrs)); ##debug1
+lib/Idval/Graph.pm:            verbose("Got: ([_1], [_2], [_3])\n", $start, $type, $end); ##debug1
+lib/Idval/Graph.pm:            verbose("In loop: attributes are: [_1]\n", join(':', sort keys %attrs)); ##debug1
+lib/Idval/Graph.pm:        #idv_dbg("Storing into [_1].[_2]: [_3]", $path_info{START}, $path_info{END}, Dumper(\%path_info)); ##Dumper
+lib/Idval/Graph.pm:        verbose("\n"); ##debug1
+lib/Idval/Graph.pm:        verbose("Starting with node \"[_1]\"\n", $item); ##debug1
+lib/Idval/Graph.pm:        verbose("Clearing all visited stickers from nodes\n"); ##debug1
+lib/Idval/Graph.pm:#         #verbose("([_1])\n", join(',', @{$list})); ##debug1
+lib/Idval/Graph.pm:    #verbose("[_1]Checking \"[_2]\" against [_3]", $leader x $level, $short_item, $self->path_as_str()); ##Dumper
+lib/Idval/Graph.pm:        #verbose("[_1]Found a loop: [_2]", $leader x $level, Dumper($self->{CURRENT_PATH})); ##Dumper
+lib/Idval/Graph.pm:        fatal("Beginning of current path \([_1]\) is not a START_NODE\n", $short_item) unless $self->is_major_node($item);
+lib/Idval/Graph.pm:#         verbose("[_1]Found an internal loop. Returning.\n", $leader x $level); ##debug1
+lib/Idval/Graph.pm:            idv_dbg("Marking [_1] to [_2] as visited.\n", $from_item, $item); ##debug1
+lib/Idval/Graph.pm:                #verbose("[_1]Saving current path [_2]", $leader x $level, $self->path_as_str()); ##Dumper
+lib/Idval/Graph.pm:                #verbose("[_1]Current path has illegal duplicate nodes: [_2]", $leader x $level, $self->path_as_str()); ##Dumper
+lib/Idval/Graph.pm:            #verbose("[_1]Current path is too short to save: [_2]", $leader x $level, $self->path_as_str()); ##Dumper
+lib/Idval/Graph.pm:    #verbose("[_1]Will travel from \"[_2]\" to: ([_3])\n", $leader x $level, $short_item, join(',', keys %{$gakker->{$item}})); ##debug1
+lib/Idval/Graph.pm:    #verbose("[_1]Will travel from \"[_2]\" to: [_3]", $leader x $level, $short_item, $self->path_as_str({path => [ keys %{$gakker->{$item}}]})); ##Dumper
+lib/Idval/Graph.pm:            verbose("[_1]\"[_2]\" to \"[_3]\" has already been visited.\n", $leader x $level, $short_item, $short_next); ##debug1
+lib/Idval/Graph.pm:            verbose("[_1]Going from \"[_2]\" to \"[_3]\"\n", $leader x $level, $short_item, $short_next); ##debug1
+lib/Idval/Graph.pm:    #verbose($leader x $level, "[_1]Restoring [_2] to ([_3])\n", $leader x $level, $self->path_as_str({trailer => ''}), join(',', @saved_path)); ##Dumper
+lib/Idval/Graph.pm:    #verbose($leader x $level, "[_1]Restoring [_2] to ([_3])\n", $leader x $level, $self->path_as_str({trailer => ''}), $self->path_as_str({path => \@saved_path})); ##Dumper
+lib/Idval/Graph.pm:    #idv_dbg("[_1]Checking for duplicate nodes in [_2]", $leader, $self->path_as_str({path=>$path})); ##Dumper
+lib/Idval/Graph.pm:    idv_dbg("[_1]One-arc path; must be OK for dup nodes\n", $leader) if $#pl == 2; ##debug1
+lib/Idval/Graph.pm:            idv_dbg("[_1]Checking dup node [_2]\n", $leader, $end); ##debug1
+lib/Idval/Graph.pm:                idv_dbg("[_1]Dup node is OK ($start->$end)\n");
+lib/Idval/Graph.pm:            idv_dbg("[_1]Bad duplicate node found for \"$start\" -> \"$end\"\n");
+lib/Idval/Graph.pm:            #idv_dbg("[_1]ATTRS: ", Dumper($self->{GRAPH}->{$start}->{$type}->{ATTRS})); ##Dumper
+lib/Idval/Graph.pm:    verbose("Looking for path: \"[_1]\"\n", $arc); ##debug1
+lib/Idval/Graph.pm:        chatty("Path: \"[_1]\" does not exist in EXTRACTED_PATHS\n", $arc); ##debug1
+lib/Idval/Graph.pm:    #chatty("Getting best path from: [_1]", Dumper($self->{EXTRACTED_PATHS}->{$arc})); ##Dumper
+lib/Idval/Graph.pm:    chatty("Need attributes: [_1]\n", join(',', @attrs)); ##debug1
+lib/Idval/Graph.pm:        idv_dbg("Path \"[_1].[_2] has attributes: [_3]\n",  $pathinfo->{START}, $pathinfo->{END},
+lib/Idval/Graph.pm:                idv_dbg("Path [_1] does not have attribute [_2], checking next path.\n", $arc, $attr); ##debug1
+lib/Idval/Graph.pm:    #idv_dbg("Resulting path list is: [_1]", Dumper(\@goodpaths)); ##Dumper
+lib/Idval/DataFile.pm:    my $fh = Idval::FileIO->new($datafile, "r") || fatal("Can't open tag data file \"[_1]\" for reading: [_2]\n", $datafile, $!);
+lib/Idval/DataFile.pm:                fatal("\"Append\" line too early in tag data file (no previous value): \"[_1]\"\n", $line);
+lib/Idval/DataFile.pm:            fatal("Unrecognized line in tag data file: \"[_1]\"\n", $line);
+lib/Idval/DataFile.pm:        fatal("No FILE tag in tag data record \"[_1]\"\n", join("\n", @{$blockref}));
+lib/Idval/Validate.pm:    idv_dbg("In parse_vars, got [quant,_1,var,vars]\n", scalar(@vars));
+lib/Idval/DoDots.pm:    info_q({force_match => 1}, "$char");
+lib/Idval/DoDots.pm:    info_q({force_match => 1}, " ") if $dotnum % 4 == 0;
+lib/Idval/DoDots.pm:    info_q({force_match => 1}, "\n") if $dotnum % 60 == 0;
+lib/Idval/DoDots.pm:    info_q({force_match => 1}, "\n") if $dotnum % 60 != 0;
+lib/Idval/Ui.pm:        fatal("No idval configuration file found in \"[_1]\"\n", $datadir);
+lib/Idval/Ui.pm:    chatty("user config file name is: \"[_1]\"\n", $cfgname);
+lib/Idval/Ui.pm:    idv_dbg("UI: exts: <[_1]>\n", join(",", @exts));
+lib/Idval/Ui.pm:        idv_dbg("UI: file is \"[_1]\"\n", $_);
+lib/Idval/Ui.pm:        idv_dbg("UI: name is [_1], Suffix is: <[_2]>\n", $_, $suffix);
+lib/Idval/Ui.pm:    fatal("Tag info cache is corrupted; you will need to regenerate it (with 'gettags'):\n[_1]\n", $@) if $@;
+lib/Idval/Ui.pm:            fatal("Can't open [_1] for writing: [_2]\n", $ds_dat, $ERRNO);
+lib/Idval/Ui.pm:        my $out = Idval::FileIO->new($fname, '>') or fatal("Can't open \"[_1]\" for writing: [_1]\n", $fname, $ERRNO);
+lib/Idval/Ui.pm:                verbose("Wide char in \"[_1]\" from \"[_2]\"\n", $line, $ftag) if ord($char) > 255;
+lib/Idval/Interp.pm:            chatty("command name: \"[_1]\", line args: [_2]\n", $cmd_name, join(" ", @line_args));
+lib/Idval/Interp.pm:                    fatal("Error in \"[_1]\": \"[_2]\", \"[_3]\"\n", $cmd_name, $status, $reason);
+lib/Idval/Common.pm:        quiet("[_1] [_2]\n", $name, $cmdargs);
+lib/Idval/Common.pm:        verbose("[_1] [_2]\n", $name, $cmdargs);
+lib/Idval/Common.pm:            quiet("Error [_1] from: \"[_2] [_3]\"\nReturned \"[_4]\"\n", $status, $name, $cmdargs, $retval);
+lib/Idval/Common.pm:    #$log->fatal("Program terminated: $! (" . WTERMSIG($status) . ")\n") if WIFSIGNALED($status);
+lib/Idval/Common.pm:    fatal("what type is [_1]?\n", ref $this);
+lib/Idval/Common.pm:    fatal("Common object \"[_1]\" not found.\n", $key) unless exists($common_objs{$key});
+lib/Idval/Converter.pm:    fatal("No converters in smoosh?") unless @_ and defined($_[0]);
+lib/Idval/Converter.pm:    verbose("Smooshing: ", join(" -> ", map { $_->query('name') } @{$self->{CONVERTERS}}), "\n");
+lib/Idval/Converter.pm:        verbose("Converting ", $tag_record->get_name(), " to $to_file using ", $conv->query('name'), "\n");
+lib/Idval/Converter.pm:    idv_dbg("First dest name: [_1], dest ext: [_2]\n", $dest_name, $dest_ext); ##debug1
+lib/Idval/Converter.pm:        idv_dbg("Dest name is now \"[_1]\" ([_2])\n", $dest_name, $conv->query('name')); ##debug1
+lib/Idval.pm:    #verbose("option list: [_1]", Dumper(\%options));
+lib/Idval.pm:    verbose("Looking for: [_1]\n", Idval::Ui::get_sysconfig_file($data_dir));
+lib/Idval.pm:    verbose("sysconfig is: \"[_1]\", userconfig is \"[_2]\"\n", $sysconfig_file, $userconfig_file);
+lib/Idval.pm:    chatty("Remaining args: <[_1]>\n", join(", ", @{$self->{REMAINING_ARGS}}));
+lib/Idval.pm:    chatty("In autoload, checking \"[_1]\"\n", $name);
+lib/Idval.pm:    fatal("ERROR: Command \"$rtn\" called too early\n") unless defined $providers;
+lib/Idval.pm:    chatty("In autoload; rtn is \"[_1]\"\n", $rtn);

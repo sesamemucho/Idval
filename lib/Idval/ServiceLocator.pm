@@ -62,7 +62,7 @@ sub register_callback
 
     if (!exists($registered_callbacks{"$service_name/$callback_name/$callback_routine_name"}))
     {
-        verbose("Registering callback with \"$service_name/$callback_name/$callback_routine_name\"\n");
+        verbose("Registering callback with \"[_1]\"\n", "$service_name/$callback_name/$callback_routine_name");
         push(@{$callbacks{$service_name}}, [$callback_name, $cb]);
         $registered_callbacks{"$service_name/$callback_name/$callback_routine_name"} = 1;
     }
@@ -76,7 +76,7 @@ sub locate
 
     if (!exists($services{$service_name}))
     {
-        fatal("Unregistered service \"$service_name\" requested.\n");
+        fatal("Unregistered service \"[_1]\" requested.\n", $service_name);
     }
 
     return $services{$service_name};

@@ -175,11 +175,16 @@ sub check_function
 sub passes
 {
     my $selectors = $_[0];
+    #my $aref = $_[1];
+    my $tagname = $_[1];
     my $funcname = $_[2];
-    fatal("Unknown function Idval::ValidateFuncs::$funcname") unless check_function($funcname);
+    fatal("Unknown function Idval::ValidateFuncs::[_1]", $funcname) unless check_function($funcname);
     my $func = \&{"Idval::ValidateFuncs::$funcname"};
     # The commas are for (in case someone wants to use multiple ... (figure out why or remove) XXX
-    return (&$func($selectors, split(/,/, $_[1])) != 0 );
+    #print STDERR "funcname is \"$funcname\", aref is ", Dumper($aref);
+    #return first { &$func($selectors, $_) } @{$aref};
+    #print STDERR "funcname is \"$funcname\", tagname is \"$tagname\"\n";
+    return &$func($selectors, $tagname);
 }
 
 sub fails
@@ -247,7 +252,7 @@ sub get_regex
         $combo = $op_string_no_spaces;
     }
 
-    verbose("\n\nregex is: \"$combo\"\n\n\n");
+    verbose("\n\nregex is: \"[_1]\"\n\n\n", $combo);
     return qr/$combo/;
 }
 

@@ -1,0 +1,15 @@
+=head1 NAME
+
+etsay - Etsays ariousvay run-time parameters (for debugging)
+
+=head1 SYNOPSIS
+
+etsay <param> = <value>
+
+=head1 OPTIONS
+
+Isthat ommandcay ashay onay optionsway.
+
+=head1 DESCRIPTION
+
+B<Set> will ...

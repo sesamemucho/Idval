@@ -24,14 +24,22 @@ use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
 use English '-no_match_vars';;
+use Idval::I18N;
 
 use Idval::Logger qw(:vars idv_print);
 
 my $first = 0;
+my %cmds;
 
 sub init
 {
-    set_pod_input();
+    my $lh = Idval::I18N->get_handle() || die "Can't get a language handle!";
+    foreach my $cmd_id (qw(conf debug level))
+    {
+        my $cmd_str = $lh->maketext("set_cmd=" . $cmd_id) || die "No command found for set command \"$cmd_id\"\n";
+        $cmd_str =~ s/^set_cmd=//;
+        $cmds{$cmd_id} = $cmd_str;
+    }
 }
 
 sub main
@@ -50,9 +58,9 @@ sub main
 
     if (!defined($param) or !$param)
     {
-        idv_print("set commands are:\n", join("    \n", qw(conf debug level)), "\n");
+        idv_print("set commands are: conf, debug, level\n");
     }
-    elsif ($param eq 'debug')
+    elsif ($param eq $cmds{'debug'})
     {
         my $modhash = Idval::Common::get_logger()->set_debugmask(join(' ', @ARGV));
 #         my @info = sort { $modhash->{$a}->{STR} cmp $modhash->{$b}->{STR} } keys %{$modhash};
@@ -64,21 +72,20 @@ sub main
         idv_print("  Module spec       level\n");
         foreach my $item (@info)
         {
-            idv_print(sprintf("%-20s  %d\n", $modhash->{$item}->{STR}, $modhash->{$item}->{LEVEL}));
+            idv_print("[sprintf,%-20s  %d,_1,_2]\n", $modhash->{$item}->{STR}, $modhash->{$item}->{LEVEL});
         }
-        #idv_print("Debug mask is: ", join(' ', @newmods), "\n");
     }
-    elsif ($param eq 'level')
+    elsif ($param eq $cmds{'level'})
     {
         my $helpsub = sub {
             idv_print("Available debug levels are:\n");
             foreach my $level (sort {$a <=> $b} keys %level_to_name)
             {
-                idv_print(sprintf("    %8s: %d\n", $level_to_name{$level}, $level));
+                idv_print("[sprintf,    %8s: %d,_1,_2]\n", $level_to_name{$level}, $level);
             }
 
             my $current_level = Idval::Common::get_logger()->accessor('LOGLEVEL');
-            idv_print("\nCurrent level is: $current_level (", $level_to_name{$current_level}, ")\n");
+            idv_print("\nCurrent level is: [_1] ([_2])\n", $current_level, $level_to_name{$current_level});
         };
 
         if (@ARGV)
@@ -88,17 +95,17 @@ sub main
             {
                 Idval::Common::get_logger()->accessor('LOGLEVEL', $newlevel);
                 my $current_level = Idval::Common::get_logger()->accessor('LOGLEVEL');
-                idv_print("\nNew level is: $current_level (", $level_to_name{$current_level}, ")\n");
+                idv_print("\nNew level is: [_1] ([_2])\n", $current_level, $level_to_name{$current_level});
             }
             elsif (exists($name_to_level{lc($newlevel)}))
             {
                 Idval::Common::get_logger()->accessor('LOGLEVEL', $name_to_level{lc($newlevel)});
                 my $current_level = Idval::Common::get_logger()->accessor('LOGLEVEL');
-                idv_print("\nNew level is: $current_level (", $level_to_name{$current_level}, ")\n");
+                idv_print("\nNew level is: [_1] ([_2])\n", $current_level, $level_to_name{$current_level});
             }
             else
             {
-                idv_print("Unrecognized level \"$newlevel\"\n");
+                idv_print("Unrecognized level \"[_1]\"\n", $newlevel);
                 &$helpsub();
             }
         }
@@ -107,7 +114,7 @@ sub main
             &$helpsub();
         }
     }
-    elsif ($param eq 'conf')
+    elsif ($param eq $cmds{'conf'})
     {
         require Idval::FirstTime;
         my $config = Idval::Common::get_common_object('config');
@@ -117,38 +124,10 @@ sub main
     }
     else
     {
-        idv_print("Unrecognized \"set\" command: \"", join(' ', @ARGV), "\" (try \"help set\")\n");
+        idv_print("Unrecognized \"set\" command: \"[_1]\" (try \"help set\")\n", join(' ', @ARGV));
     }
 
     return $datastore;
-}
-
-sub set_pod_input
-{
-    my $help_file = Idval::Common::get_common_object('help_file');
-
-    my $pod_input =<<EOD;
-
-=head1 NAME
-
-set - Sets various run-time parameters (for debugging)
-
-=head1 SYNOPSIS
-
-set <param> = <value>
-
-=head1 OPTIONS
-
-This command has no options.
-
-=head1 DESCRIPTION
-
-B<Set> will ...
-
-=cut
-
-EOD
-   $help_file->man_info('set', $pod_input);
 }
 
 1;

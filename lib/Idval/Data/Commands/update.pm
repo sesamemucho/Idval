@@ -50,9 +50,9 @@ sub main
     my $new_datastore = eval {
         Idval::Ui::get_source_from_file($inputfile);};
 
-    fatal($@) if $@;
-    #idv_dbg("update: datastore:", Dumper($datastore));
-    #idv_dbg("update: new datastore:", Dumper($new_datastore));
+    fatal("Error: [_1]\n", $@) if $@;
+    #idv_dbg("update: datastore: [_1]", Dumper($datastore));
+    #idv_dbg("update: new datastore: [_1]", Dumper($new_datastore));
 
     my $typemap = Idval::Common::get_common_object('typemap');
     my $dotmap = $typemap->get_dot_map();
@@ -65,7 +65,7 @@ sub main
     foreach my $key (sort keys %{$new_datastore->{RECORDS}})
     {
         $tag_record = $new_datastore->{RECORDS}->{$key};
-        #idv_dbg("in update with: ", Dumper($tag_record));
+        #idv_dbg("in update with: [_1]", Dumper($tag_record));
         $type = $tag_record->get_value('TYPE');
         $prov = $providers->get_provider('writes_tags', $type, 'NULL');
         $prov_list{$prov} = $prov;
@@ -107,7 +107,7 @@ use to change tag information in your files.
 =cut
 
 EOD
-    $help_file->man_info('update', $pod_input);
+    $help_file->set_man_info('update', $pod_input);
 
     return;
 }

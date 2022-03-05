@@ -30,6 +30,7 @@ sub capture_logger
     eval "$log_rtn(\$msg)";
     my $eval_status = $@ if $@;
 
+    #print STDERR "cl: \$\@: <$@>, str_buf: <$str_buf>\n";
     open STDOUT, ">&", $oldout or die "Can't dup \$oldout: $!";
 
     my $retval = $eval_status ? $eval_status : $str_buf;
@@ -121,8 +122,8 @@ sub match_to_packages : Test(4)
     @pkgresult = $logger->_pkg_matches('Idval::Provider');
     is_deeply(\@pkgresult, [1, $loglevel]);
 
-    @pkgresult = $logger->_pkg_matches('Idval::ProviderMgr');
-    is_deeply(\@pkgresult, [0, -99]);
+    @pkgresult = $logger->_pkg_matches('Idval::Select');
+    is_deeply(\@pkgresult, [0, $loglevel]);
 
     @pkgresult = $logger->_pkg_matches('Idval::Commands::About');
     is_deeply(\@pkgresult, [1, $loglevel]);
@@ -220,24 +221,25 @@ sub test_chatty : Test(2)
 {
     my $msg = 'test_chatty test';
 
-    my $result = capture_logger('chatty', 'Test', $L_SILENT, $msg);
+    my $result = capture_logger('Idval::Logger::chatty_real', 'Test', $L_SILENT, $msg);
     is($result, '');
 
-    $result = capture_logger('chatty', 'Test', $L_CHATTY, $msg);
+    $result = capture_logger('Idval::Logger::chatty_real', 'Test', $L_CHATTY, $msg);
     is($result, "Idval::Logger::Test: $msg");
 }
 
 sub test_verbose : Test(3)
 {
     my $msg = 'test_verbose test';
+    my $result;
 
-    my $result = capture_logger('verbose', 'Test', $L_SILENT, $msg);
+    $result = capture_logger('Idval::Logger::verbose_real', 'Test', $L_SILENT, $msg);
     is($result, '');
 
-    $result = capture_logger('verbose', 'Test', $L_VERBOSE, $msg);
+    $result = capture_logger('Idval::Logger::verbose_real', 'Test', $L_VERBOSE, $msg);
     is($result, "Idval::Logger::Test: $msg");
 
-    $result = capture_logger('verbose', 'Test', $L_CHATTY, $msg);
+    $result = capture_logger('Idval::Logger::verbose_real', 'Test', $L_CHATTY, $msg);
     is($result, "Idval::Logger::Test: $msg");
 }
 
@@ -258,7 +260,7 @@ sub separate_levels_per_module : Test(5)
     is_deeply(\@pkgresult, [1, 4]);
 
     @pkgresult = $logger->_pkg_matches('Idval::ProviderMgr');
-    is_deeply(\@pkgresult, [0, -99]);
+    is_deeply(\@pkgresult, [0, $loglevel]);
 
     @pkgresult = $logger->_pkg_matches('Idval::Commands::About');
     is_deeply(\@pkgresult, [1, $loglevel]);
@@ -267,3 +269,27 @@ sub separate_levels_per_module : Test(5)
     is_deeply(\@pkgresult, [1, 0]);
 }
 
+sub would_I_print_1 : Test(9)
+{
+    my $result;
+    my $save_logger = Idval::Logger::get_logger();
+
+    Idval::Logger::re_init({debugmask=>'Test::Class:1'});
+
+    is_deeply(Idval::Logger::would_I_print(1), 1);
+    is_deeply(Idval::Logger::would_I_print(2), 0);
+    is_deeply(Idval::Logger::would_I_print(3), 0);
+
+    Idval::Logger::re_init({debugmask=>'Test::Class:2'});
+    is_deeply(Idval::Logger::would_I_print(1), 1);
+    is_deeply(Idval::Logger::would_I_print(2), 1);
+    is_deeply(Idval::Logger::would_I_print(3), 0);
+
+    Idval::Logger::re_init({debugmask=>'Test::Class:3'});
+    is_deeply(Idval::Logger::would_I_print(1), 1);
+    is_deeply(Idval::Logger::would_I_print(2), 1);
+    is_deeply(Idval::Logger::would_I_print(3), 1);
+
+    my $logger = Idval::Logger->new();
+
+}

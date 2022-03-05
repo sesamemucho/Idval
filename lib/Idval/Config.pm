@@ -23,27 +23,13 @@ use Data::Dumper;
 use English '-no_match_vars';
 use Memoize;
 use File::Temp;
+use List::Util qw(first);
 
+use Idval::I18N;
 use Idval::Common;
 use Idval::Select;
 use Idval::FileIO;
-use Idval::Logger qw(idv_print chatty idv_dbg idv_warn fatal);
-
-my $xml_req_status = eval {require XML::Simple};
-my $xml_req_msg = !defined($xml_req_status) ? "$!" :
-    $xml_req_status == 0 ? "$@" :
-    "Load OK";
-
-if ($xml_req_msg ne 'Load OK')
-{
-    print STDERR "Oops; let's try again for XML::Simple\n";
-    use lib Idval::Common::get_top_dir('lib/perl');
-
-    $xml_req_status = eval {require XML::Simple};
-    $xml_req_msg = 'Load OK' if (defined($xml_req_status) && ($xml_req_status != 0));
-}
-
-fatal("Need XML support (via XML::Simple)") unless $xml_req_msg eq 'Load OK';
+use Idval::Logger qw(:vars idv_print chatty idv_dbg idv_warn fatal would_I_print);
 
 our %vars;
 
@@ -62,22 +48,23 @@ sub _init
     my $self = shift;
     my $initfile = shift;
 
+    my $lh = Idval::I18N->get_handle() || die "Config: Can't get a language handle!";
+
+    $self->{KEYNAMES} = {
+        'tempfiles' => $lh->idv_getkey('config', 'tempfiles'),
+    };
+
     $self->{INITFILES} = [];
     $self->{datadir} = Idval::Common::get_top_dir('Data');
-    $self->{HAS_YAML_SUPPORT} = 0;
+    $self->{DEBUG} = 0;
+
+    $self->{CALCULATED_VARS} = Idval::Config::Methods::return_calculated_vars();
 
     if ($initfile)
     {
         $self->add_file($initfile);
     }
 
-    $self->{DEF_VARS} = $self->merge_blocks({config_group => 'idval_calculated_variables'});
-    foreach my $key (keys %{$self->{DEF_VARS}})
-    {
-        delete $self->{DEF_VARS}->{$key} unless $key =~ m/^__/;
-    }
-
-    #chatty("Calculated variables are: ", Dumper($self->{DEF_VARS}));
     return;
 }
 
@@ -117,7 +104,6 @@ sub add_file
     fatal("Need a file") unless @{$self->{INITFILES}}; # We do need at least one config file
 
 
-    my $xmltext = "<config>\n";
     my $text = '';
     my $fh;
 
@@ -132,110 +118,382 @@ sub add_file
         {
 
 
-            $fh = Idval::FileIO->new($fname, "r") || fatal("Can't open \"$fname\" for reading: $! in " . __PACKAGE__ . " line(" . __LINE__ . ")");
+            $fh = Idval::FileIO->new($fname, "r") || 
+                fatal("Can't open \"[_1]\" for reading: [_2] in [_3] line([_4])", $fname, $!, __PACKAGE__, __LINE__);
         }
 
-        $text = do { local $/ = undef; <$fh> };
+        $text .= do { local $/ = undef; <$fh> };
         $fh->close();
 
-        if ($fname =~ m/tmp/)
-        {
-            #print "For \"$fname\", text is: \"$text\"\n";
-        }
-
-        if ($fname =~ m/\.xml$/i)
-        {
-            $text =~ s|\A.*?<config>||i;
-            $text =~ s|</config>.*?\z||i;
-            $xmltext .= $text;
-        }
-        elsif ($fname =~ m/\.yml$/i)
-        {
-            if ($self->{HAS_YAML_SUPPORT})
-            {
-                my $c = YAML::Tiny->read_string($text);
-                my $hr = $$c[1];
-                my $data = XMLout($hr);
-                $data =~ s|\A.*?<opt>||i;
-                $data =~ s|</opt>.*?\z||i;
-                $xmltext .= $data;
-            }
-            else
-            {
-                fatal("This installation of idv does not have YAML support.");
-            }
-        }
-        else # Must be a idv-style config file
-        {
-            $xmltext .= $self->config_to_xml($text);
-        }
     }
 
-    $xmltext .= "</config>\n";
-    #eval { $self->{TREE} = XML::Simple::XMLin($xmltext, keyattr => {select=>'name'}, forcearray => ['select']); };
-    $@ = '';
-    my $xmlin = XML::Simple->new();             # Work-around for DProf bug (rt 58446)
-    eval { $self->{TREE} = $xmlin->XMLin($xmltext, forcearray => ['select', 'name']); };
+    my ($subr_text, $just_match_subr_text) = $self->config_to_subr($text);
+    $self->{SUBR} = eval $subr_text;
+    $self->{SUBR_TEXT} = $subr_text;
     if ($@)
     {
-        idv_print("Error from XML conversion: $@\n");
-        my ($linenum, $col, $byte) = ($@ =~ m/ line (\d+), column (\d+), byte (\d+)/);
-        $linenum = 0 unless (defined($linenum) && $linenum);
-        my $i = 1;
-        foreach my $line (split("\n", $xmltext))
-        {
-            printf "%3d: %s\n", $i, $line;
-            if ($i == $linenum)
-            {
-                print '.....' . '.' x ($col - 1) . "^\n";
-            }
-
-            $i++;
-        }
-        print "\n\n";
-        fatal("XML conversion error");
+        print STDERR "Error converting to subr: $@\nsubr text is: <$subr_text>\n";
+        exit 1;
+    }
+    else
+    {
+        #print STDERR "Eval was OK\n";
     }
 
-    $self->{XMLTEXT} = $xmltext; # In case someone wants to see it later
-    $self->{PRETTY} = $xmlin->XMLout($self->{TREE},
-                                     NoAttr => 1,
-                                     KeepRoot => 1,
-        );
-
-#     {
-#         print "xmltext: ", $self->{XMLTEXT};
-#         print "\n\n\n";
-#         print "XML: ", $self->{PRETTY};
-#         print "\n\n\n";
-#         print "TREE: ", Dumper($self->{TREE});
-#     }
+    $self->{JM_SUBR} = eval $just_match_subr_text;
+    $self->{JM_SUBR_TEXT} = $just_match_subr_text;
+    if ($@)
+    {
+        print STDERR "Error converting to jm_subr: $@\njm_subr text is: <$just_match_subr_text>\n";
+        exit 1;
+    }
+    else
+    {
+        #print STDERR "Eval was OK\n";
+    }
 
     return;
 }
 
-sub config_to_xml
+sub get_cmp_func
+{
+    my $cmp_func_name = shift;
+    my $cmp_func;
+
+    no strict 'refs';
+    eval { $cmp_func = \&$cmp_func_name; };
+    use strict;
+
+    #print STDERR "get_cmp_func: from \"$cmp_func_name\", got $cmp_func\n";
+    return $cmp_func;
+}
+
+sub ck_selects
+{
+    my $selectors = shift;
+    my $varsref = shift;
+    my $tagsref = shift;        # What we're looking to use
+
+    my %expanded_tags;          # For regexp selectors
+    my %complete_tag_list;
+    my $subr_var;
+
+    idv_dbg("looking for [_1] in [_2]", join(',', @{$tagsref}), Dumper($selectors, $varsref));
+
+    # If the tag is a regexp expression, figure out the tags it
+    # matches and store the results in %expanded_tags.
+    # Also, store the newly-discovered tags in %complete_tag_list for later.
+    my @new_tags;
+    foreach my $tag (@{$tagsref})
+    {
+        #print STDERR "ck: looking at <$tag>\n";
+        if ($tag =~ m/\W/)
+        {
+            @new_tags = grep(/^$tag$/, keys %{$selectors});
+            #print STDERR "ck: for <$tag>, exp tags are: ", join(':', @new_tags), "\n";
+            $expanded_tags{$tag} = \@new_tags;
+        }
+    }
+
+    # Then, assemble a pared-down selector hash in which all selector values are array refs
+    my $ar_selects;
+    my $valref;
+    foreach my $tag (@{$tagsref})
+    {
+        if (exists($selectors->{$tag}))
+        {
+            $valref = $selectors->{$tag};
+            $ar_selects->{$tag} = ref $valref eq 'ARRAY' ? $valref : [$valref];
+        }
+        if (exists($varsref->{$tag}))
+        {
+            $valref = $varsref->{$tag};
+            $ar_selects->{$tag} = ref $valref eq 'ARRAY' ? $valref : [$valref];
+        }
+    }
+#     foreach my $tag (keys %{$selectors})
+#     {
+#         $valref = $selectors->{$tag};
+#         $ar_selects->{$tag} = ref $valref eq 'ARRAY' ? $valref : [$valref];
+#     }
+
+#     foreach my $tag (keys %{$varsref})
+#     {
+#         $valref = $varsref->{$tag};
+#         $ar_selects->{$tag} = ref $valref eq 'ARRAY' ? $valref : [$valref];
+#     }
+
+    chatty("ck_selects: returning: [_1]", Dumper($ar_selects, \%expanded_tags));
+    return ($ar_selects, \%expanded_tags);
+}
+
+# Regexp tags are evaluated with ORs
+sub evaluate_regexp_tags
+{
+    my $selects = shift;
+    my $expanded_tags = shift;
+    my $parts = shift;
+
+    my $cmp_result;
+    my $cmp_func;
+    my $retval = 0;
+    my @matching_tags = ();
+
+    #print STDERR "ert: selects, expanded_tags, parts: ", Dumper($selects, $expanded_tags, $parts);
+    foreach my $regexp_tag (keys %{$expanded_tags})
+    {
+        foreach my $ert_conditional (@{$parts->{$regexp_tag}})
+        {
+            idv_dbg("ert: for \"[_1]\", checking [_2]", $regexp_tag, Dumper($ert_conditional));
+            my ($cmp_name, $op, $value) = @{$ert_conditional};
+            $cmp_func = get_cmp_func($cmp_name);
+
+            foreach my $tagname (@{$expanded_tags->{$regexp_tag}})
+            {
+                if ($op eq 'passes' or $op eq 'fails')
+                {
+                    $cmp_result = &$cmp_func($selects, $tagname, $value);
+                }
+                else
+                {
+                    # BOGUS! It's time to convert selects to always be array ref vars XXX
+                    my $var_ref = ref $selects->{$tagname} eq 'ARRAY' ? $selects->{$tagname} : [$selects->{$tagname}];
+                    $cmp_result = &$cmp_func($var_ref, $value);
+                }
+                idv_dbg("Comparing \"selector list\" \"[_1]\" \"[_2]\" \"[_3]\" resulted in " .
+                      $cmp_result ? "True\n" : "False\n", $selects->{$tagname}, $op, $value);
+
+                push(@matching_tags, $tagname) if $cmp_result;
+            }
+        }
+    }
+
+    return @matching_tags ? [sort @matching_tags] : 0;
+}
+
+sub parse_conditionals
+{
+    my $self = shift;
+    my @conds = @_;
+    my @results = ();
+    my $cmp_func;
+    my %parts;
+
+    return '' unless @conds;
+    my $is_regexp = 0;
+    my $ci = $self->current_indent();
+    my $ciif = $ci . '    ';
+    my $result = "${ci}if (\n$ciif";
+    foreach my $condinfo (@conds)
+    {
+        my ($var, $op, $value) = @{$condinfo};
+        $cmp_func = Idval::Select::get_compare_function_name($op, $value);
+        push(@{$parts{$var}}, [$cmp_func, $op, $value]);
+    }
+    idv_dbg("pc: parts: [_1]", Dumper(\%parts));
+
+    push(@results, "((\$ar_selects, \$expanded_tags) = ck_selects(\$selects, \\\%vars, [qw{" . join(' ', keys %parts) . '}]))');
+    # If there are any regexp keys, handle them here
+    if (grep(/\W/, keys %parts))
+    {
+        my $ert_cmd = '($rg_matched_tags = evaluate_regexp_tags($selects, $expanded_tags, ' . '{ ';
+        foreach my $rt (grep(/\W/, keys %parts))
+        {
+            $ert_cmd .= "q{$rt} => [";
+            foreach my $rt_conditionals (@{$parts{$rt}})
+            {
+                my ($cmp_func, $op, $value) = @{$rt_conditionals};
+            
+                $ert_cmd .= "[q{$cmp_func}, q{$op}, q{$value}], ";
+            }
+            $ert_cmd .= "],";
+        }
+        $ert_cmd .= '}))';
+
+        push(@results, $ert_cmd);
+    }
+
+    foreach my $item (keys %parts)
+    {
+        # If there are regexp keys, they are handled in 'evaluate_regexp_tags()'
+        next if $item =~ m/\W/;
+        my ($fname, $op, $value) = @{${$parts{$item}}[0]};
+        if ($op eq 'passes' or $op eq 'fails')
+        {
+            push(@results, "$fname(\$selects, q{$item}, q{$value})");
+        }
+        elsif (exists($self->{CALCULATED_VARS}->{$item}))
+        {
+            push(@results, "$fname($self->{CALCULATED_VARS}->{$item}->{NAME}(\$selects), q{$value})");
+        }
+        else
+        {
+            push(@results, "(exists(\$ar_selects->{$item}) && $fname(\$ar_selects->{$item}, q{$value}))");
+        }
+    }
+
+    $result .= join(" &&\n$ciif", @results) . "\n${ci}   )\n";
+    #print STDERR "pc: returning <$result>\n";
+    return $result;
+}
+
+sub add_to_list
+{
+    my $maybe_list = shift;
+    my $item = shift;
+    my $result;
+
+    if(ref $maybe_list eq 'ARRAY')
+    {
+        $result = [@{$maybe_list}, $item];
+    }
+    else
+    {
+        $result = [$maybe_list, $item];
+    }
+
+    return $result;
+}
+
+sub parse_vars
+{
+    my $self = shift;
+    my @vars = @_;
+    my @results = ();
+
+    idv_dbg("In parse_vars, got [quant,_1,var,vars]\n", scalar(@vars));
+    foreach my $varinfo (@vars)
+    {
+        my ($var, $op, $value) = @{$varinfo};
+        $value =~ s/\%DATA\%/$self->{datadir}/gx;
+
+        if ($op eq '=')
+        {
+            push(@results, '$vars{q{' . $var . '}} = q{' . $value . '};');
+            #push(@results, 'print STDERR "keys: ", join(", ", keys(%{$ar_selects}), keys(%{$expanded_tags})), "\n";');
+        }
+        else                    # op is '+='
+        {
+            push(@results, '$vars{q{' . $var . '}} = exists($vars{q{' . $var . '}}) ? add_to_list($vars{q{' . $var . '}}, q{' . $value . '}) : q{' . $value . '};');
+        }
+    }
+
+    return @results;
+}
+
+sub current_indent
+{
+    my $self = shift;
+
+    return $self->{INDENT} x $self->{LEVEL};
+}
+
+sub indent_lines
+{
+    my $self = shift;
+    my $ci = $self->current_indent();
+
+    return $ci . join("\n$ci", @_) . "\n";
+}
+
+sub into
+{
+    my $self = shift;
+    my $retval = $self->current_indent() . "{\n";
+    $self->{LEVEL}++;
+
+    return $retval;
+}
+
+sub out_of
+{
+    my $self = shift;
+    $self->{LEVEL}--;
+    my $retval = $self->{INDENT} x $self->{LEVEL} . "1;}\n";
+
+    return $retval;
+}
+
+sub config_to_subr
 {
     my $self = shift;
     my $cfg_text = shift;
-    my $xml = '';
     my $cmp_regex = Idval::Select::get_cmp_regex();
     my $assign_regex = Idval::Select::get_assign_regex();
+
+    my @conditionals = ();
+    my @vars = ();
+    my %seen_conds;
+    my $block_text = '';
+
+    $self->{LEVEL} = 1;
+    $self->{INDENT} = '  ';
+
+    my $subr = "sub\n{\n  my \$selects = shift;\n  my \%vars;\n  my \$ar_selects;\n  my \$expanded_tags;\n  my \$rg_matched_tags = [];\n\n";
+    my $just_match_subr = "sub\n{\n  my \$selects = shift;\n  my \$ar_selects;\n  my \$expanded_tags;\n  my \$rg_matched_tags = [];\n\n";
+    $subr .= $self->current_indent() . 'print STDERR "from SUBR, selects: ", Dumper($selects);' . "\n" if would_I_print($L_DEBUG);
+    $just_match_subr .= $self->current_indent() . 'print STDERR "from SUBR, selects: ", Dumper($selects);' . "\n" if would_I_print($L_DEBUG);
     foreach my $line (split(/\n|\r\n|\r/, $cfg_text))
     {
-        #print "Looking at: <$line>\n";
-
+        #print STDERR "C: processing <$line>\n";
+        $block_text .= $line . "\n";
         $line =~ /^\s*{\s*$/ and do {
-            $xml .= "<group>\n";
+            my $pc = $self->parse_conditionals(@conditionals);
+            $subr .= $pc;
+            $just_match_subr .= $pc;
+            my @var_results = $self->parse_vars(@vars);
+
+            if (@var_results)
+            {
+                $subr .= $self->into();
+                $subr .= $self->indent_lines(@var_results);
+                $subr .= $self->out_of();
+            }
+            if (@conditionals)
+            {
+                $just_match_subr .= $self->into();
+                $just_match_subr .= $self->indent_lines('return 1;');
+                $just_match_subr .= $self->out_of();
+            }
+
+            $subr .= $self->into();
+            $just_match_subr .= $self->into();
+
+            @conditionals = ();
+            @vars = ();
+            %seen_conds = ();
+            $block_text = '';
             next;
         };
 
         $line =~ /^\s*}\s*$/ and do {
-            $xml .= "</group>\n";
+            my $pc = $self->parse_conditionals(@conditionals);
+            $subr .= $pc;
+            $just_match_subr .= $pc;
+            my @var_results = $self->parse_vars(@vars);
+            if (@var_results)
+            {
+                $subr .= $self->into();
+                $subr .= $self->indent_lines(@var_results);
+                $subr .= $self->out_of();
+            }
+            if (@conditionals)
+            {
+                $just_match_subr .= $self->into();
+                $just_match_subr .= $self->indent_lines('return 1;');
+                $just_match_subr .= $self->out_of();
+            }
+            $subr .= $self->out_of();
+            $just_match_subr .= $self->out_of();
+
+            @conditionals = ();
+            @vars = ();
+            %seen_conds = ();
+            $block_text = '';
             next;
         };
 
         $line =~ /^\s*(#.*)$/ and do {
-            $xml .= "<!-- $1 -->\n";
             next;
         };
 
@@ -243,381 +501,65 @@ sub config_to_xml
             next;
         };
 
-        #$line =~ m{^\s*([%[:alnum:]][\w%-]*)($cmp_regex)(.*)\s*$}imx and do {
+        # Any { or } that gets here is an error
+        $line =~ m/[{}]/ and do {
+            fatal("Any '{' or '}' must be on a line by itself: <[_1]>\n", $line);
+        };
+
         $line =~ m{^\s*(\S+)\s*($cmp_regex)(.*)\s*$}imx and do {
             my $name = $1;
             my $op = $2;
             my $value = $3;
             $op =~ s/^\s+//;
             $op =~ s/\s+$//;
-            $op =~ s/>/\&gt;/;
-            $op =~ s/</\&lt;/;
-            $xml .= "<select>\n<name>$name</name>\n<op>$op</op>\n<value>$value</value>\n</select>\n";
+            fatal("Conditional variable \"[_1]\" was already used in this block:\n{\n[_2]}\n", $name, $block_text) if exists($seen_conds{$name});
+            $seen_conds{$name} = 1;
+            push(@conditionals, [$name, $op, $value]);
             next;
         };
 
-        #$line =~ m{^\s*([%[:alnum:]][\w%-]*)($assign_regex)(.*)\s*$}imx and do {
         $line =~ m{^\s*(\S+)\s*($assign_regex)(.*)\s*$}imx and do {
             my $name = $1;
             my $op = $2;
-            $op =~ s/>/\&gt;/;
-            $op =~ s/</\&lt;/;
             my $value = $3;
-            if ($op =~ m/\+\=/)
-            {
-                $xml .= "<$name append=\"1\">$value</$name>\n";
-            }
-            else
-            {
-                $xml .= "<$name>$value</$name>\n";
-            }
+            $op =~ s/^\s+//;
+            $op =~ s/\s+$//;
+            push(@vars, [$name, $op, $value]);
             next;
         };
 
 
-        idv_warn("Unrecognized input line <$line>\n");
+        idv_warn("Unrecognized input line <[_1]>\n", $line);
     }
 
-    return $xml;
-}
-
-# For any node, there are three possible kinds of keys
-#  'select', which contains the selection information
-#  'group',  which is a list of child nodes
-#  anything else, which indicate a key->value pair
-#
-#  For each node N in a list of nodes:
-#    evaluate it (using the 'select' key, if present) to see if it should be processed or skipped
-#    if it should be processed:
-#       add key->value pairs to result
-#       recurse into the nodes of N->{'group'}
-#    else
-#       next
-#  end for
-#
-
-sub visit
-{
-    my $self = shift;
-    my $node_list_ref = shift;
-    my $name = shift;
-    my $level = shift;
-    my $subr = shift;
-
-    my $status;
-
-    #print "visit ($level): ref of node_list_ref is: ", ref $node_list_ref, "\n";
-    #print("visit ($level): visiting \"$name\", with ", scalar(@{$node_list_ref}), " nodes\n");
-
-    fatal("node_list_ref not an ARRAY ref") unless ref $node_list_ref eq 'ARRAY';
-    foreach my $node (@{$node_list_ref})
+    my @var_results = $self->parse_vars(@vars);
+    if (@var_results)
     {
-        # Should we process this node?
-        $status = &$subr($self, $node);
-        #print ("visit ($level): subr returned ", defined($status) ? "\"$status\"" : "undefined", "\n");
-        return if $status == 2; # short-circuit finish
-        if ($status)
-        {
-#             # Don't allow 'select' as a regular key
-#             if (exists($node->{'group'}) && (ref($node->{'group'}) ne 'HASH'))
-#             {
-#                 fatal("Dis-allowed configuration name 'group' found");
-#             }
-
-            # Do we have any sub-nodes to visit?
-            my $kids = [];
-            if (exists($node->{'group'}))
-            {
-                if (ref($node->{'group'}) eq 'ARRAY')
-                {
-                    $kids = $node->{'group'};
-                }
-                elsif (ref($node->{'group'}) eq 'HASH')
-                {
-                    $kids = [$node->{'group'}];
-                }
-
-                if ($kids)
-                {
-                    my $nameid = sprintf "node%03d000", $level;
-                    $level++;
-                    $self->visit($kids, $nameid++, $level, $subr);
-                }
-                else
-                {
-                    #print "visit ($level): No kids for \"$name\"\n";
-                }
-            }
-        }
+        $subr .= $self->into();
+        $subr .= $self->indent_lines(@var_results);
+        $subr .= $self->out_of();
     }
+
+    $subr .= $self->current_indent() . 'print STDERR "from SUBR, vars: ", Dumper(\%vars);' . "\n" if would_I_print($L_DEBUG);
+    $subr .= $self->current_indent() . 'return \%vars;' . "\n}\n";
+
+    $just_match_subr .= $self->current_indent() . 'return 0;' . "\n}\n";
+    idv_dbg("returning <\n[_1]\n>\n", $subr);
+    idv_dbg("returning just_match: <\n[_1]\n>\n", $just_match_subr);
+    return ($subr, $just_match_subr);
 }
 
 sub merge_blocks
 {
     my $self = shift;
     my $selects = shift;
-    my $tree = $self->{TREE};
-    local %vars;
-    my $match_status;
-    my $match_id;
+    my $subr = $self->{SUBR};
 
-    #idv_dbg("Start of _merge_blocks, selects: ", Dumper($selects)); ##Dumper
+    my $vars = &$subr($selects);
 
-    my $visitor = sub {
-        my $self = shift;
-        my $noderef = shift;
+    #print STDERR "vars is: ", Dumper($vars);
 
-        #idv_dbg("merge_blocks: noderef is: ", Dumper($noderef)); ##Dumper
-        return 0 if ($self->evaluate($noderef, $selects) == 0);
-
-        idv_dbg("merge_blocks: evaluate returned nonzero\n"); ##debug1
-        foreach my $key (sort keys %{$noderef})
-        {
-            idv_dbg("merge_blocks: checking key $key\n"); ##debug1
-            next if ($key eq 'group');
-            next if ($key eq 'select');
-
-            my $value = $noderef->{$key};
-            my $append = 0;
-            idv_dbg("ref of value is: ", ref $value, "\n"); ##debug1
-            if (ref $value eq 'HASH')
-            {
-                if (!exists($value->{append}))
-                {
-                    fatal("Unexpected attributes for value: ", join(', ', sort keys %{$value}));
-                }
-                $append = $value->{append};
-                $value = $value->{content};
-                $value =~ s/\%DATA\%/$self->{datadir}/gx;
-            }
-            elsif (ref $value eq 'ARRAY')
-            {
-                # XML::Simple has already done it for us
-                my @newlist;
-                my $newvalue;
-                foreach my $item (@{$value})
-                {
-                    $newvalue = (ref $item eq 'HASH') ? $item->{content} : $item;
-                    $newvalue =~ s/\%DATA\%/$self->{datadir}/gx;
-
-                    push(@newlist, $newvalue);
-                }
-                $value = \@newlist;
-            }
-            else
-            {
-                $value =~ s/\%DATA\%/$self->{datadir}/gx;
-            }
-
-            idv_dbg("merge_blocks: Adding \"$value\" to \"$key\"\n"); ##debug1
-            #print "value: ", Dumper($value);
-            if ($append)
-            {
-                # If it's alread been appended, push
-                # Otherwise, make it a list ref
-                $vars{$key} = ref $vars{$key} ? push(@{$vars{$key}}, $value) : [$vars{$key}, $value];
-            }
-            else
-            {
-                $vars{$key} = $value;
-            }
-        }
-
-        return 1;
-    };
-
-    $self->visit([$tree], 'top', 0, $visitor);
-
-    #idv_dbg("Result of merge blocks - VARS: ", Dumper(\%vars)); ##Dumper
-
-    return \%vars;
-}
-
-# For when we just want to know if some selector matched something
-sub match_blocks
-{
-    my $self = shift;
-    my $selects = shift;
-    my $tree = $self->{TREE};
-    my $match_status = 0;
-    my $result;
-
-    #idv_dbg("Start of match_blocks, selects: ", Dumper($selects)); ##Dumper
-
-    my $visitor = sub {
-        my $self = shift;
-        my $noderef = shift;
-
-        #idv_dbg("match_blocks: noderef is: ", Dumper($noderef)); ##Dumper
-        my $eval_status = $self->evaluate($noderef, $selects);
-        return 0 if $eval_status == 0;
-        return 1 if $eval_status == 2;
-
-        # Otherwise, we got it - no need to check _anything_ else
-        $match_status = 1;
-        return 2;
-    };
-
-    $self->visit([$tree], 'top', 0, $visitor);
-    $result = $match_status;
-    $match_status = 0;
-
-    #idv_dbg("Result of match blocks is $result\n"); ##debug1
-
-    return $result;
-}
-
-# See if the selector keys in $select_list match the selector keys in
-# the block ($noderef).
-# If the block doesn't have any selector keys, it always matches.
-# again, $noderef is the block from the config file
-#        $select_list are the selectors passed in to get_value (for instance, a tag record)
-
-sub evaluate
-{
-    my $self = shift;
-    my $noderef = shift;
-    my $select_list = shift;
-    my $retval = 1;
-    my @s_key_list;
-    my $match = '';
-    my $is_regexp = 0;
-
-    #idv_dbg("in evaluate: ", Dumper($noderef)); ##Dumper
-    #idv_dbg("evaluate: 1 select_list: ", Dumper($select_list)); ##Dumper
-    # If the block has no selector keys itself, then all matches should succeed
-    if (not (exists($noderef->{'select'})))
-    {
-        idv_dbg("Block has no selector keys, returning 2\n"); ##debug1
-        return 2;
-    }
-
-    # Add the variables that have been defined (so far) to the selector list.
-    # This lets us use variables defined previously in the configuration file
-    # in block selections.
-    # See ConfigTest.t:previously_defined_variable_can_be_used_as_selector()
-
-    my %selectors = (%{$select_list}, %vars);
-
-    #return 0 unless %selectors;
-
-#       block_selector will look like this:
-#       {
-#           'value' => 'MP3',
-#           'name' => [
-#               'TYPE'
-#               ],
-#           'op' => '=='
-#       }
-
-  KEY_MATCH: foreach my $block_selector (@{$noderef->{'select'}})
-    {
-        my $block_key    = ${$block_selector->{name}}[0];
-        my $block_op     = $block_selector->{op};
-        my $block_value  = $block_selector->{value};
-
-        # Certain variable names are interpreted as subroutines, and the
-        # result of the subroutine is used as the value of the variable.
-        if (exists ($self->{DEF_VARS}->{$block_key}))
-        {
-            #chatty("Using \"$block_key\" as subroutine name\n"); ##debug1
-            no strict 'refs';
-            my $subr = $self->{DEF_VARS}->{$block_key};
-            $selectors{$block_key} = &$subr(\%selectors);
-            #chatty ("Using ", $selectors{$block_key}, " for \"$block_key\"\n"); ##debug1
-            use strict;
-        }
-
-        my $block_cmp_func = Idval::Select::get_compare_function($block_op, $block_value);
-
-#   KEY_MATCH: foreach my $block_key (keys %{$noderef->{'select'}})
-#     {
-#         # Certain variable names are interpreted as subroutines, and the
-#         # result of the subroutine is used as the value of the variable.
-#         if (exists ($self->{DEF_VARS}->{$block_key}))
-#         {
-#             chatty("Using \"$block_key\" as subroutine name\n");
-#             no strict 'refs';
-#             my $subr = $self->{DEF_VARS}->{$block_key};
-#             $selectors{$block_key} = &$subr(\%selectors);
-#             chatty ("Using ", $selectors{$block_key}, " for \"$block_key\"\n");
-#             use strict;
-#         }
-
-#         my $bstor = $noderef->{'select'}->{$block_key}; # Naming convenience
-#         my $block_op = $bstor->{'op'};
-#         my $block_value = $bstor->{'value'};
-#         my $block_cmp_func = Idval::Select::get_compare_function($block_op, $block_value);
-
-        # A couple of special-case operators that need to be able to
-        # look at (possibly non-existing) selector keys.
-        if ($block_op eq 'passes' or $block_op eq 'fails')
-        {
-            #idv_dbg("Comparing \"selector list\" \"$block_key\" \"$block_op\" \"$block_value\" resulted in ",
-            #      &$block_cmp_func(\%selectors, $block_key, $block_value) ? "True\n" : "False\n");
-
-            my $cmp_result = &$block_cmp_func(\%selectors, $block_key, $block_value);
-
-            $retval &&= $cmp_result;
-            next KEY_MATCH;
-        }
-
-        #idv_dbg("evaluate: 2 select_list: ", Dumper(\%selectors)); ##Dumper
-        #idv_dbg("Checking block selector \"$block_key\"\n"); ##debug1
-
-#        @s_key_list = ($block_key);
-        @s_key_list = $self->{ALLOW_KEY_REGEXPS} ? grep(/^$block_key$/, keys %selectors) :
-            ($block_key);
-
-# XXX Throw out ALLOW_KEY_REGEXPS changes. That's just dumb. We do need to keep track of _all_
-# the tags that matched (only in blocks that have a GRIPE variable...)
-
-        $is_regexp = $block_key =~ m/\W/;
-        foreach my $s_key (@s_key_list)
-        {
-            if (!exists($selectors{$s_key}))
-            {
-                # The select list has nothing to match a required selector, so this must fail
-                return 0;
-            }
-
-
-            # Make sure arg_value is a list reference
-            my $arg_value_list = ref $selectors{$s_key} eq 'ARRAY' ? $selectors{$s_key} :
-                [$selectors{$s_key}];
-
-            my $cmp_result = 0;
-
-            # For any key, the passed_in selector may have a list of values that it can offer up to be matched.
-            # A successful match for any of these values constitutes a successful match for the block selector.
-            foreach my $value (@{$arg_value_list})
-            {
-                #idv_dbg("Comparing \"$value\" \"$block_op\" \"$block_value\" resulted in ",
-                #      &$block_cmp_func($value, $block_value) ? "True\n" : "False\n");
-
-                $cmp_result ||= &$block_cmp_func($value, $block_value);
-                last if $cmp_result;
-            }
-
-            if ($is_regexp)
-            {
-                $retval ||= $cmp_result;
-            }
-            else
-            {
-                $retval &&= $cmp_result;
-            }
-
-            if (!$retval)
-            {
-                #print "Config: match id is \"$s_key\"\n";
-                last KEY_MATCH;
-            }
-        }
-    }
-
-    #print("evaluate returning $retval\n");
-    return $retval;
+    return $vars;
 }
 
 sub get_single_value
@@ -652,9 +594,9 @@ sub get_value
     my $default = shift || '';
 
     #$cfg_dbg = ($key eq 'sync_dest');
-    idv_dbg("In get_single_value with key \"$key\"\n"); ##debug1
+    idv_dbg("In get_single_value with key \"[_1]\"\n", $key); ##debug1
     my $vars = $self->merge_blocks($selects);
-    #idv_dbg("get_single_value: list result for \"$key\" is: ", Dumper($vars->{$key})); ##Dumper
+    #idv_dbg("get_single_value: list result for \"[_1]\" is: [_2]", $key, Dumper($vars->{$key})); ##Dumper
     return defined $vars->{$key} ? $vars->{$key} : $default;
 }
 
@@ -672,8 +614,9 @@ sub selectors_matched
 {
     my $self = shift;
     my $selects = shift;
+    my $subr = $self->{JM_SUBR};
 
-    return $self->match_blocks($selects);
+    return &$subr($selects);
 }
 
 package Idval::Config::Methods;
@@ -684,23 +627,56 @@ use Config;
 use Idval::Logger qw(fatal);
 use Idval::FileIO;
 
+our %method_descriptions;
+
+$method_descriptions{__system_type} = "desc for get_system_type";
 sub get_system_type
 {
-    return $Config{osname};
+    return [$Config{osname}];
 }
 
-sub get_mtime
+$method_descriptions{__file_time} = "desc for get_file_time";
+sub get_file_time
 {
     my $selectors = shift;
 
     fatal("No filename in selectors") unless exists $selectors->{FILE};
-    return Idval::FileIO::idv_get_mtime($selectors->{FILE});
+    return [Idval::FileIO::idv_get_mtime($selectors->{FILE})];
 }
 
+$method_descriptions{__file_age} = "desc for get_file_age";
 sub get_file_age
 {
     my $selectors = shift;
-    return time - Idval::FileIO::idv_get_mtime($selectors->{FILE});
+    return [time - Idval::FileIO::idv_get_mtime($selectors->{FILE})];
+}
+
+sub return_calculated_vars
+{
+    my %cvlist;
+    my $fname;
+
+    foreach my $method (keys %Idval::Config::Methods::)
+    {
+        if ($method =~ m/^get_/)
+        {
+            ($fname = $method) =~ s/^get_/__/;
+
+            $cvlist{$fname}->{FUNC} = $Idval::Config::Methods::{$method};
+            $cvlist{$fname}->{NAME} = 'Idval::Config::Methods::' . $method;
+            $cvlist{$fname}->{DESC} = $method_descriptions{$fname};
+        }
+    }
+
+#     $cvlist{__file_time}->{FUNC} = \&Idval::Config::Methods::get_file_time;
+#     $cvlist{__file_time}->{NAME} = 'Idval::Config::Methods::get_file_time';
+#     $cvlist{__file_time}->{DESC} = 'description of Idval::Config::Methods::get_file_time';
+
+#     $cvlist{__file_age}->{FUNC} = \&Idval::Config::Methods::get_file_age;
+#     $cvlist{__file_age}->{NAME} = 'Idval::Config::Methods::get_file_age';
+#     $cvlist{__file_age}->{DESC} = 'description of Idval::Config::Methods::get_file_age';
+
+    return \%cvlist;
 }
 
 1;

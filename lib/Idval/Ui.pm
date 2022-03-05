@@ -54,7 +54,7 @@ sub get_sysconfig_file
     }
     else
     {
-        fatal("No idval configuration file found in \"$datadir\"\n");
+        fatal("No idval configuration file found in \"[_1]\"\n", $datadir);
     }
 
     return $cfgname;
@@ -108,7 +108,7 @@ sub get_userconfig_file
                  : '';
     }
 
-    chatty("user config file name is: \"$cfgname\"\n");
+    chatty("user config file name is: \"[_1]\"\n", $cfgname);
     return $cfgname;
 }
 
@@ -167,12 +167,12 @@ sub make_wanted
     
     my @exts = map { '\.' . lc($_) } keys %type_list;
 
-    idv_dbg("UI: exts: ", join(",", @exts), ">\n");
+    idv_dbg("UI: exts: <[_1]>\n", join(",", @exts));
     return sub {
-        idv_dbg("UI: file is \"$_\"\n");
+        idv_dbg("UI: file is \"[_1]\"\n", $_);
         return if -d $_;
         my($filename, $junk, $suffix) = fileparse(basename($_), @exts);
-        idv_dbg("UI: name is $_, Suffix is: <$suffix>\n");
+        idv_dbg("UI: name is [_1], Suffix is: <[_2]>\n", $_, $suffix);
         return unless $suffix;  # It wasn't one of the ones we were looking for
 
         $suffix = substr($suffix, 1); # Remove the '.'
@@ -224,7 +224,7 @@ sub get_source_from_cache
     my $reclist;
 
     $reclist = eval {retrieve(Idval::Common::expand_tilde($data_store))};
-    fatal("Tag info cache is corrupted; you will need to regenerate it (with 'gettags'):\n$@\n") if $@;
+    fatal("Tag info cache is corrupted; you will need to regenerate it (with 'gettags'):\n[_1]\n", $@) if $@;
     my $ds = Idval::Collection->new({contents => $reclist});
     $ds->source($dat_file_name);
 
@@ -259,7 +259,7 @@ sub put_source_to_file
         $datastore->source('STORED DATA CACHE'); # First, adjust the SOURCE descriptor
         store($datastore, $ds_bin);
         my $out = Idval::FileIO->new($ds_dat, '>') or 
-            fatal("Can't open $ds_dat for writing: $ERRNO\n");
+            fatal("Can't open [_1] for writing: [_2]\n", $ds_dat, $ERRNO);
 
         $out->print(join("\n", @{$datastore->stringify()}), "\n");
         $out->close();
@@ -269,7 +269,7 @@ sub put_source_to_file
     if ($dat_file)
     {
         my $fname = $dat_file;
-        my $out = Idval::FileIO->new($fname, '>') or fatal("Can't open $fname for writing: $ERRNO\n");
+        my $out = Idval::FileIO->new($fname, '>') or fatal("Can't open \"[_1]\" for writing: [_1]\n", $fname, $ERRNO);
 
         $datastore->source($fname);
         my @outstrs = @{$datastore->stringify()};
@@ -279,7 +279,7 @@ sub put_source_to_file
             $ftag = $line if $line =~ m/^FILE/;
             foreach my $char (split(//, $line))
             {
-                verbose("Wide char in \"$line\" from \"$ftag\"\n") if ord($char) > 255;
+                verbose("Wide char in \"[_1]\" from \"[_2]\"\n", $line, $ftag) if ord($char) > 255;
             }
         }
         $out->print(join("\n", @outstrs), "\n");

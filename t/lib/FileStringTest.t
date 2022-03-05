@@ -169,8 +169,14 @@ sub mkdir2 : Test(2)
 
     is(Idval::FileString::idv_is_ref_dir($dir), 1);
 
+    my $str_buf;
+
+    open(my $fh, '>', \$str_buf) or die "Can't redirect NOWHERE: $!";
+    my $old_settings = Idval::Logger::get_settings();
+    Idval::Logger::re_init({log_out => $fh, debugmask=>'nobody'});
     eval {$dir = Idval::FileString::idv_mkdir("/a/a2/goober")};
     my $str = $@;
+    Idval::Logger::re_init($old_settings);
     like($str, qr{A regular file \(a2\) was found while creating the directory path "/a/a2/goober"});
 
     return;

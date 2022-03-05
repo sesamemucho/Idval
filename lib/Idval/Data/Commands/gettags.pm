@@ -77,7 +77,7 @@ sub main
 
     foreach my $key (sort keys %{$datastore->{RECORDS}})
     {
-        idv_dbg("Checking \"$key\"\n");
+        idv_dbg("Checking \"[_1]\"\n", $key);
         $tag_record = $datastore->{RECORDS}->{$key};
         $type = $tag_record->get_value('TYPE');
         $prov = $providers->get_provider('reads_tags', $type, 'NULL');
@@ -164,7 +164,7 @@ the command line. The tag information will be merged.
 =cut
 
 EOD
-    $help_file->man_info('gettags', $pod_input);
+    $help_file->set_man_info('gettags', $pod_input);
 
     return;
 }

@@ -77,8 +77,8 @@ sub read_tags
 
         if ($line =~ m/ERROR: reading metadata/)
         {
-            idv_warn('Getters::BadFlac', $line, $filename, "\n");
-            chatty("ref record: ", ref $tag_record, "\n");
+            idv_warn("Getters::BadFlac [_1] [_2]\n", $line, $filename);
+            chatty("ref record: [_1]\n", ref $tag_record);
             #delete $tag_record;
             $retval = 1;
             last;
@@ -112,7 +112,7 @@ sub write_tags
 
     return 0 if !$self->query('is_ok');
 
-    fatal("Unblessed tag_record reference (ref is \"", ref $tag_record, "\"") unless ref $tag_record eq 'Idval::Record';
+    fatal("Unblessed tag_record reference (ref is \"[_1]\"\n", ref $tag_record) unless ref $tag_record eq 'Idval::Record';
 
     my $filename = $tag_record->get_value('FILE');
     my $path = $self->query('path');

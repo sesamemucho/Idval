@@ -205,19 +205,19 @@ sub find_exe_path
 
         foreach my $testexe (@{$exelist})
         {
-            verbose("Checking \"$testexe\"\n"); ##debug1
+            verbose("Checking \"[_1]\n", $testexe); ##debug1
             $testexe = Idval::Common::expand_tilde($testexe);
             if (-e $testexe)
             {
                 $exe = $testexe;
-                verbose("Found \"$testexe\"\n"); ##debug1
+                verbose("Found \"[_1]\"\n", $testexe); ##debug1
                 last;
             }
         }
     }
 
     $exe = undef if !$exe;
-    #fatal("Could not find program \"$name\"\n") if !$exe;
+    #fatal("Could not find program \"[_1]\"\n", $name) if !$exe;
     return $exe;
 }
 

@@ -23,7 +23,7 @@ use warnings;
 no  warnings qw(redefine);
 use Class::ISA;
 
-use Idval::Logger qw(chatty idv_warn idv_dbg);
+use Idval::Logger qw(chatty idv_warn);
 use base qw(Idval::Provider);
 
 my $name = 'vorbiscomment';
@@ -89,8 +89,8 @@ sub read_tags
 
         if ($line =~ m/Failed to open file as vorbis/)
         {
-            idv_warn('Getters::BadVorbis', $line, $filename, "\n");
-            chatty("ref record: ", ref $tag_record, "\n");
+            idv_warn("Getters::BadVorbis [_1] [_2]\n", $line, $filename);
+            chatty("ref record: [_1]\n", ref $tag_record);
             $retval = 1;
             last;
         }
@@ -106,9 +106,6 @@ sub read_tags
 
         $tag_record->add_to_tag($current_tag, "\n$line");
     }
-
-    #idv_dbg("\nGot tag:\n");
-    #idv_dbg(join("\n", $tag_record->format_record()));
 
     return $retval;
 }

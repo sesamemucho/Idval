@@ -150,11 +150,11 @@ sub get_dest_filename
     my $dest_name = shift;
     my $dest_ext = shift;
 
-    idv_dbg("First dest name: $dest_name, dest ext: $dest_ext\n"); ##debug1
+    idv_dbg("First dest name: [_1], dest ext: [_2]\n", $dest_name, $dest_ext); ##debug1
     foreach my $conv (@{$self->{CONVERTERS}})
     {
         $dest_name = $conv->get_dest_filename($rec, $dest_name, $dest_ext);
-        idv_dbg("Dest name is now \"$dest_name\" (", $conv->query('name'), ")\n"); ##debug1
+        idv_dbg("Dest name is now \"[_1]\" ([_2])\n", $dest_name, $conv->query('name')); ##debug1
     }
 
     return $dest_name;

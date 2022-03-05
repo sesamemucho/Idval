@@ -74,7 +74,7 @@ sub new
 
     if (!$filename && ($mode && ($mode =~ m/^[r<]/x)) && !idv_test_exists($filename))
     {
-        fatal("Filename \"$filename\" opened in read mode but it doesn't exist.\n");
+        fatal("Filename \"[_1]\" opened in read mode but it doesn't exist.\n", $filename);
     }
 
     if ($filename && ($mode && ($mode =~ m/^[r<]/x)) && idv_test_exists($filename))
@@ -285,8 +285,8 @@ sub idv_get_dirname
 
         if ($i > 128)
         {
-            fatal("Maximum directory depth exceeded. So far, the name is: \"" .
-                   '/' . join('/', reverse @name) . "\"");
+            fatal("Maximum directory depth exceeded. So far, the name is: \"[_1]\"\n",
+                   '/' . join('/', reverse @name));
         }
     }
 
@@ -434,7 +434,7 @@ sub idv_mkdir
     }
     else
     {
-        fatal("A regular file ($dpath) was found while creating the directory path \"$path\"\n");
+        fatal("A regular file ([_1]) was found while creating the directory path \"[_2]\"\n", $dpath, $path);
     }
 
     return $retval;
@@ -531,7 +531,7 @@ sub idv_get_file
     $dirpath =~ s{//+}{/}gx;
     #print STDERR "idv_get_file: vol, dirpath, filename: \"$vol\" \"$dirpath\" \"$filename\"\n";
 
-    fatal("File \"$path\" not found\n") unless idv_test_isfile($path);
+    fatal("File \"[_1]\" not found\n", $path) unless idv_test_isfile($path);
     my ($status, $dpath) = _get_dir($dirpath);
 
     #print STDERR "idv_get_file: returning \"$dpath->{$filename}\"\n";

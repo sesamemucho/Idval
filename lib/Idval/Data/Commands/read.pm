@@ -43,7 +43,7 @@ sub main
 
     #print "read.pm: inputfile is: \"$inputfile\"\n";
     my $loc = $inputfile ? $inputfile : 'Cached data store';
-    verbose("Reading tag information from \"$loc\"\n");
+    verbose("Reading tag information from \"[_1]\"\n", $loc);
 
     if ($inputfile)
     {
@@ -94,7 +94,7 @@ current data store.
 =cut
 
 EOD
-    $help_file->man_info('read', $pod_input);
+    $help_file->set_man_info('read', $pod_input);
 
     return;
 }

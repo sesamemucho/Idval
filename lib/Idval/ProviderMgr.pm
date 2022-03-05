@@ -54,8 +54,9 @@ sub _init
     Idval::Common::register_common_object('providers', $self);
 
     $self->{PROVIDER_DIRS} = $self->local_get_list_value('provider_dir');
-    #print "dirlist is: ", join(":", @{$dirlist}), "\n";
-    #print Dumper($config);
+    #print STDERR "dirlist is: ", join(":", @{$self->{PROVIDER_DIRS}}), "\n";
+    #my $foo = $self->{CONFIG}->merge_blocks($self->{DEFAULT_SELECTS});
+    #print STDERR Dumper($foo);
     $self->{COMMAND_DIRS} = $self->local_get_list_value('command_dir');
     $self->{COMMAND_LIST} = {};
     $self->{COMMAND_EXT}  = $self->local_get_single_value('command_extension', 'pm');
@@ -74,10 +75,10 @@ sub _init
 
     map{$self->{GRAPH}->{$_}->process_graph()} @provider_types;
 
-    #chatty_graph("loaded packages: ", Dumper($self->{LOADED_PACKAGES}));
-    #chatty_graph("TAGREADER graph: ", Dumper($self->{GRAPH}->{reads_tags}));
-    #chatty_graph("command graph: ", Dumper($self->{GRAPH}->{command}));
-    #chatty_graph("converter graph: ", Dumper($self->{GRAPH}->{converts}));
+    #chatty_graph("loaded packages: [_1]", Dumper($self->{LOADED_PACKAGES}));
+    #chatty_graph("TAGREADER graph: [_1]", Dumper($self->{GRAPH}->{reads_tags}));
+    #chatty_graph("command graph: [_1]", Dumper($self->{GRAPH}->{command}));
+    #chatty_graph("converter graph: [_1]", Dumper($self->{GRAPH}->{converts}));
 
     $self->setup_command_abbreviations();
 
@@ -141,13 +142,14 @@ sub get_provider
 
     if (!(defined($src) && defined($dest) && $src && $dest))
     {
-        fatal("Invalid src \"$src\" or dest \"$dest\".");
+        fatal("Invalid src \"[_1]\" or dest \"[_2]\".", $src, $dest);
     }
 
-    idv_dbg("Looking for provider type \"$prov_type\" src \"$src\" dest \"$dest\", with attributes <", join(',', @attributes), ">\n"); ##debug1
+    idv_dbg("Looking for provider type \"[_1]\" src \"[_2]\" dest \"[_3]\", with attributes <[_4]>\n",
+        $prov_type, $src, $dest, join(',', @attributes)); ##debug1
     my $path = $graph->get_best_path($src, $dest, @attributes);
-    #idv_dbg("Converter graph is: ", Dumper($graph)); ##Dumper
-    #idv_dbg("From $src to $dest. Path is: ", Dumper($path)); ##Dumper
+    #idv_dbg("Converter graph is: [_1]", Dumper($graph)); ##Dumper
+    #idv_dbg("From [_1] to [_2]. Path is: [_3]", $src, $dest, Dumper($path)); ##Dumper
     if (defined($path))
     {
         foreach my $cnvinfo (@{$path})
@@ -157,20 +159,20 @@ sub get_provider
             my $from = $$cnvinfo[0];
             my $to = $$cnvinfo[2];
             my $endpoint = Idval::Provider::make_endpoint($from, $to);
-            idv_dbg("cnvinfo is <", join(", ", @{$cnvinfo}), ">\n"); ##debug1
-            idv_dbg("converter is <$converter>\n"); ##debug1
-            idv_dbg("name is <$name>\n"); ##debug1
-            chatty("Looking up \{$prov_type\}->\{$converter\}->\{$name\}->\{$endpoint\}\n"); ##debug1
+            idv_dbg("cnvinfo is <[_1]>\n", join(", ", @{$cnvinfo})); ##debug1
+            idv_dbg("converter is <[_1]>\n", $converter); ##debug1
+            idv_dbg("name is <[_1]>\n", $name); ##debug1
+            chatty("Looking up \{[_1]\}->\{[_2]\}->\{[_3]\}->\{[_4]\}\n", $prov_type, $converter, $name, $endpoint); ##debug1
             $cnv = $self->{ALL_PROVIDERS}->{$prov_type}->{$converter}->{$name}->{$endpoint};
-            #idv_dbg("cnv is: ", Dumper($cnv)) if $src eq 'about'; ##Dumper
+            #idv_dbg("cnv is: [_1]", Dumper($cnv)) if $src eq 'about'; ##Dumper
             push(@cnv_list, $cnv);
         }
     }
 
-    idv_dbg("Found ", scalar(@cnv_list), " providers for $dest -> $src\n"); ##debug1
+    idv_dbg("Found [quant,_1,provider,providers] for [_2] -> [_3]\n", scalar(@cnv_list), $dest, $src); ##debug1
     if (scalar(@cnv_list) < 1)
     {
-        idv_warn("No \"$prov_type\" provider found for \"$src,$dest\"\n");
+        idv_warn("No \"[_1]\" provider found for \"[_2],[_3]\"\n", $prov_type, $src, $dest);
         $converter = undef;
     }
     elsif (scalar(@cnv_list) == 1)
@@ -209,18 +211,18 @@ sub _get_providers
     foreach my $prov_type (@{$provider_types})
     {
         my $provider_id = $prov_type;
-        idv_dbg("_get_providers: For provider type \"$prov_type\" with attributes <", join(',', @{$attributes}), ">\n"); ##debug1
+        idv_dbg("from _get_providers: For provider type \"[_1]\" with attributes <[_2]>\n", $prov_type, join(',', @{$attributes})); ##debug1
         # For each provider
         foreach my $conversion (keys %{$self->{GRAPH}->{$provider_id}->{EXTRACTED_PATHS}})
         {
-            idv_dbg("_get_providers: Checking conversion \"$conversion\"\n"); ##debug1
+            idv_dbg("from _get_providers: Checking conversion \"[_1]\n", $conversion); ##debug1
             my ($from, $to) = ($conversion =~ m/^([^.]+)\.([^.]+)$/x);
 
             push(@prov_list, $self->get_provider($prov_type, $from, $to, @{$attributes}));
         }
     }
 
-    idv_dbg("_get_providers: returning <", join(',', @prov_list), ">\n"); ##debug1
+    idv_dbg("from _get_providers: returning <[_1]>\n", join(',', @prov_list)); ##debug1
     return @prov_list;
 }
 
@@ -242,7 +244,7 @@ sub _get_arg
     }
     else
     {
-        fatal("Nothing provided for \"$keyword\" in ", Dumper($argref));
+        fatal("Nothing provided for \"[_1]\" in [_2]", $keyword, Dumper($argref));
     }
 
     return $retval;
@@ -302,16 +304,17 @@ sub _add_provider
         $self->{ALL_PROVIDERS}->{$prov_type}->{$package}->{$name}->{$endpoint} = $cnv;
         if ($cnv->query('is_ok'))
         {
-            chatty("Adding \{$prov_type\}->\{$package\}->\{$name\}->\{$endpoint\}\n"); ##debug1
-            chatty("Adding \"$prov_type\" provider: From \"$src\", via \"${package}::$name\" to \"$dest\", weight: \"$weight\" ",
-                   "attributes: \"", $argref->{attributes}, "\"\n"); ##debug1
+            chatty("Adding \{[_1]\}->\{[_2]\}->\{[_3]\}->\{[_4]\}\n", $prov_type, $package, $name, $endpoint); ##debug1
+            chatty("Adding \"[_1]\" provider: From \"[_2]\", via \"[_3]\" to \"[_4]\", weight: \"[_5]\"attributes: \"[_6]\"\n", 
+                   $prov_type, $src, "${package}::$name", $dest,
+                   $weight, $argref->{attributes}); ##debug1
             $self->{GRAPH}->{$prov_type}->add_edge($src, $package . '::' . $name, $dest, $weight, @attributes);
             $added = 1;
         }
         else
         {
             my $status = $cnv->query('status') ? $cnv->query('status') : 'no status';
-            verbose("Provider \"$name\" is not ok: status is: $status\n"); ##debug1
+            verbose("Provider \"[_1]\" is not ok: status is: [_2]\n", $name, $status); ##debug1
         }
     }
 
@@ -340,7 +343,7 @@ sub register_provider
     #print "caller(2) is: ", caller(2), "\n";
     foreach my $argref (@_)
     {
-        #chatty("register_provider: argref is: ", Dumper($argref)); ##Dumper
+        #chatty("register_provider: argref is: [_1]", Dumper($argref)); ##Dumper
         my $provides = lc($self->_get_arg($argref, 'provides'));
         my $name     = $self->_get_arg($argref, 'name');
         # If a weighting for this provider has been specified in a config file, use that value
@@ -351,7 +354,7 @@ sub register_provider
         # If the caller has specified a package, use it (i.e., registering a command)
         $package = $self->_get_arg($argref, 'package', $package);
 
-        chatty("Adding \"$provides\" $package\n"); ##debug1
+        chatty("Adding \"[_1]\" [_2]\n", $provides, $package); ##debug1
         $self->{LOADED_PACKAGES}->{$package}++;
 
         $provides eq 'reads_tags' and do {
@@ -398,7 +401,7 @@ sub register_provider
 #             next;
 #         };
 
-        fatal("Unrecognized provider type \"$provides\" in ", Dumper($argref));
+        fatal("Unrecognized provider type \"[_1]\" in [_2]", $provides, Dumper($argref));
     }
 
     return;
@@ -412,7 +415,7 @@ sub _load_plugin
     return $self->{PLUGIN_LIST}->{$filename} if exists $self->{PLUGIN_LIST}->{$filename};
 
     my $fh = Idval::FileIO->new($filename, "r");
-    fatal("Bad filehandle: $! for item \"$filename\"") unless defined $fh;
+    fatal("Bad filehandle: [_1] for item \"[_2]\"", $!, $filename) unless defined $fh;
 
 
     # Doing it this way instead of just "do ..." to allow for use
@@ -429,18 +432,19 @@ sub _load_plugin
     }
     else
     {
-        verbose("Plugin candidate \"$filename\" is not an Idval plugin: no \"package Idval::Plugin::...\"\n"); ##debug1
+        verbose("Plugin candidate \"[_1]\" is not an Idval plugin: no \"package Idval::Plugin::...\"\n", $filename); ##debug1
         return;
     }
 
 
     #print "Plugin is \"$plugin\"\n" if $filename eq "id3v2"; # or whatever...
-    #fatal("Could not read plugin \"$filename\"\n") unless $plugin;
-    chatty("Plugin $filename\n"); ##debug1
+    #fatal("Could not read plugin \"[_1]\"\n", $filename) unless $plugin;
+    chatty("Plugin [_1]\n", $filename); ##debug1
 
     no warnings 'redefine';
     # This call causes a Provider plugin to call 'register_provider'
     my $status = eval "$plugin";
+    my $result = $@;
     #print STDERR "eval result for \"$package_name\" is: $@\n" if $@;
     #print STDERR "eval result for \"$package_name\" is: \"$@\"; status is \"$status\"\n";
 #     if ($package_name eq 'Idval::Plugins::Command::Gettags')
@@ -449,19 +453,20 @@ sub _load_plugin
 #     }
     if (defined $status)
     {
-        chatty("Status is <$status>\n"); ##debug1
+        chatty("Status is <[_1]>\n", $status); ##debug1
     }
     else
     {
-        info("Error return from \"$filename\"\n");
+        info("Error return from \"[_1]\"\n", $filename);
     }
-    if (not ($status or $! or $@))
+
+    if (not ($status or $! or $result))
     {
-        fatal("Error reading \"$filename\": Does it return a true value at the end of the file?\n");
+        fatal("Error reading \"[_1]\": Does it return a true value at the end of the file?\n", $filename);
     }
     else
     {
-        fatal("Error reading \"$filename\":($!) ($@)") unless $status;
+        fatal("Error reading \"[_1]\":([_2]) ([_3])", $filename, $!, $result) unless $status;
     }
 
     $self->{PLUGIN_LIST}->{$filename} = $package_name;
@@ -486,7 +491,7 @@ sub find_all_plugins
     {
         my @sources = Idval::FileIO::idv_glob("$dir/*.$ext",
                                               $Idval::FileIO::GLOB_NOCASE | $Idval::FileIO::GLOB_TILDE);
-        chatty("ProviderMgr: in \"$dir\", candidates are: ", join(', ', @sources), "\n"); ##debug1
+        chatty("ProviderMgr: in \"[_1]\", candidates are: [_2]\n", $dir, join(', ', @sources)); ##debug1
         foreach my $source (@sources)
         {
             next if $source =~ m/\.?\.$/;

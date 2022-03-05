@@ -50,8 +50,8 @@ sub main
     my $providers = shift;
     my $outputfile = shift || '';
 
-    fatal("Bad \"datastore\" (ref is \"", ref $datastore , "\"\n") unless ref $datastore eq 'Idval::Collection';
-    fatal("Bad \"providers\" (ref is \"", ref $providers , "\"\n") unless ref $providers eq 'Idval::ProviderMgr';
+    fatal("Bad \"datastore\" (ref is \"[_1]\"\n", ref $datastore) unless ref $datastore eq 'Idval::Collection';
+    fatal("Bad \"providers\" (ref is \"[_1]\"\n", ref $providers) unless ref $providers eq 'Idval::ProviderMgr';
 
     # Let's write out the data as required
     Idval::Ui::put_source_to_file({datastore => $datastore,
@@ -101,7 +101,7 @@ unless a B<store> command is issued!
 =cut
 
 EOD
-    $help_file->man_info('store', $pod_input);
+    $help_file->set_man_info('store', $pod_input);
 
     return;
 }

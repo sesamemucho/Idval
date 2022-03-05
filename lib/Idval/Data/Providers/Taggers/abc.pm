@@ -25,7 +25,7 @@ use Class::ISA;
 use Data::Dumper;
 
 use Idval::FileIO;
-use Idval::Logger qw(idv_dbg fatal);
+use Idval::Logger qw(fatal);
 use base qw(Idval::Provider);
 
 my $name = 'abc';
@@ -113,7 +113,7 @@ sub write_tags
     }
 
     # For each field found in the file,
-    # check it against the tag_record. If the field is not in the tag record, 
+    # check it against the tag_record. If the field is not in the tag record,
     # delete it from the file. If the field is in the tag record, replace it.
     my $text = $self->{TEXT}->{$fname}->{BLOCK}->{$id};
     my $field_id;
@@ -152,7 +152,7 @@ sub write_tags
                 carp("\nIn \"$fname\", attempt to change write-only tag \"$field_id\" from \"$field_value\" to \"$tag_value\" in section \"$fileid\"\n");
                 return 1;
             }
-                
+
             if ($tag_value)
             {
                 $output .= $field_id . ':' . $tag_value . $field_comment . $eol;
@@ -255,7 +255,7 @@ sub parse_file
 
     if (!exists($self->{TEXT}->{$fname}))
     {
-        my $fh = Idval::FileIO->new($fname, "r") || fatal("Can't open \"$fname\" for reading: $!\n");
+        my $fh = Idval::FileIO->new($fname, "r") || fatal("Can't open \"[_1]\" for reading: [_2]\n", $fname, $!);
         my $text = do { local $/ = undef; <$fh> };
         $fh->close();
 
@@ -272,10 +272,9 @@ sub parse_file
 
         #print Dumper($self->{TEXT});
     }
-    
+
     my $text = $self->{TEXT}->{$fname}->{BLOCK}->{$id};
     $text =~ s/\r//g;
-    #idv_dbg("File $fileid:\n");
     my $field;
     my $data;
     my %tags;
@@ -299,14 +298,6 @@ sub parse_file
         {
             my $fieldid = $1;
             my $tagvalue = $2;
-#             if($fieldid eq 'X')
-#             {
-#                 my $text1 = defined($3) ? $3 : 'undef';
-#                 my $text2 = $tagvalue;
-#                 $text1 =~ s/\r//g;
-#                 $text2 =~ s/\r//g;
-#                 idv_dbg("Parsing: Field $fieldid, tagvalue <$text2>, comment <$text1>\n");
-#             }
             push(@{$tags{$fieldid}}, $tagvalue);
             redo LOOP2;
         }
@@ -329,11 +320,6 @@ sub parse_file
         {
             my $fieldid = $1;
             my $tagvalue = $2;
-#             {
-#                 my $text1 = $tagvalue;
-#                 $text1 =~ s/\r//g;
-#                 idv_dbg("Parsing: other Field \"$fieldid\", text <$text1>\n");
-#             }
             push(@{$tags{$fieldid}}, $tagvalue);
             redo LOOP2;
         }
@@ -351,8 +337,6 @@ sub parse_file
         }
     }
 
-    idv_dbg("Got", Dumper(\%tags));
-
     return (\%tags, $fname, $id);
 }
 
@@ -367,7 +351,7 @@ sub create_records
     my $type    = $arglist->{type};
     my $srclist = $arglist->{srclist};
 
-    my $fh = Idval::FileIO->new($fname, "r") || fatal("Can't open \"$fname\" for reading: $!\n");
+    my $fh = Idval::FileIO->new($fname, "r") ||fatal("Can't open \"[_1]\" for reading: [_2]\n", $fname, $!);
     my $text = do { local $/ = undef; <$fh> };
     $fh->close();
 
@@ -399,7 +383,7 @@ sub close
     {
         foreach my $fname (keys %{$self->{OUTPUT}})
         {
-            $fh = Idval::FileIO->new($fname, "w") || fatal("Can't open \"$fname\" for writing: $!\n");
+            $fh = Idval::FileIO->new($fname, "w") || fatal("Can't open \"[_1]\" for writing: [_2]\n", $fname, $!);
             $fh->printflush($self->{OUTPUT}->{$fname});
             $fh->close();
         }
@@ -442,7 +426,7 @@ abc - tagger
 diff [options] file1 [file2]
 
  Options:
-   -outputfile F<output_listing_file> 
+   -outputfile F<output_listing_file>
 
 =head1 OPTIONS
 

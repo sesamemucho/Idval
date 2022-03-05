@@ -124,13 +124,13 @@ sub ok_to_convert
 
     if (not -e $remote_pathname) {
         $convert_file = 1;
-        verbose("Remote file \"$remote_pathname\" does not exist. Will create.\n");
+        verbose("Remote file \"[_1]\" does not exist. Will create.\n", $remote_pathname);
     } elsif ($r_st->mtime < $l_st->mtime) {
         $convert_file = 1;
-        verbose("Remote file \"$remote_pathname\" is older than local file \"$local_pathname\". Will convert.\n");
+        verbose("Remote file \"[_1]\" is older than local file \"[_2]\". Will convert.\n", $remote_pathname, $local_pathname);
     } else {
         $convert_file = 0;
-        verbose("Remote file \"$remote_pathname\" is newer than local file \"$local_pathname\". Will not convert.\n");
+        verbose("Remote file \"[_1]\" is newer than local file \"[_2]\". Will not convert.\n", $remote_pathname, $local_pathname);
     }
 
     return $convert_file;
@@ -171,22 +171,11 @@ sub each_item
     my $tag_record = $hash->{$key};
     my $retval = 0;
 
-    #if ($first and ($key =~ m/ogg/))
-    #{
-    #idv_dbg("Record is: ", Dumper($tag_record));
-        #idv_dbg(Dumper($config));
-        #$first = 0;
-    #}
-
     my $do_sync = $config->get_single_value('sync', $tag_record);
-#     if ($sync_dest or $do_sync)
-#     {
-#         idv_dbg("sync_dest = \"$sync_dest\", do_sync = \"$do_sync\"\n");
-#     }
 
     progress_inc_seen($progress_data);
 
-    idv_dbg("Checking ", $tag_record->get_name(), "\n");
+    idv_dbg("Checking [_1]\n", $tag_record->get_name());
     if (! $do_sync)
     {
         return $retval;
@@ -197,7 +186,7 @@ sub each_item
     my $prov;
 
     my $filter = $config->get_single_value('filter', $tag_record);
-    chatty("source type is \"$src_type\" dest type is \"$dest_type\"; filter is \"$filter\"\n");
+    chatty("source type is \"[_1]\" dest type is \"[_2]\"; filter is \"[_3]\"\n", $src_type, $dest_type, $filter);
     if ($filter and ($filter eq 'sox'))
     {
         $prov = get_converter($src_type, $dest_type, 'filter');
@@ -212,7 +201,7 @@ sub each_item
         $prov = get_converter($src_type, $dest_type);
     }
 
-    chatty("src: $src_type to dest: $dest_type yields converter ", $prov->query('name'), "\n");
+    chatty("src: [_1] to dest: [_2] yields converter [_3]\n", $src_type, $dest_type, $prov->query('name'));
 
     # Keep track of all the providers, so we can call close() on them later.
     $prov_list{$prov} = $prov;
@@ -222,7 +211,7 @@ sub each_item
     if (ok_to_convert($src_path, $dest_path))
     {
 
-        chatty("Converting \"$src_path\" to \"$dest_path\"\n");
+        chatty("Converting \"[_1]\" to \"[_2]\"\n", $src_path, $dest_path);
         my $dest_dir = dirname($dest_path);
         if (!Idval::FileIO::idv_test_isdir($dest_dir))
         {
@@ -241,7 +230,7 @@ sub each_item
     }
     else
     {
-        chatty("Did not convert \"$src_path\" to \"$dest_path\"\n");
+        chatty("Did not convert \"[_1]\" to \"[_2]\"\n", $src_path, $dest_path);
         $retval = 0;
     }
 
@@ -277,7 +266,7 @@ sub get_converter
 
     my $src_type = shift;
     my $dest_type = shift;
-    #idv_dbg("Getting provider for src:$src_type dest:$dest_type\n");
+    #idv_dbg("Getting provider for src:[_1] dest:[_2]\n", $src_type, $dest_type);
     return $providers->get_provider('converts', $src_type, $dest_type, @_);
 }
 
@@ -346,7 +335,7 @@ sub _parse_args
         foreach my $src (split(/;/, $selectors))
         {
             # A src argument that is just a file name is assumed to be a FILE parameter
-            
+
             if (-e $src)
             {
                 $syncfile .= "\tFILE has $src\n";
@@ -404,7 +393,7 @@ sub progress_print_title
     my $this = shift;
 
     info_q("processed remaining  total  percent  elapsed  remaining    total\n");
-    info_q(sprintf("%5d %9d %9d %5.0f%%     %8s  %8s  %8s\n",
+    info_q("[sprintf,%5d %9d %9d %5.0f%%     %8s  %8s  %8s,_1,_2,_3,_4,_5,_6]\n",
                     0,
                     $this->{total_number_to_process},
                     $this->{total_number_to_process},
@@ -412,7 +401,7 @@ sub progress_print_title
                     '00:00:00',
                     '00:00:00',
                     '',
-            ));
+            );
     return;
 }
 
@@ -430,7 +419,7 @@ sub progress_print_line
     my $est_time = $elapsed_time / $safe_frac;
     my $est_time_remaining = $est_time - $elapsed_time;
 
-    info_q(sprintf("%5d %9d %9d %5.0f%%     %8s  %8s %8s\n",
+    info_q("[sprintf,%5d %9d %9d %5.0f%%     %8s  %8s  %8s,_1,_2,_3,_4,_5,_6]\n",
                      $this->{number_of_processed_records},
                      $this->{total_number_to_process} - $this->{number_of_processed_records},
                      $this->{total_number_to_process},
@@ -438,7 +427,7 @@ sub progress_print_line
                      progress_format_time($elapsed_time),
                      progress_format_time($est_time_remaining),
                      progress_format_time($est_time),
-             ));
+           );
     return;
 }
 
@@ -478,32 +467,19 @@ sub get_file_paths
 
     my $src_path = $prov->get_source_filepath($tag_record);
     my ($volume, $src_dir, $src_name) = File::Spec->splitpath($src_path);
-    chatty("For $src_path\n");
+    chatty("For [_1]\n", $src_path);
     my $remote_top = Idval::Common::mung_to_unix($config->get_single_value('remote_top', $tag_record));
-    chatty("   remote top is \"$remote_top\"\n");
+    chatty("   remote top is \"[_1]\"\n", $remote_top);
     my $dest_name = $prov->get_dest_filename($tag_record, $src_name, get_file_ext($dest_type));
-    chatty("   dest name is \"$dest_name\" (", $prov->query('name'), ")\n");
+    chatty("   dest name is \"[_1]\" ([_2])\n", $dest_name, $prov->query('name'));
     my $sync_dest = Idval::Common::mung_to_unix($config->get_single_value('sync_dest', $tag_record));
-
-
-#     my $src_path =  $tag_record->get_name();
-#     my ($volume, $src_dir, $src_name) = File::Spec->splitpath($src_path);
-#     #idv_dbg("For $src_path\n");
-#     my $remote_top = Idval::Common::mung_to_unix($config->get_single_value('remote_top', $tag_record));
-#     #idv_dbg("   remote top is \"$remote_top\"\n");
-#     my $src_type = $tag_record->get_value('TYPE');
-#     my $dest_type = $config->get_single_value('convert', $tag_record);
-
-#     my $dest_name;
-#     my $dest_ext = get_file_ext($dest_type);
-#     ($dest_name = $src_name) =~ s{\.[^.]+$}{.$dest_ext};
 
     my $extre = get_all_extensions_regexp();
     if ($sync_dest !~ m/$extre/)
     {
         # sync_dest is a directory, so to get the destination name just append dest_name
         $sync_dest = File::Spec->catfile($sync_dest, $dest_name);
-        chatty("sync_dest is a directory: sync dest is \"$sync_dest\"\n");
+        chatty("sync_dest is a directory: sync dest is \"[_1]\"\n", $sync_dest);
     }
 
     my $dest_path = File::Spec->catfile($remote_top, $sync_dest);
@@ -518,12 +494,12 @@ sub get_file_paths
     # Do we have any tagname expansions?
     if (my @tags = ($dest_path =~ m/%([^%]+)%/g))
     {
-        idv_dbg("Found tags to expand: ", join(',', @tags), "\n");
+        idv_dbg("Found tags to expand: [_1]\n", join(',', @tags));
         foreach my $tag (@tags)
         {
             $dest_path =~ s{%$tag%}{$tag_record->{$tag}} if exists($tag_record->{$tag});
         }
-        idv_dbg("dest path is now: \"$dest_path\"\n");
+        idv_dbg("dest path is now: \"[_1]\"\n", $dest_path);
     }
 
     $dest_path = File::Spec->canonpath($dest_path); # Make sure the destination path is nice and clean
@@ -560,7 +536,7 @@ useful with the contents thereof.
 =cut
 
 EOD
-    $help_file->man_info('sync', $pod_input);
+    $help_file->set_man_info('sync', $pod_input);
 
     return;
 }

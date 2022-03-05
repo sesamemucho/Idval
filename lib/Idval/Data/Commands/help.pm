@@ -55,6 +55,7 @@ sub main
     {
         $cmd_info{$cmd->{NAME}} = $cmd;
     }
+    #print "from Help: cmd info is: ", Dumper(\%cmd_info);
     #my $cmd_abbrev = abbrev map {lc $_} keys %cmd_info;
     my $cmd_name = $name;
 
@@ -63,10 +64,10 @@ sub main
         $name = lc (shift @ARGV);
         $cmd = $providers->get_command($name);
         
-        fatal("Unrecognized command name \"$name\"\n") unless defined($cmd);
+        fatal("Unrecognized command name \"[_1]\"\n", $name) unless defined($cmd);
         $cmd_name = $cmd->{NAME};
         $cmd = $cmd_info{$cmd_name};
-        fatal("No help information for command name \"$name\"\n") unless defined($help_file->man_info($cmd_name));
+        fatal("No help information for command name \"[_1]\"\n", $name) unless defined($help_file->man_info($cmd_name));
     
         if ($verbose)
         {
@@ -75,7 +76,7 @@ sub main
         else
         {
             silent_q($help_file->get_synopsis($cmd_name));
-            silent_q("\nUse \"help -v $cmd_name\" for more information.\n");
+            silent_q("\nUse \"help -v [_1]\" for more information.\n", $cmd_name);
         }
     }
     else
@@ -90,7 +91,7 @@ sub main
        silent_q("\nAvailable commands:\n");
        foreach my $cmd_name (sort keys %cmd_info) {
            my $gsd = $help_file->get_short_description($cmd_name);
-           silent_q("  ", $help_file->get_short_description($cmd_name), "\n");
+           silent_q("[_1]\n", $gsd);
        }
     }
 
@@ -137,7 +138,7 @@ useful with the contents thereof.
 =cut
 
 EOD
-    $help_file->man_info('help', $pod_input);
+    $help_file->set_man_info('help', $pod_input);
 
     return;
 }
